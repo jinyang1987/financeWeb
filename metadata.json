@@ -1,0 +1,6 @@
+{
+  "name": "智能会计档案“四性”高质校验平台",
+  "description": "基于国税电子档案《四性检测》（真实性、完整性、可用性、安全性）标准及全生命周期审计追踪(Audit Trail)的智能会计档案与数电发票管理核对系统。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
