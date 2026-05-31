@@ -9,7 +9,8 @@ import {
   Trash2, ShieldCheck, ShieldAlert, Award, FileText, Settings, 
   RefreshCw, Info, CheckCircle2, AlertTriangle, Filter, Database, Menu, X,
   Compass, Grid, Building2, Users, UserCheck, Shield, Fingerprint, ChevronDown, ChevronUp, Briefcase, Layers,
-  Check, Files, Bell, Cpu, Ticket, Activity, FileSpreadsheet, FileInput, Link2, CheckSquare, FolderTree, Clock
+  Check, Files, Bell, Cpu, Ticket, Activity, FileSpreadsheet, FileInput, Link2, CheckSquare, FolderTree, Clock,
+  Library, Calendar, FolderOpen, FolderCog, Building
 } from 'lucide-react';
 
 import { CategoryNode, ArchiveRecord, Fonds, CategoryConfigItem } from './types';
@@ -20,6 +21,8 @@ import { AdvancedWorkbenchSidebar } from './components/AdvancedWorkbenchSidebar'
 import { UploadModal } from './components/UploadModal';
 import { InteractivePreview } from './components/InteractivePreview';
 import { AuditTimeline } from './components/AuditTimeline';
+import DirectoryConfigPanel from './components/DirectoryConfigPanel';
+import { useDirectoryConfig, DirectoryConfigProvider } from './DirectoryConfigContext';
 
 // Import our new professional business components
 import { FanzongManager } from './components/FanzongManager';
@@ -27,6 +30,7 @@ import { WorkflowConfigPanel } from './components/WorkflowConfigPanel';
 import { OrgManagePanel } from './components/OrgManagePanel';
 import { UserRolePanel } from './components/UserRolePanel';
 import { AuditLogsPanel } from './components/AuditLogsPanel';
+
 import { DigitalWarehousePanel } from './components/DigitalWarehousePanel';
 
 import { ArchiveReceiveCenter } from './components/ArchiveReceiveCenter';
@@ -111,8 +115,9 @@ export default function App() {
 
   // Navigation tabs (matching Vue mock parameters)
   const [activeMainMenu, setActiveMainMenu] = useState<
-    'dashboard' | 'view-finance' | 'view-project' | 'view-time' | 'config-fanzong' | 'config-directory' | 'config-workflow' | 'sys-org' | 'sys-user' | 'sys-log' |
-    'archive-offline' | 'archive-rcv' | 'wf-control' | 'borrow-manage' | 'return-manage' | 'search-stats' | 'smart-data' | 'order-special' | 'digital-warehouse'
+    'dashboard' | 'directory-config' | 'view-finance' | 'view-project' | 'view-time' | 'config-fanzong' | 'config-workflow' | 'sys-org' | 'sys-user' | 'sys-log' |
+    'archive-offline' | 'archive-rcv' | 'wf-control' | 'borrow-manage' | 'return-manage' | 'search-stats' | 'smart-data' | 'order-special' | 'digital-warehouse' |
+    'preserve-view-finance' | 'preserve-view-project' | 'preserve-view-time' | 'util-view-finance' | 'util-view-project' | 'util-view-time'
   >('dashboard');
 
   // Interactive local states for regulatory & compliance workflows (Vue counterpart logic)
@@ -176,16 +181,96 @@ export default function App() {
   // Sidebar group accordions
   const [isRcvGroupOpen, setIsRcvGroupOpen] = useState(true);
   const [isArrangeGroupOpen, setIsArrangeGroupOpen] = useState(true);
+  const [isConfigGroupOpen, setIsConfigGroupOpen] = useState(false);
   const [isPreserveGroupOpen, setIsPreserveGroupOpen] = useState(true);
   const [isUtilGroupOpen, setIsUtilGroupOpen] = useState(true);
   const [isDisposalGroupOpen, setIsDisposalGroupOpen] = useState(true);
   const [isStatsGroupOpen, setIsStatsGroupOpen] = useState(true);
   const [isArchiveSettingsGroupOpen, setIsArchiveSettingsGroupOpen] = useState(true);
   const [isSystemGroupOpen, setIsSystemGroupOpen] = useState(true);
+  
+  // 全宗下拉框状态
+  const [isFanzongDropdownOpen, setIsFanzongDropdownOpen] = useState(false);
+
+  // 关闭其他所有一级菜单，只保留指定的菜单打开
+  const closeOtherGroups = (keepOpen: string) => {
+    const groupStates: Record<string, [boolean, (val: boolean) => void]> = {
+      'rcv': [isRcvGroupOpen, setIsRcvGroupOpen],
+      'arrange': [isArrangeGroupOpen, setIsArrangeGroupOpen],
+      'config': [isConfigGroupOpen, setIsConfigGroupOpen],
+      'preserve': [isPreserveGroupOpen, setIsPreserveGroupOpen],
+      'util': [isUtilGroupOpen, setIsUtilGroupOpen],
+      'disposal': [isDisposalGroupOpen, setIsDisposalGroupOpen],
+      'stats': [isStatsGroupOpen, setIsStatsGroupOpen],
+      'archiveSettings': [isArchiveSettingsGroupOpen, setIsArchiveSettingsGroupOpen],
+      'system': [isSystemGroupOpen, setIsSystemGroupOpen],
+    };
+    
+    Object.entries(groupStates).forEach(([key, [isOpen, setIsOpen]]) => {
+      if (key !== keepOpen) {
+        setIsOpen(false);
+      } else {
+        setIsOpen(true);
+      }
+    });
+  };
+
+  // Sub-menu expand states for tree view in left sidebar
+  const [isFinanceViewExpanded, setIsFinanceViewExpanded] = useState(true);
+  const [isProjectViewExpanded, setIsProjectViewExpanded] = useState(false);
+  const [isTimeViewExpanded, setIsTimeViewExpanded] = useState(false);
+
+  // 档案保存下的视图展开状态
+  const [isPreserveFinanceViewExpanded, setIsPreserveFinanceViewExpanded] = useState(false);
+  const [isPreserveProjectViewExpanded, setIsPreserveProjectViewExpanded] = useState(false);
+  const [isPreserveTimeViewExpanded, setIsPreserveTimeViewExpanded] = useState(false);
+
+  // 档案利用下的视图展开状态
+  const [isUtilFinanceViewExpanded, setIsUtilFinanceViewExpanded] = useState(false);
+  const [isUtilProjectViewExpanded, setIsUtilProjectViewExpanded] = useState(false);
+  const [isUtilTimeViewExpanded, setIsUtilTimeViewExpanded] = useState(false);
+
+  // Expanded fonds/project/time nodes within each view
+  const [expandedFinanceNodes, setExpandedFinanceNodes] = useState<Record<string, boolean>>({
+    'fonds-1': true,
+    'fonds-2': false,
+  });
+  const [expandedProjectNodes, setExpandedProjectNodes] = useState<Record<string, boolean>>({
+    'proj-1': true,
+  });
+  const [expandedTimeNodes, setExpandedTimeNodes] = useState<Record<string, boolean>>({
+    'time-2026': true,
+    'time-2025': false,
+  });
+
+  // Expanded states for financial category view (class -> year -> month)
+  const [expandedFinanceClasses, setExpandedFinanceClasses] = useState<Record<string, boolean>>({
+    'sub-111': true, // 会计凭证
+    'sub-112': false, // 会计账簿
+    'sub-113': false, // 财务报表
+    'sub-114': false, // 其他会计资料
+  });
+  const [expandedFinanceYears, setExpandedFinanceYears] = useState<Record<string, boolean>>({
+    'period-2026': true,
+    'period-2025': false,
+  });
+
+  // Quarter and month selection for financial category view
+  const [selectedQuarter, setSelectedQuarter] = useState<string>('Q1');
+  const [selectedMonth, setSelectedMonth] = useState<number>(1);
+
+  // Quarter definitions
+  const quarters = [
+    { id: 'Q1', name: '第一季度', months: [1, 2, 3] },
+    { id: 'Q2', name: '第二季度', months: [4, 5, 6] },
+    { id: 'Q3', name: '第三季度', months: [7, 8, 9] },
+    { id: 'Q4', name: '第四季度', months: [10, 11, 12] },
+  ];
 
   // Top-level menu visibility settings
   const [visibleMenus, setVisibleMenus] = useState<Record<string, boolean>>({
     rcv: true,
+    config: true,
     arrange: true,
     preserve: true,
     util: true,
@@ -471,7 +556,8 @@ export default function App() {
   };
 
   return (
-    <div id="smart-accounting-root" className="min-h-screen bg-slate-50 flex text-slate-800 font-sans antialiased selection:bg-blue-500 selection:text-white">
+    <DirectoryConfigProvider>
+    <div id="smart-accounting-root" className="h-screen overflow-hidden bg-slate-50 flex text-slate-800 font-sans antialiased selection:bg-blue-500 selection:text-white">
       
       {/* Visual Feedback Toasts */}
       {feedbackToast && (
@@ -493,42 +579,45 @@ export default function App() {
       )}
 
       {/* LEFT SIDEBAR: Static Enterprise Menu matching el-aside class="main-sidebar" */}
-      <aside className="hidden md:flex flex-col w-[260px] bg-[#F8FAFC] shrink-0 min-h-screen text-slate-600 border-r border-slate-200 transition-all duration-300 shadow-[2px_0_8px_-4px_rgba(0,0,0,0.05)]">
-        {/* LOGO AREA: system-logo */}
-        <div className="h-[76px] bg-[#F8FAFC] flex items-center justify-between px-4 shrink-0 select-none border-b border-slate-200">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-indigo-600 rounded-xl text-white shadow-md shadow-indigo-600/20 flex items-center justify-center w-8 h-8 shrink-0">
-              <Grid className="w-4 h-4 font-extrabold" />
-            </div>
-            <div className="flex flex-col">
-              <span className="font-bold text-slate-800 text-[14px] tracking-wide leading-tight">会计档案管理系统</span>
-            </div>
+      <aside className="hidden md:flex flex-col w-[260px] bg-[#F8FAFC] shrink-0 h-full text-slate-600 transition-all duration-300 border-r border-slate-200">
+        {/* LOGO AREA: system-logo - 与顶部header共享边框 */}
+        <div className="h-[64px] bg-[#F8FAFC] flex items-center justify-between px-5 shrink-0 select-none">
+          <div className="flex items-center gap-3">
+            <img 
+              src="/logo.png" 
+              alt="会计档案管理系统Logo" 
+              className="w-9 h-9 rounded-lg shadow-sm object-cover shrink-0"
+            />
+            <span className="font-bold text-slate-800 text-[15px] tracking-wide">会计档案管理系统</span>
           </div>
           <button 
             type="button" 
             onClick={() => setIsMenuSettingsOpen(true)}
-            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100/80 rounded-md transition-colors" 
+            className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-slate-100/80 rounded transition-colors" 
             title="自定义菜单"
           >
-            <Settings className="w-4 h-4" />
+            <Settings className="w-3.5 h-3.5" />
           </button>
         </div>
 
+        {/* 顶部边框线 - 贯穿整个宽度 */}
+        <div className="h-px bg-slate-200" />
+
         {/* SCROLLABLE SIDEBAR MENU */}
-        <nav className="flex-1 overflow-y-auto py-4 space-y-4 font-sans text-sm select-none">
+        <nav className="flex-1 overflow-y-auto py-3 space-y-1 font-sans text-sm select-none">
           {/* 1. 档案接收 (isRcvGroupOpen) */}
           {visibleMenus.rcv && (
           <div className="space-y-1">
             <button 
               type="button"
               onClick={() => setIsRcvGroupOpen(!isRcvGroupOpen)}
-              className="w-[calc(100%-24px)] flex items-center justify-between mx-3 py-2 px-4 text-sm font-extrabold text-indigo-700 bg-indigo-50/50 rounded-lg uppercase tracking-wider hover:text-indigo-900 hover:bg-indigo-50 transition-all cursor-pointer text-left"
+              className="w-[calc(100%-24px)] flex items-center justify-between mx-3 py-2.5 px-4 text-base font-bold text-slate-700 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-all cursor-pointer text-left"
             >
               <span className="flex items-center gap-2">
-                <Upload className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                <Upload className="w-3.5 h-3.5 text-slate-600 shrink-0" />
                 <span>档案接收</span>
               </span>
-              {isRcvGroupOpen ? <ChevronDown className="w-3.5 h-3.5 text-indigo-600" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+              {isRcvGroupOpen ? <ChevronDown className="w-3.5 h-3.5 text-slate-600" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
             </button>
 
             {isRcvGroupOpen && (
@@ -536,32 +625,34 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => {
+                    closeOtherGroups('rcv');
                     setActiveMainMenu('archive-offline');
                     triggerToast('进入档案离线接收页面', 'info');
                   }}
-                  className={`w-[calc(100%-24px)] flex items-center gap-3 mx-3 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left ${
-                    activeMainMenu === 'archive-offline'
-                      ? 'bg-[#EEF2FF] text-[#4F46E5] border-l-[#4F46E5] font-bold shadow-xs'
-                      : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 border-l-transparent'
+                  className={`w-[calc(100%-36px)] flex items-center gap-3 mx-6 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                    selectedNode?.id === 'archive-offline'
+                      ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
                   }`}
                 >
-                  <Database className={`w-4 h-4 shrink-0 ${activeMainMenu === 'archive-offline' ? 'text-indigo-600' : 'text-sky-500'}`} />
+                  <Database className={`w-4 h-4 shrink-0 ${activeMainMenu === 'archive-offline' ? 'text-slate-700' : 'text-slate-500'}`} />
                   <span>档案离线接收</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => {
+                    closeOtherGroups('rcv');
                     setActiveMainMenu('archive-rcv');
                     triggerToast('进入档案接收业务中台', 'info');
                   }}
-                  className={`w-[calc(100%-24px)] flex items-center gap-3 mx-3 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left ${
-                    activeMainMenu === 'archive-rcv'
-                      ? 'bg-[#EEF2FF] text-[#4F46E5] border-l-[#4F46E5] font-bold shadow-xs'
-                      : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 border-l-transparent'
+                  className={`w-[calc(100%-36px)] flex items-center gap-3 mx-6 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                    selectedNode?.id === 'archive-rcv'
+                      ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
                   }`}
                 >
-                  <Upload className={`w-4 h-4 shrink-0 ${activeMainMenu === 'archive-rcv' ? 'text-indigo-600' : 'text-blue-500'}`} />
+                  <Upload className={`w-4 h-4 shrink-0 ${activeMainMenu === 'archive-rcv' ? 'text-slate-700' : 'text-slate-500'}`} />
                   <span>档案接收业务中台</span>
                 </button>
               </div>
@@ -569,70 +660,473 @@ export default function App() {
           </div>
           )}
 
-          {/* 2. 档案整理 (isArrangeGroupOpen) */}
+          {/* 3. 档案整理 (isArrangeGroupOpen) */}
           {visibleMenus.arrange && (
           <div className="space-y-1">
             <button 
               type="button"
               onClick={() => setIsArrangeGroupOpen(!isArrangeGroupOpen)}
-              className="w-[calc(100%-24px)] flex items-center justify-between mx-3 py-2 px-4 text-sm font-extrabold text-emerald-700 bg-emerald-50/50 rounded-lg uppercase tracking-wider hover:text-emerald-900 hover:bg-emerald-50 transition-all cursor-pointer text-left"
+              className="w-[calc(100%-24px)] flex items-center justify-between mx-3 py-2.5 px-4 text-base font-bold text-slate-700 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-all cursor-pointer text-left"
             >
               <span className="flex items-center gap-2">
-                <Layers className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <Layers className="w-3.5 h-3.5 text-slate-600 shrink-0" />
                 <span>档案整理</span>
               </span>
-              {isArrangeGroupOpen ? <ChevronDown className="w-3.5 h-3.5 text-emerald-600" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+              {isArrangeGroupOpen ? <ChevronDown className="w-3.5 h-3.5 text-slate-600" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
             </button>
 
             {isArrangeGroupOpen && (
               <div className="space-y-1 mt-1 pl-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveMainMenu('view-finance');
-                    triggerToast('进入财务类视图', 'info');
-                  }}
-                  className={`w-[calc(100%-24px)] flex items-center gap-3 mx-3 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left ${
-                    activeMainMenu === 'view-finance'
-                      ? 'bg-[#EEF2FF] text-[#4F46E5] border-l-[#4F46E5] font-bold shadow-xs'
-                      : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 border-l-transparent'
-                  }`}
-                >
-                  <FolderTree className={`w-4 h-4 shrink-0 ${activeMainMenu === 'view-finance' ? 'text-indigo-600' : 'text-blue-500'}`} />
-                  <span>财务大类视图</span>
-                </button>
+                {/* 财务大类视图 - 可展开的树结构 */}
+                <div className="space-y-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsFinanceViewExpanded(!isFinanceViewExpanded);
+                      if (!isFinanceViewExpanded) {
+                        setActiveMainMenu('view-finance');
+                        setSelectedNode(null);
+                      }
+                    }}
+                    className={`w-[calc(100%-36px)] flex items-center justify-between mx-6 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                      selectedNode?.id === 'view-finance'
+                        ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <FolderTree className={`w-4 h-4 shrink-0 ${activeMainMenu === 'view-finance' ? 'text-slate-700' : 'text-slate-500'}`} />
+                      <span>财务大类视图</span>
+                    </span>
+                    {isFinanceViewExpanded ? <ChevronDown className="w-3.5 h-3.5 text-slate-600" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveMainMenu('view-project');
-                    triggerToast('进入项目全景视图', 'info');
-                  }}
-                  className={`w-[calc(100%-24px)] flex items-center gap-3 mx-3 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left ${
-                    activeMainMenu === 'view-project'
-                      ? 'bg-[#EEF2FF] text-[#10B981] border-l-[#10B981] font-bold shadow-xs'
-                      : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 border-l-transparent'
-                  }`}
-                >
-                  <Briefcase className={`w-4 h-4 shrink-0 ${activeMainMenu === 'view-project' ? 'text-emerald-600' : 'text-emerald-500'}`} />
-                  <span>项目全景视图</span>
-                </button>
+                  {/* 财务大类视图下的分类列表 - 直接显示会计凭证等 */}
+                  {isFinanceViewExpanded && (
+                    <div className="space-y-1">
+                      {/* 从所有全宗中提取所有分类并去重显示 */}
+                      {(() => {
+                        // 收集所有分类（会计凭证、会计账簿等）
+                        const allClasses = new Map<string, { label: string; id: string; type: string; code: string; children: any[] }>();
+                        
+                        treeData.forEach(fonds => {
+                          fonds.children?.forEach(cls => {
+                            if (!allClasses.has(cls.label)) {
+                              allClasses.set(cls.label, cls);
+                            }
+                          });
+                        });
+                        
+                        const classesList = Array.from(allClasses.values());
+                        
+                        return classesList.map(cls => (
+                          <div key={cls.id} className="space-y-0.5">
+                            {/* 分类节点 - 如"会计凭证" */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExpandedFinanceClasses(prev => ({ ...prev, [cls.id]: !prev[cls.id] }));
+                                setActiveMainMenu('view-finance');
+                              }}
+                              className={`w-[calc(100%-54px)] flex items-center justify-between mx-9 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                                selectedNode?.id === cls.id
+                                  ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                              }`}
+                            >
+                              <span className="flex items-center gap-2">
+                                {cls.label.includes('凭证') ? <FileInput className="w-4 h-4 text-slate-500 shrink-0" /> :
+                                 cls.label.includes('账簿') ? <Briefcase className="w-4 h-4 text-slate-500 shrink-0" /> :
+                                 cls.label.includes('报表') || cls.label.includes('报告') ? <FileSpreadsheet className="w-4 h-4 text-slate-500 shrink-0" /> :
+                                 <Layers className="w-4 h-4 text-slate-500 shrink-0" />}
+                                <span>{cls.label}</span>
+                              </span>
+                              {cls.children && cls.children.length > 0 && (
+                                expandedFinanceClasses[cls.id] ? <ChevronDown className="w-3.5 h-3.5 text-slate-600" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                              )}
+                            </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveMainMenu('view-time');
-                    triggerToast('进入时间主线视图', 'info');
-                  }}
-                  className={`w-[calc(100%-24px)] flex items-center gap-3 mx-3 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left ${
-                    activeMainMenu === 'view-time'
-                      ? 'bg-[#EEF2FF] text-[#3B82F6] border-l-[#3B82F6] font-bold shadow-xs'
-                      : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 border-l-transparent'
-                  }`}
-                >
-                  <Clock className={`w-4 h-4 shrink-0 ${activeMainMenu === 'view-time' ? 'text-blue-600' : 'text-sky-500'}`} />
-                  <span>时间主线视图</span>
-                </button>
+                            {/* 年份层级 */}
+                            {expandedFinanceClasses[cls.id] && cls.children && (
+                              <div className="space-y-0.5">
+                                {cls.children.map(yearNode => (
+                                  <div key={yearNode.id} className="space-y-0.5">
+                                    {/* 年份节点 */}
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        closeOtherGroups('arrange');
+                                        setActiveMainMenu('view-finance');
+                                        setSelectedNode(yearNode);
+                                      }}
+                                      className={`w-[calc(100%-72px)] flex items-center justify-between mx-12 py-1.5 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                                        selectedNode?.id === yearNode.id
+                                          ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                                          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                                      }`}
+                                    >
+                                      <span className="flex items-center gap-2">
+                                        <Calendar className="w-4 h-4 text-slate-500 shrink-0" />
+                                        <span>{yearNode.label}</span>
+                                      </span>
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  )}
+                </div>
+
+                {/* 项目全景视图 - 可展开的树结构 */}
+                <div className="space-y-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProjectViewExpanded(!isProjectViewExpanded);
+                      if (!isProjectViewExpanded) {
+                        setActiveMainMenu('view-project');
+                        setSelectedNode(null);
+                      }
+                    }}
+                    className={`w-[calc(100%-36px)] flex items-center justify-between mx-6 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                      selectedNode?.id === 'view-project'
+                        ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Briefcase className={`w-4 h-4 shrink-0 ${activeMainMenu === 'view-project' ? 'text-slate-700' : 'text-slate-500'}`} />
+                      <span>项目全景视图</span>
+                    </span>
+                    {isProjectViewExpanded ? <ChevronDown className="w-3.5 h-3.5 text-slate-600" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+                  </button>
+
+                  {/* 项目全景视图下的项目列表 */}
+                  {isProjectViewExpanded && (
+                    <div className="space-y-1">
+                      {/* 项目1 */}
+                      <div className="space-y-0.5">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            closeOtherGroups('arrange');
+                            setExpandedProjectNodes(prev => ({ ...prev, 'proj-1': !prev['proj-1'] }));
+                            setActiveMainMenu('view-project');
+                            setSelectedNode({ id: 'proj-1', label: '华北数据中心建设项目', type: 'fonds', code: 'PROJ-001' } as CategoryNode);
+                          }}
+                          className={`w-[calc(100%-54px)] flex items-center justify-between mx-9 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                            selectedNode?.id === 'proj-1'
+                              ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <Briefcase className={`w-4 h-4 shrink-0 ${selectedNode?.id === 'proj-1' ? 'text-slate-700' : 'text-slate-500'}`} />
+                            <span>华北数据中心建设项目</span>
+                          </span>
+                          {expandedProjectNodes['proj-1'] ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+                        </button>
+
+                        {expandedProjectNodes['proj-1'] && (
+                          <div className="space-y-0.5">
+                            {[
+                              { id: 'proj-1-contract', label: '合同及协议' },
+                              { id: 'proj-1-voucher', label: '关联会计凭证' },
+                              { id: 'proj-1-report', label: '项目独立报表' }
+                            ].map(item => (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  closeOtherGroups('arrange');
+                                  setActiveMainMenu('view-project');
+                                  setSelectedNode({ id: item.id, label: item.label, type: 'subclass', code: '' } as CategoryNode);
+                                }}
+                                className={`w-[calc(100%-72px)] flex items-center gap-2 mx-12 py-1.5 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                                  selectedNode?.id === item.id
+                                    ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                                }`}
+                              >
+                                {item.id.includes('contract') ? <FileText className="w-4 h-4 text-slate-500 shrink-0" /> :
+                                 item.id.includes('voucher') ? <FileInput className="w-4 h-4 text-slate-500 shrink-0" /> :
+                                 <FileSpreadsheet className="w-4 h-4 text-slate-500 shrink-0" />}
+                                <span>{item.label}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 项目2 */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          closeOtherGroups('arrange');
+                          setActiveMainMenu('view-project');
+                          setSelectedNode({ id: 'proj-2', label: 'AI平台研发三期', type: 'fonds', code: 'PROJ-002' } as CategoryNode);
+                        }}
+                        className={`w-[calc(100%-54px)] flex items-center gap-2 mx-9 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left opacity-60 text-sm ${
+                          selectedNode?.id === 'proj-2'
+                            ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                        }`}
+                      >
+                        <Briefcase className="w-4 h-4 text-slate-500 shrink-0" />
+                        <span>AI平台研发三期</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* 时间主线视图 - 可展开的树结构 */}
+                <div className="space-y-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsTimeViewExpanded(!isTimeViewExpanded);
+                      if (!isTimeViewExpanded) {
+                        setActiveMainMenu('view-time');
+                        setSelectedNode(null);
+                      }
+                    }}
+                    className={`w-[calc(100%-36px)] flex items-center justify-between mx-6 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                      selectedNode?.id === 'view-time'
+                        ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Clock className={`w-4 h-4 shrink-0 ${activeMainMenu === 'view-time' ? 'text-slate-700' : 'text-slate-500'}`} />
+                      <span>时间主线视图</span>
+                    </span>
+                    {isTimeViewExpanded ? <ChevronDown className="w-3.5 h-3.5 text-slate-600" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+                  </button>
+
+                  {/* 时间主线视图下的年份列表 */}
+                  {isTimeViewExpanded && (
+                    <div className="space-y-1">
+                      {/* 2026年 */}
+                      <div className="space-y-0.5">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            closeOtherGroups('arrange');
+                            setExpandedTimeNodes(prev => ({ ...prev, 'time-2026': !prev['time-2026'] }));
+                            setActiveMainMenu('view-time');
+                            setSelectedNode({ id: 'time-2026', label: '2026年', type: 'period', code: '2026' } as CategoryNode);
+                          }}
+                          className={`w-[calc(100%-54px)] flex items-center justify-between mx-9 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                            selectedNode?.id === 'time-2026'
+                              ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <Calendar className={`w-4 h-4 shrink-0 ${selectedNode?.id === 'time-2026' ? 'text-slate-700' : 'text-slate-500'}`} />
+                            <span>2026年</span>
+                          </span>
+                          {expandedTimeNodes['time-2026'] ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+                        </button>
+
+                        {expandedTimeNodes['time-2026'] && (
+                          <div className="space-y-0.5">
+                            {/* 会计凭证 */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                closeOtherGroups('arrange');
+                                setActiveMainMenu('view-time');
+                                setSelectedNode({ id: 'time-2026-voucher', label: '会计凭证', type: 'class', code: '2026-voucher' } as CategoryNode);
+                              }}
+                              className={`w-[calc(100%-72px)] flex items-center gap-2 mx-12 py-1.5 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                                selectedNode?.id === 'time-2026-voucher'
+                                  ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                              }`}
+                            >
+                              <FolderOpen className="w-4 h-4 text-slate-500 shrink-0" />
+                              <span>会计凭证</span>
+                            </button>
+
+                            {/* 会计账簿 */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                closeOtherGroups('arrange');
+                                setActiveMainMenu('view-time');
+                                setSelectedNode({ id: 'time-2026-ledger', label: '会计账簿', type: 'class', code: '2026-ledger' } as CategoryNode);
+                              }}
+                              className={`w-[calc(100%-72px)] flex items-center gap-2 mx-12 py-1.5 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                                selectedNode?.id === 'time-2026-ledger'
+                                  ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                              }`}
+                            >
+                              <FolderOpen className="w-4 h-4 text-slate-500 shrink-0" />
+                              <span>会计账簿</span>
+                            </button>
+
+                            {/* 财务报表 */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                closeOtherGroups('arrange');
+                                setActiveMainMenu('view-time');
+                                setSelectedNode({ id: 'time-2026-report', label: '财务报表', type: 'class', code: '2026-report' } as CategoryNode);
+                              }}
+                              className={`w-[calc(100%-72px)] flex items-center gap-2 mx-12 py-1.5 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                                selectedNode?.id === 'time-2026-report'
+                                  ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                              }`}
+                            >
+                              <FolderOpen className="w-4 h-4 text-slate-500 shrink-0" />
+                              <span>财务报表</span>
+                            </button>
+
+                            {/* 其他会计资料 */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                closeOtherGroups('arrange');
+                                setActiveMainMenu('view-time');
+                                setSelectedNode({ id: 'time-2026-other', label: '其他会计资料', type: 'class', code: '2026-other' } as CategoryNode);
+                              }}
+                              className={`w-[calc(100%-72px)] flex items-center gap-2 mx-12 py-1.5 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                                selectedNode?.id === 'time-2026-other'
+                                  ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                              }`}
+                            >
+                              <FolderOpen className="w-4 h-4 text-slate-500 shrink-0" />
+                              <span>其他会计资料</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 2025年 */}
+                      <div className="space-y-0.5">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            closeOtherGroups('arrange');
+                            setExpandedTimeNodes(prev => ({ ...prev, 'time-2025': !prev['time-2025'] }));
+                            setActiveMainMenu('view-time');
+                            setSelectedNode({ id: 'time-2025', label: '2025年', type: 'period', code: '2025' } as CategoryNode);
+                          }}
+                          className={`w-[calc(100%-54px)] flex items-center justify-between mx-9 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                            selectedNode?.id === 'time-2025'
+                              ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <Calendar className={`w-4 h-4 shrink-0 ${selectedNode?.id === 'time-2025' ? 'text-slate-700' : 'text-slate-500'}`} />
+                            <span>2025年</span>
+                          </span>
+                          {expandedTimeNodes['time-2025'] ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+                        </button>
+
+                        {expandedTimeNodes['time-2025'] && (
+                          <div className="space-y-0.5">
+                            {/* 会计凭证 */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                closeOtherGroups('arrange');
+                                setActiveMainMenu('view-time');
+                                setSelectedNode({ id: 'time-2025-voucher', label: '会计凭证', type: 'class', code: '2025-voucher' } as CategoryNode);
+                              }}
+                              className={`w-[calc(100%-72px)] flex items-center gap-2 mx-12 py-1.5 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                                selectedNode?.id === 'time-2025-voucher'
+                                  ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                              }`}
+                            >
+                              <FolderOpen className="w-4 h-4 text-slate-500 shrink-0" />
+                              <span>会计凭证</span>
+                            </button>
+
+                            {/* 会计账簿 */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                closeOtherGroups('arrange');
+                                setActiveMainMenu('view-time');
+                                setSelectedNode({ id: 'time-2025-ledger', label: '会计账簿', type: 'class', code: '2025-ledger' } as CategoryNode);
+                              }}
+                              className={`w-[calc(100%-72px)] flex items-center gap-2 mx-12 py-1.5 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                                selectedNode?.id === 'time-2025-ledger'
+                                  ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                              }`}
+                            >
+                              <FolderOpen className="w-4 h-4 text-slate-500 shrink-0" />
+                              <span>会计账簿</span>
+                            </button>
+
+                            {/* 财务报表 */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                closeOtherGroups('arrange');
+                                setActiveMainMenu('view-time');
+                                setSelectedNode({ id: 'time-2025-report', label: '财务报表', type: 'class', code: '2025-report' } as CategoryNode);
+                              }}
+                              className={`w-[calc(100%-72px)] flex items-center gap-2 mx-12 py-1.5 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                                selectedNode?.id === 'time-2025-report'
+                                  ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                              }`}
+                            >
+                              <FolderOpen className="w-4 h-4 text-slate-500 shrink-0" />
+                              <span>财务报表</span>
+                            </button>
+
+                            {/* 其他会计资料 */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                closeOtherGroups('arrange');
+                                setActiveMainMenu('view-time');
+                                setSelectedNode({ id: 'time-2025-other', label: '其他会计资料', type: 'class', code: '2025-other' } as CategoryNode);
+                              }}
+                              className={`w-[calc(100%-72px)] flex items-center gap-2 mx-12 py-1.5 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                                selectedNode?.id === 'time-2025-other'
+                                  ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                              }`}
+                            >
+                              <FolderOpen className="w-4 h-4 text-slate-500 shrink-0" />
+                              <span>其他会计资料</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 <button
                   type="button"
@@ -640,10 +1134,10 @@ export default function App() {
                     setActiveMainMenu('smart-data');
                     triggerToast('进入数电清洗与分册插卷计算模块', 'info');
                   }}
-                  className={`w-[calc(100%-24px)] flex items-center gap-3 mx-3 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left ${
-                    activeMainMenu === 'smart-data'
-                      ? 'bg-[#EEF2FF] text-[#4F46E5] border-l-[#4F46E5] font-bold shadow-xs'
-                      : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 border-l-transparent'
+                  className={`w-[calc(100%-36px)] flex items-center gap-3 mx-6 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                    selectedNode?.id === 'smart-data'
+                      ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
                   }`}
                 >
                   <Cpu className={`w-4 h-4 shrink-0 ${activeMainMenu === 'smart-data' ? 'text-[#4F46E5]' : 'text-pink-505'}`} />
@@ -660,13 +1154,13 @@ export default function App() {
             <button 
               type="button"
               onClick={() => setIsPreserveGroupOpen(!isPreserveGroupOpen)}
-              className="w-[calc(100%-24px)] flex items-center justify-between mx-3 py-2 px-4 text-sm font-extrabold text-blue-700 bg-blue-50/50 rounded-lg uppercase tracking-wider hover:text-blue-900 hover:bg-blue-50 transition-all cursor-pointer text-left"
+              className="w-[calc(100%-24px)] flex items-center justify-between mx-3 py-2.5 px-4 text-base font-bold text-slate-700 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-all cursor-pointer text-left"
             >
               <span className="flex items-center gap-2">
-                <Database className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <Database className="w-3.5 h-3.5 text-slate-600 shrink-0" />
                 <span>档案保存</span>
               </span>
-              {isPreserveGroupOpen ? <ChevronDown className="w-3.5 h-3.5 text-blue-600" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+              {isPreserveGroupOpen ? <ChevronDown className="w-3.5 h-3.5 text-slate-600" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
             </button>
 
             {isPreserveGroupOpen && (
@@ -674,31 +1168,217 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => {
+                    closeOtherGroups('preserve');
                     setActiveMainMenu('digital-warehouse');
                     triggerToast('进入数字化实体虚拟库房映射与生命管理', 'info');
                   }}
-                  className={`w-[calc(100%-24px)] flex items-center gap-3 mx-3 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left ${
-                    activeMainMenu === 'digital-warehouse'
-                      ? 'bg-[#EEF2FF] text-[#4F46E5] border-l-[#4F46E5] font-bold shadow-xs'
-                      : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 border-l-transparent'
+                  className={`w-[calc(100%-36px)] flex items-center gap-3 mx-6 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                    selectedNode?.id === 'digital-warehouse'
+                      ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
                   }`}
                 >
-                  <Building2 className={`w-4 h-4 shrink-0 ${activeMainMenu === 'digital-warehouse' ? 'text-[#4F46E5]' : 'text-indigo-400'}`} />
+                  <Building2 className={`w-4 h-4 shrink-0 ${activeMainMenu === 'digital-warehouse' ? 'text-slate-700' : 'text-slate-500'}`} />
                   <span>数字化虚拟库房</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => setActiveMainMenu('config-fanzong')}
-                  className={`w-[calc(100%-24px)] flex items-center gap-3 mx-3 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left ${
-                    activeMainMenu === 'config-fanzong'
-                      ? 'bg-[#EEF2FF] text-[#4F46E5] border-l-[#4F46E5] font-bold shadow-xs'
-                      : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 border-l-transparent'
-                  }`}
-                >
-                  <Building2 className={`w-4 h-4 shrink-0 ${activeMainMenu === 'config-fanzong' ? 'text-[#4F46E5]' : 'text-indigo-500'}`} />
-                  <span>全宗管理</span>
-                </button>
+                {/* 档案保存 - 财务大类视图 */}
+                <div className="space-y-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsPreserveFinanceViewExpanded(!isPreserveFinanceViewExpanded);
+                      if (!isPreserveFinanceViewExpanded) {
+                        closeOtherGroups('preserve');
+                        setActiveMainMenu('preserve-view-finance');
+                        setSelectedNode(null);
+                      }
+                    }}
+                    className={`w-[calc(100%-36px)] flex items-center justify-between mx-6 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                      selectedNode?.id === 'preserve-view-finance'
+                        ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <FolderTree className={`w-4 h-4 shrink-0 ${activeMainMenu === 'preserve-view-finance' ? 'text-slate-700' : 'text-slate-500'}`} />
+                      <span>财务大类视图</span>
+                    </span>
+                    {isPreserveFinanceViewExpanded ? <ChevronDown className="w-3.5 h-3.5 text-slate-600" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+                  </button>
+
+                  {isPreserveFinanceViewExpanded && (
+                    <div className="space-y-1">
+                      {(() => {
+                        const allClasses = new Map<string, { label: string; id: string; type: string; code: string; children: any[] }>();
+                        treeData.forEach(fonds => {
+                          fonds.children?.forEach(cls => {
+                            if (!allClasses.has(cls.label)) {
+                              allClasses.set(cls.label, cls);
+                            }
+                          });
+                        });
+                        const classesList = Array.from(allClasses.values());
+                        return classesList.map(cls => (
+                          <div key={cls.id} className="space-y-0.5">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                closeOtherGroups('preserve');
+                                setActiveMainMenu('preserve-view-finance');
+                                setSelectedNode({ id: `preserve-${cls.id}`, label: cls.label, type: cls.type, code: cls.code } as CategoryNode);
+                              }}
+                              className={`w-[calc(100%-54px)] flex items-center justify-between mx-9 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                                selectedNode?.id === `preserve-${cls.id}`
+                                  ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                              }`}
+                            >
+                              <span className="flex items-center gap-2">
+                                {cls.label.includes('凭证') ? <FileInput className="w-4 h-4 text-slate-500 shrink-0" /> :
+                                 cls.label.includes('账簿') ? <Briefcase className="w-4 h-4 text-slate-500 shrink-0" /> :
+                                 cls.label.includes('报表') || cls.label.includes('报告') ? <FileSpreadsheet className="w-4 h-4 text-slate-500 shrink-0" /> :
+                                 <Layers className="w-4 h-4 text-slate-500 shrink-0" />}
+                                <span>{cls.label}</span>
+                              </span>
+                            </button>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  )}
+                </div>
+
+                {/* 档案保存 - 项目全景视图 */}
+                <div className="space-y-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsPreserveProjectViewExpanded(!isPreserveProjectViewExpanded);
+                      if (!isPreserveProjectViewExpanded) {
+                        closeOtherGroups('preserve');
+                        setActiveMainMenu('preserve-view-project');
+                        setSelectedNode(null);
+                      }
+                    }}
+                    className={`w-[calc(100%-36px)] flex items-center justify-between mx-6 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                      selectedNode?.id === 'preserve-view-project'
+                        ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Briefcase className={`w-4 h-4 shrink-0 ${activeMainMenu === 'preserve-view-project' ? 'text-slate-700' : 'text-slate-500'}`} />
+                      <span>项目全景视图</span>
+                    </span>
+                    {isPreserveProjectViewExpanded ? <ChevronDown className="w-3.5 h-3.5 text-slate-600" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+                  </button>
+
+                  {isPreserveProjectViewExpanded && (
+                    <div className="space-y-1">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          closeOtherGroups('preserve');
+                          setActiveMainMenu('preserve-view-project');
+                          setSelectedNode({ id: 'preserve-proj-1', label: '华北数据中心建设项目', type: 'fonds', code: 'PROJ-001' } as CategoryNode);
+                        }}
+                        className={`w-[calc(100%-54px)] flex items-center gap-2 mx-9 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                          selectedNode?.id === 'preserve-proj-1'
+                            ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                        }`}
+                      >
+                        <Briefcase className="w-4 h-4 text-slate-500 shrink-0" />
+                        <span>华北数据中心建设项目</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          closeOtherGroups('preserve');
+                          setActiveMainMenu('preserve-view-project');
+                          setSelectedNode({ id: 'preserve-proj-2', label: 'AI平台研发三期', type: 'fonds', code: 'PROJ-002' } as CategoryNode);
+                        }}
+                        className={`w-[calc(100%-54px)] flex items-center gap-2 mx-9 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left opacity-60 text-sm ${
+                          selectedNode?.id === 'preserve-proj-2'
+                            ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                        }`}
+                      >
+                        <Briefcase className="w-4 h-4 text-slate-500 shrink-0" />
+                        <span>AI平台研发三期</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* 档案保存 - 时间主线视图 */}
+                <div className="space-y-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsPreserveTimeViewExpanded(!isPreserveTimeViewExpanded);
+                      if (!isPreserveTimeViewExpanded) {
+                        closeOtherGroups('preserve');
+                        setActiveMainMenu('preserve-view-time');
+                        setSelectedNode(null);
+                      }
+                    }}
+                    className={`w-[calc(100%-36px)] flex items-center justify-between mx-6 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                      selectedNode?.id === 'preserve-view-time'
+                        ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Clock className={`w-4 h-4 shrink-0 ${activeMainMenu === 'preserve-view-time' ? 'text-slate-700' : 'text-slate-500'}`} />
+                      <span>时间主线视图</span>
+                    </span>
+                    {isPreserveTimeViewExpanded ? <ChevronDown className="w-3.5 h-3.5 text-slate-600" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+                  </button>
+
+                  {isPreserveTimeViewExpanded && (
+                    <div className="space-y-1">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          closeOtherGroups('preserve');
+                          setActiveMainMenu('preserve-view-time');
+                          setSelectedNode({ id: 'preserve-time-2026', label: '2026年', type: 'period', code: '2026' } as CategoryNode);
+                        }}
+                        className={`w-[calc(100%-54px)] flex items-center gap-2 mx-9 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                          selectedNode?.id === 'preserve-time-2026'
+                            ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                        }`}
+                      >
+                        <Calendar className="w-4 h-4 text-slate-500 shrink-0" />
+                        <span>2026年</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          closeOtherGroups('preserve');
+                          setActiveMainMenu('preserve-view-time');
+                          setSelectedNode({ id: 'preserve-time-2025', label: '2025年', type: 'period', code: '2025' } as CategoryNode);
+                        }}
+                        className={`w-[calc(100%-54px)] flex items-center gap-2 mx-9 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                          selectedNode?.id === 'preserve-time-2025'
+                            ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                        }`}
+                      >
+                        <Calendar className="w-4 h-4 text-slate-500 shrink-0" />
+                        <span>2025年</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -710,13 +1390,13 @@ export default function App() {
             <button 
               type="button"
               onClick={() => setIsUtilGroupOpen(!isUtilGroupOpen)}
-              className="w-[calc(100%-24px)] flex items-center justify-between mx-3 py-2 px-4 text-sm font-extrabold text-amber-700 bg-amber-50/50 rounded-lg uppercase tracking-wider hover:text-amber-900 hover:bg-amber-50 transition-all cursor-pointer text-left"
+              className="w-[calc(100%-24px)] flex items-center justify-between mx-3 py-2.5 px-4 text-base font-bold text-slate-700 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-all cursor-pointer text-left"
             >
               <span className="flex items-center gap-2">
-                <Notebook className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                <Notebook className="w-3.5 h-3.5 text-slate-600 shrink-0" />
                 <span>档案利用</span>
               </span>
-              {isUtilGroupOpen ? <ChevronDown className="w-3.5 h-3.5 text-amber-600" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+              {isUtilGroupOpen ? <ChevronDown className="w-3.5 h-3.5 text-slate-600" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
             </button>
 
             {isUtilGroupOpen && (
@@ -724,66 +1404,268 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => {
+                    closeOtherGroups('util');
                     setActiveMainMenu('wf-control');
                     triggerToast('进入审批流协同网络中心', 'info');
                   }}
-                  className={`w-[calc(100%-24px)] flex items-center gap-3 mx-3 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left ${
-                    activeMainMenu === 'wf-control'
-                      ? 'bg-[#EEF2FF] text-[#4F46E5] border-l-[#4F46E5] font-bold shadow-xs'
-                      : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 border-l-transparent'
+                  className={`w-[calc(100%-36px)] flex items-center gap-3 mx-6 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                    selectedNode?.id === 'wf-control'
+                      ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
                   }`}
                 >
-                  <CheckCircle2 className={`w-4 h-4 shrink-0 ${activeMainMenu === 'wf-control' ? 'text-indigo-600' : 'text-emerald-500'}`} />
+                  <CheckCircle2 className={`w-4 h-4 shrink-0 ${activeMainMenu === 'wf-control' ? 'text-slate-700' : 'text-slate-500'}`} />
                   <span>使用审批管控 (线上化)</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => {
+                    closeOtherGroups('util');
                     setActiveMainMenu('borrow-manage');
                     triggerToast('进入多维档案借阅控制矩阵', 'info');
                   }}
-                  className={`w-[calc(100%-24px)] flex items-center gap-3 mx-3 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left ${
-                    activeMainMenu === 'borrow-manage'
-                      ? 'bg-[#EEF2FF] text-[#4F46E5] border-l-[#4F46E5] font-bold shadow-xs'
-                      : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 border-l-transparent'
+                  className={`w-[calc(100%-36px)] flex items-center gap-3 mx-6 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                    selectedNode?.id === 'borrow-manage'
+                      ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
                   }`}
                 >
-                  <Notebook className={`w-4 h-4 shrink-0 ${activeMainMenu === 'borrow-manage' ? 'text-[#4F46E5]' : 'text-amber-500'}`} />
+                  <Notebook className={`w-4 h-4 shrink-0 ${activeMainMenu === 'borrow-manage' ? 'text-slate-700' : 'text-slate-500'}`} />
                   <span>借阅业务精细管控</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => {
+                    closeOtherGroups('util');
                     setActiveMainMenu('return-manage');
                     triggerToast('进入归还与催还闭环专区', 'info');
                   }}
-                  className={`w-[calc(100%-24px)] flex items-center gap-3 mx-3 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left ${
-                    activeMainMenu === 'return-manage'
-                      ? 'bg-[#EEF2FF] text-[#4F46E5] border-l-[#4F46E5] font-bold shadow-xs'
-                      : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 border-l-transparent'
+                  className={`w-[calc(100%-36px)] flex items-center gap-3 mx-6 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                    selectedNode?.id === 'return-manage'
+                      ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
                   }`}
                 >
-                  <Check className={`w-4 h-4 shrink-0 ${activeMainMenu === 'return-manage' ? 'text-indigo-600' : 'text-green-500'}`} />
+                  <Check className={`w-4 h-4 shrink-0 ${activeMainMenu === 'return-manage' ? 'text-slate-700' : 'text-slate-500'}`} />
                   <span>归还与催还闭环</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => {
+                    closeOtherGroups('util');
                     setActiveMainMenu('order-special');
                     triggerToast('进入借单专项全周期精细监控', 'info');
                   }}
-                  className={`w-[calc(100%-24px)] flex items-center gap-3 mx-3 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left ${
-                    activeMainMenu === 'order-special'
-                      ? 'bg-[#EEF2FF] text-[#4F46E5] border-l-[#4F46E5] font-bold shadow-xs'
-                      : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 border-l-transparent'
+                  className={`w-[calc(100%-36px)] flex items-center gap-3 mx-6 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                    selectedNode?.id === 'order-special'
+                      ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
                   }`}
                 >
-                  <Ticket className={`w-4 h-4 shrink-0 ${activeMainMenu === 'order-special' ? 'text-[#4F46E5]' : 'text-teal-500'}`} />
+                  <Ticket className={`w-4 h-4 shrink-0 ${activeMainMenu === 'order-special' ? 'text-slate-700' : 'text-slate-500'}`} />
                   <span>借单专项生命周期</span>
                 </button>
+
+                {/* 档案利用 - 财务大类视图 */}
+                <div className="space-y-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsUtilFinanceViewExpanded(!isUtilFinanceViewExpanded);
+                      if (!isUtilFinanceViewExpanded) {
+                        closeOtherGroups('util');
+                        setActiveMainMenu('util-view-finance');
+                        setSelectedNode(null);
+                      }
+                    }}
+                    className={`w-[calc(100%-36px)] flex items-center justify-between mx-6 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                      selectedNode?.id === 'util-view-finance'
+                        ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <FolderTree className={`w-4 h-4 shrink-0 ${activeMainMenu === 'util-view-finance' ? 'text-slate-700' : 'text-slate-500'}`} />
+                      <span>财务大类视图</span>
+                    </span>
+                    {isUtilFinanceViewExpanded ? <ChevronDown className="w-3.5 h-3.5 text-slate-600" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+                  </button>
+
+                  {isUtilFinanceViewExpanded && (
+                    <div className="space-y-1">
+                      {(() => {
+                        const allClasses = new Map<string, { label: string; id: string; type: string; code: string; children: any[] }>();
+                        treeData.forEach(fonds => {
+                          fonds.children?.forEach(cls => {
+                            if (!allClasses.has(cls.label)) {
+                              allClasses.set(cls.label, cls);
+                            }
+                          });
+                        });
+                        const classesList = Array.from(allClasses.values());
+                        return classesList.map(cls => (
+                          <div key={cls.id} className="space-y-0.5">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                closeOtherGroups('util');
+                                setActiveMainMenu('util-view-finance');
+                                setSelectedNode({ id: `util-${cls.id}`, label: cls.label, type: cls.type, code: cls.code } as CategoryNode);
+                              }}
+                              className={`w-[calc(100%-54px)] flex items-center justify-between mx-9 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                                selectedNode?.id === `util-${cls.id}`
+                                  ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                              }`}
+                            >
+                              <span className="flex items-center gap-2">
+                                {cls.label.includes('凭证') ? <FileInput className="w-4 h-4 text-slate-500 shrink-0" /> :
+                                 cls.label.includes('账簿') ? <Briefcase className="w-4 h-4 text-slate-500 shrink-0" /> :
+                                 cls.label.includes('报表') || cls.label.includes('报告') ? <FileSpreadsheet className="w-4 h-4 text-slate-500 shrink-0" /> :
+                                 <Layers className="w-4 h-4 text-slate-500 shrink-0" />}
+                                <span>{cls.label}</span>
+                              </span>
+                            </button>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  )}
+                </div>
+
+                {/* 档案利用 - 项目全景视图 */}
+                <div className="space-y-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsUtilProjectViewExpanded(!isUtilProjectViewExpanded);
+                      if (!isUtilProjectViewExpanded) {
+                        closeOtherGroups('util');
+                        setActiveMainMenu('util-view-project');
+                        setSelectedNode(null);
+                      }
+                    }}
+                    className={`w-[calc(100%-36px)] flex items-center justify-between mx-6 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                      selectedNode?.id === 'util-view-project'
+                        ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Briefcase className={`w-4 h-4 shrink-0 ${activeMainMenu === 'util-view-project' ? 'text-slate-700' : 'text-slate-500'}`} />
+                      <span>项目全景视图</span>
+                    </span>
+                    {isUtilProjectViewExpanded ? <ChevronDown className="w-3.5 h-3.5 text-slate-600" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+                  </button>
+
+                  {isUtilProjectViewExpanded && (
+                    <div className="space-y-1">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          closeOtherGroups('util');
+                          setActiveMainMenu('util-view-project');
+                          setSelectedNode({ id: 'util-proj-1', label: '华北数据中心建设项目', type: 'fonds', code: 'PROJ-001' } as CategoryNode);
+                        }}
+                        className={`w-[calc(100%-54px)] flex items-center gap-2 mx-9 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                          selectedNode?.id === 'util-proj-1'
+                            ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                        }`}
+                      >
+                        <Briefcase className="w-4 h-4 text-slate-500 shrink-0" />
+                        <span>华北数据中心建设项目</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          closeOtherGroups('util');
+                          setActiveMainMenu('util-view-project');
+                          setSelectedNode({ id: 'util-proj-2', label: 'AI平台研发三期', type: 'fonds', code: 'PROJ-002' } as CategoryNode);
+                        }}
+                        className={`w-[calc(100%-54px)] flex items-center gap-2 mx-9 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left opacity-60 text-sm ${
+                          selectedNode?.id === 'util-proj-2'
+                            ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                        }`}
+                      >
+                        <Briefcase className="w-4 h-4 text-slate-500 shrink-0" />
+                        <span>AI平台研发三期</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* 档案利用 - 时间主线视图 */}
+                <div className="space-y-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsUtilTimeViewExpanded(!isUtilTimeViewExpanded);
+                      if (!isUtilTimeViewExpanded) {
+                        closeOtherGroups('util');
+                        setActiveMainMenu('util-view-time');
+                        setSelectedNode(null);
+                      }
+                    }}
+                    className={`w-[calc(100%-36px)] flex items-center justify-between mx-6 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                      selectedNode?.id === 'util-view-time'
+                        ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Clock className={`w-4 h-4 shrink-0 ${activeMainMenu === 'util-view-time' ? 'text-slate-700' : 'text-slate-500'}`} />
+                      <span>时间主线视图</span>
+                    </span>
+                    {isUtilTimeViewExpanded ? <ChevronDown className="w-3.5 h-3.5 text-slate-600" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+                  </button>
+
+                  {isUtilTimeViewExpanded && (
+                    <div className="space-y-1">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          closeOtherGroups('util');
+                          setActiveMainMenu('util-view-time');
+                          setSelectedNode({ id: 'util-time-2026', label: '2026年', type: 'period', code: '2026' } as CategoryNode);
+                        }}
+                        className={`w-[calc(100%-54px)] flex items-center gap-2 mx-9 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                          selectedNode?.id === 'util-time-2026'
+                            ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                        }`}
+                      >
+                        <Calendar className="w-4 h-4 text-slate-500 shrink-0" />
+                        <span>2026年</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          closeOtherGroups('util');
+                          setActiveMainMenu('util-view-time');
+                          setSelectedNode({ id: 'util-time-2025', label: '2025年', type: 'period', code: '2025' } as CategoryNode);
+                        }}
+                        className={`w-[calc(100%-54px)] flex items-center gap-2 mx-9 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                          selectedNode?.id === 'util-time-2025'
+                            ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                        }`}
+                      >
+                        <Calendar className="w-4 h-4 text-slate-500 shrink-0" />
+                        <span>2025年</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -795,13 +1677,13 @@ export default function App() {
             <button 
               type="button"
               onClick={() => setIsDisposalGroupOpen(!isDisposalGroupOpen)}
-              className="w-[calc(100%-24px)] flex items-center justify-between mx-3 py-2 px-4 text-sm font-extrabold text-rose-700 bg-rose-50/50 rounded-lg uppercase tracking-wider hover:text-rose-900 hover:bg-rose-50 transition-all cursor-pointer text-left"
+              className="w-[calc(100%-24px)] flex items-center justify-between mx-3 py-2.5 px-4 text-base font-bold text-slate-700 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-all cursor-pointer text-left"
             >
               <span className="flex items-center gap-2">
-                <Trash2 className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                <Trash2 className="w-3.5 h-3.5 text-slate-600 shrink-0" />
                 <span>档案处置</span>
               </span>
-              {isDisposalGroupOpen ? <ChevronDown className="w-3.5 h-3.5 text-rose-600" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+              {isDisposalGroupOpen ? <ChevronDown className="w-3.5 h-3.5 text-slate-600" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
             </button>
 
             {isDisposalGroupOpen && (
@@ -809,32 +1691,34 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => {
+                    closeOtherGroups('disposal');
                     setActiveMainMenu('digital-warehouse');
                     triggerToast('进入虚拟库房：请下拉至页面底部【会计防销毁与会签鉴定】模块。', 'info');
                   }}
-                  className={`w-[calc(100%-24px)] flex items-center gap-3 mx-3 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left ${
-                    activeMainMenu === 'digital-warehouse'
-                      ? 'bg-[#EEF2FF] text-[#4F46E5] border-l-[#4F46E5] font-bold shadow-xs'
-                      : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 border-l-transparent'
+                  className={`w-[calc(100%-36px)] flex items-center gap-3 mx-6 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                    selectedNode?.id === 'disposal-destroy'
+                      ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
                   }`}
                 >
-                  <Trash2 className={`w-4 h-4 shrink-0 ${activeMainMenu === 'digital-warehouse' ? 'text-rose-600' : 'text-rose-450'}`} />
+                  <Trash2 className={`w-4 h-4 shrink-0 ${activeMainMenu === 'digital-warehouse' ? 'text-slate-700' : 'text-slate-500'}`} />
                   <span>到期销毁与合规会签</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => {
+                    closeOtherGroups('disposal');
                     setActiveMainMenu('config-workflow');
                     triggerToast('进入保障时效监督工作流配置', 'info');
                   }}
-                  className={`w-[calc(100%-24px)] flex items-center gap-3 mx-3 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left ${
-                    activeMainMenu === 'config-workflow'
-                      ? 'bg-[#EEF2FF] text-[#4F46E5] border-l-[#4F46E5] font-bold shadow-xs'
-                      : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 border-l-transparent'
+                  className={`w-[calc(100%-36px)] flex items-center gap-3 mx-6 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                    selectedNode?.id === 'config-workflow'
+                      ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
                   }`}
                 >
-                  <Briefcase className={`w-4 h-4 shrink-0 ${activeMainMenu === 'config-workflow' ? 'text-[#4F46E5]' : 'text-slate-400'}`} />
+                  <Briefcase className={`w-4 h-4 shrink-0 ${activeMainMenu === 'config-workflow' ? 'text-slate-700' : 'text-slate-500'}`} />
                   <span>工作流配置</span>
                 </button>
               </div>
@@ -848,13 +1732,13 @@ export default function App() {
             <button 
               type="button"
               onClick={() => setIsStatsGroupOpen(!isStatsGroupOpen)}
-              className="w-[calc(100%-24px)] flex items-center justify-between mx-3 py-2 px-4 text-sm font-extrabold text-blue-800 bg-indigo-50/50 rounded-lg uppercase tracking-wider hover:text-indigo-900 hover:bg-indigo-50 transition-all cursor-pointer text-left"
+              className="w-[calc(100%-24px)] flex items-center justify-between mx-3 py-2.5 px-4 text-base font-bold text-slate-700 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-all cursor-pointer text-left"
             >
               <span className="flex items-center gap-2">
-                <Activity className="w-3.5 h-3.5 text-indigo-700 shrink-0" />
+                <Activity className="w-3.5 h-3.5 text-slate-600 shrink-0" />
                 <span>档案统计</span>
               </span>
-              {isStatsGroupOpen ? <ChevronDown className="w-3.5 h-3.5 text-indigo-700" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+              {isStatsGroupOpen ? <ChevronDown className="w-3.5 h-3.5 text-slate-600" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
             </button>
 
             {isStatsGroupOpen && (
@@ -862,32 +1746,34 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => {
+                    closeOtherGroups('stats');
                     setActiveMainMenu('dashboard');
                     triggerToast('进入档案统计仪表盘', 'info');
                   }}
-                  className={`w-[calc(100%-24px)] flex items-center gap-3 mx-3 py-2.5 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left ${
-                    activeMainMenu === 'dashboard'
-                      ? 'bg-[#EEF2FF] text-[#4F46E5] border-l-[#4F46E5] font-bold shadow-xs'
-                      : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 border-l-transparent'
+                  className={`w-[calc(100%-36px)] flex items-center gap-3 mx-6 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                    selectedNode?.id === 'dashboard'
+                      ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
                   }`}
                 >
-                  <Grid className={`w-4 h-4 shrink-0 ${activeMainMenu === 'dashboard' ? 'text-[#4F46E5]' : 'text-indigo-400'}`} />
+                  <Grid className={`w-4 h-4 shrink-0 ${activeMainMenu === 'dashboard' ? 'text-slate-700' : 'text-slate-500'}`} />
                   <span>档案统计仪表盘</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => {
+                    closeOtherGroups('stats');
                     setActiveMainMenu('search-stats');
                     triggerToast('进入多维度大盘查询与统计分析', 'info');
                   }}
-                  className={`w-[calc(100%-24px)] flex items-center gap-3 mx-3 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left ${
-                    activeMainMenu === 'search-stats'
-                      ? 'bg-[#EEF2FF] text-[#4F46E5] border-l-[#4F46E5] font-bold shadow-xs'
-                      : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 border-l-transparent'
+                  className={`w-[calc(100%-36px)] flex items-center gap-3 mx-6 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                    selectedNode?.id === 'search-stats'
+                      ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
                   }`}
                 >
-                  <Search className={`w-4 h-4 shrink-0 ${activeMainMenu === 'search-stats' ? 'text-indigo-600' : 'text-indigo-500'}`} />
+                  <Search className={`w-4 h-4 shrink-0 ${activeMainMenu === 'search-stats' ? 'text-slate-700' : 'text-slate-500'}`} />
                   <span>查询统计分析 (三模式)</span>
                 </button>
               </div>
@@ -897,59 +1783,121 @@ export default function App() {
 
 
 
+          {/* 档案配置 (isConfigGroupOpen) */}
+          <div className="space-y-1">
+            <button 
+              type="button"
+              onClick={() => setIsConfigGroupOpen(!isConfigGroupOpen)}
+              className="w-[calc(100%-24px)] flex items-center justify-between mx-3 py-2.5 px-4 text-base font-bold text-slate-700 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-all cursor-pointer text-left"
+            >
+              <span className="flex items-center gap-2">
+                <Settings className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                <span>档案配置</span>
+              </span>
+              {isConfigGroupOpen ? <ChevronDown className="w-3.5 h-3.5 text-slate-600" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+            </button>
+
+            {isConfigGroupOpen && (
+              <div className="space-y-1 mt-1 pl-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeOtherGroups('config');
+                    setActiveMainMenu('directory-config');
+                    setSelectedNode(null);
+                    triggerToast('进入目录配置页面', 'info');
+                  }}
+                  className={`w-[calc(100%-36px)] flex items-center gap-3 mx-6 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                    activeMainMenu === 'directory-config'
+                      ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                  }`}
+                >
+                  <FolderCog className="w-3.5 h-3.5 text-slate-500" />
+                  <span>目录配置</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeOtherGroups('config');
+                    setActiveMainMenu('config-fanzong');
+                  }}
+                  className={`w-[calc(100%-36px)] flex items-center gap-3 mx-6 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                    activeMainMenu === 'config-fanzong'
+                      ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
+                  }`}
+                >
+                  <Building2 className={`w-3.5 h-3.5 shrink-0 ${activeMainMenu === 'config-fanzong' ? 'text-slate-700' : 'text-slate-500'}`} />
+                  <span>全宗管理</span>
+                </button>
+              </div>
+            )}
+          </div>
+
           {/* 9. 系统设置 (isSystemGroupOpen) */}
           {visibleMenus.system && (
           <div className="space-y-1">
             <button 
               type="button"
               onClick={() => setIsSystemGroupOpen(!isSystemGroupOpen)}
-              className="w-[calc(100%-24px)] flex items-center justify-between mx-3 py-2 px-4 text-sm font-bold text-slate-400 uppercase tracking-wider hover:text-slate-700 cursor-pointer text-left"
+              className="w-[calc(100%-24px)] flex items-center justify-between mx-3 py-2.5 px-4 text-base font-bold text-slate-700 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-all cursor-pointer text-left"
             >
               <span className="flex items-center gap-1.5">
                 <Shield className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                 <span>系统设置</span>
               </span>
-              {isSystemGroupOpen ? <ChevronDown className="w-3.5 h-3.5 text-indigo-500" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+              {isSystemGroupOpen ? <ChevronDown className="w-3.5 h-3.5 text-slate-600" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
             </button>
 
             {isSystemGroupOpen && (
               <div className="space-y-1 mt-1 pl-1">
                 <button
                   type="button"
-                  onClick={() => setActiveMainMenu('sys-org')}
-                  className={`w-[calc(100%-24px)] flex items-center gap-3 mx-3 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left ${
-                    activeMainMenu === 'sys-org'
-                      ? 'bg-[#EEF2FF] text-[#4F46E5] border-l-[#4F46E5] font-bold shadow-xs'
-                      : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 border-l-transparent'
+                  onClick={() => {
+                    closeOtherGroups('system');
+                    setActiveMainMenu('sys-org');
+                  }}
+                  className={`w-[calc(100%-36px)] flex items-center gap-3 mx-6 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                    selectedNode?.id === 'sys-org'
+                      ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
                   }`}
                 >
-                  <Users className={`w-4 h-4 shrink-0 ${activeMainMenu === 'sys-org' ? 'text-[#4F46E5]' : 'text-indigo-500'}`} />
+                  <Users className={`w-4 h-4 shrink-0 ${activeMainMenu === 'sys-org' ? 'text-slate-700' : 'text-slate-500'}`} />
                   <span>组织部门管理</span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setActiveMainMenu('sys-user')}
-                  className={`w-[calc(100%-24px)] flex items-center gap-3 mx-3 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left ${
-                    activeMainMenu === 'sys-user'
-                      ? 'bg-[#EEF2FF] text-[#4F46E5] border-l-[#4F46E5] font-bold shadow-xs'
-                      : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 border-l-transparent'
+                  onClick={() => {
+                    closeOtherGroups('system');
+                    setActiveMainMenu('sys-user');
+                  }}
+                  className={`w-[calc(100%-36px)] flex items-center gap-3 mx-6 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                    selectedNode?.id === 'sys-user'
+                      ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
                   }`}
                 >
-                  <Shield className={`w-4 h-4 shrink-0 ${activeMainMenu === 'sys-user' ? 'text-indigo-650' : 'text-amber-500'}`} />
+                  <Shield className={`w-4 h-4 shrink-0 ${activeMainMenu === 'sys-user' ? 'text-slate-700' : 'text-slate-500'}`} />
                   <span>人员角色授权</span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setActiveMainMenu('sys-log')}
-                  className={`w-[calc(100%-24px)] flex items-center gap-3 mx-3 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left ${
-                    activeMainMenu === 'sys-log'
-                      ? 'bg-[#EEF2FF] text-[#4F46E5] border-l-[#4F46E5] font-bold shadow-xs'
-                      : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-955 hover:text-slate-900 border-l-transparent'
+                  onClick={() => {
+                    closeOtherGroups('system');
+                    setActiveMainMenu('sys-log');
+                  }}
+                  className={`w-[calc(100%-36px)] flex items-center gap-3 mx-6 py-2 px-4 font-medium rounded-xl transition-all border-l-4 cursor-pointer text-left text-sm ${
+                    selectedNode?.id === 'sys-log'
+                      ? 'bg-sky-50 text-slate-800 border-l-sky-500 font-bold'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-l-transparent'
                   }`}
                 >
-                  <Fingerprint className={`w-4 h-4 shrink-0 ${activeMainMenu === 'sys-log' ? 'text-indigo-650' : 'text-amber-600'}`} />
+                  <Fingerprint className={`w-4 h-4 shrink-0 ${activeMainMenu === 'sys-log' ? 'text-slate-700' : 'text-slate-500'}`} />
                   <span>安全审计日志</span>
                 </button>
               </div>
@@ -957,42 +1905,25 @@ export default function App() {
           </div>
           )}
         </nav>
-
-        {/* BOTTOM SAFETY LOCKOUT CONTROLLER */}
-        <div className="p-4 border-t border-slate-200 bg-[#F1F5F9]/50 select-none">
-          <button
-            type="button"
-            onClick={() => {
-              triggerToast('已安全锁定并退出国税电子物理账单协同控制台。', 'warning');
-              setActiveMainMenu('sys-org'); // defaults back safely
-            }}
-            className="w-full py-2.5 px-3 bg-white border border-slate-250 text-slate-700 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer text-xs"
-          >
-            <Shield className="w-4 h-4" />
-            <span>安全退出控制台</span>
-          </button>
-        </div>
       </aside>
 
       {/* RIGHT CONTENT PANEL WORKSPACE */}
-      <div className="flex-1 min-w-0 flex flex-col h-screen overflow-y-auto">
+      <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden bg-white">
 
-        {/* Main Header (Dynamic title matching current routing/tabs) */}
-        <header className="bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-6 py-4 flex items-center justify-between text-slate-800 shrink-0 sticky top-0 z-40 select-none shadow-xs">
-          <div className="flex items-center gap-3">
+        {/* Main Header - 与左侧logo区域高度一致 */}
+        <header className="bg-[#F8FAFC] px-5 h-[64px] flex items-center justify-between text-slate-800 shrink-0 select-none">
+          <div className="flex items-center gap-4">
             <button 
               onClick={() => setMobileSidebarOpen(prev => !prev)}
-              className="md:hidden p-1.5 hover:bg-slate-100 rounded text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+              className="md:hidden p-2 hover:bg-slate-100 rounded text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
               id="mobile-sidebar-toggle"
             >
               <Menu className="w-5 h-5" />
             </button>
             
-            <div className="inline-flex p-2 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-xl select-none">
-              <Award className="w-5 h-5 text-indigo-600" />
-            </div>
+            {/* 页面标题 */}
             <div>
-              <span className="text-xs font-bold text-indigo-600 block tracking-wider uppercase select-none">
+              <span className="text-[12px] font-bold text-slate-500 block tracking-wider uppercase select-none">
                 {activeMainMenu === 'dashboard' && '档案统计分析'}
                 {activeMainMenu === 'view-finance' && '财务类视图'}
                 {activeMainMenu === 'view-project' && '项目全景视图'}
@@ -1006,15 +1937,13 @@ export default function App() {
                 {activeMainMenu === 'smart-data' && '清洗引擎・插数计算工具'}
                 {activeMainMenu === 'order-special' && '专项借单・多介质物理卡链'}
                 {activeMainMenu === 'digital-warehouse' && '虚拟库房・密集实体与存储HSM'}
-                {activeMainMenu !== 'dashboard' && activeMainMenu !== 'view-finance' && activeMainMenu !== 'view-project' && activeMainMenu !== 'view-time' &&
-                 activeMainMenu !== 'archive-offline' && activeMainMenu !== 'archive-rcv' && 
-                 activeMainMenu !== 'wf-control' && activeMainMenu !== 'borrow-manage' && 
-                 activeMainMenu !== 'return-manage' && activeMainMenu !== 'search-stats' && 
-                 activeMainMenu !== 'smart-data' && activeMainMenu !== 'order-special' && 
-                 activeMainMenu !== 'digital-warehouse' && '国税电子档案合规子系统'}
+                {activeMainMenu === 'sys-log' && '安全审计・日志追踪'}
+                {activeMainMenu === 'directory-config' && '档案配置'}
+                {activeMainMenu === 'config-fanzong' && '全宗管理'}
+                {activeMainMenu === 'config-workflow' && '多维电子证据链防篡改审计工作流组件'}
               </span>
-              <h1 className="text-sm md:text-base font-bold tracking-tight text-slate-900">
-                {activeMainMenu === 'dashboard' && '全宗数字化资产运行大屏与合规审计看板'}
+              <h1 className="text-[15px] font-semibold tracking-tight text-slate-800">
+                {activeMainMenu === 'dashboard' && '全宗数字化资产运行大屏'}
                 {activeMainMenu === 'view-finance' && '电子会计档案“四性”全生命周期质检明细台账 (财务维)'}
                 {activeMainMenu === 'view-project' && '电子会计档案“四性”全生命周期质检明细台账 (项目维)'}
                 {activeMainMenu === 'view-time' && '电子会计档案“四性”全生命周期质检明细台账 (时间维)'}
@@ -1037,69 +1966,85 @@ export default function App() {
             </div>
           </div>
  
-          <div className="flex items-center gap-4 text-xs font-sans">
-            <div className="hidden xl:flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 text-slate-500">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>密链盾安全防御已载入</span>
+          {/* 右侧工具栏 */}
+          <div className="flex items-center gap-4 text-sm font-sans">
+            {/* 全宗选择器 - 大气美观的自定义下拉框 */}
+            <div className="relative">
+              <button
+                onClick={() => setIsFanzongDropdownOpen(!isFanzongDropdownOpen)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg hover:border-slate-300 hover:bg-slate-50 transition-all shadow-sm"
+              >
+                <Building className="w-5 h-5 text-slate-600" />
+                <div className="flex flex-col items-start">
+                  <span className="text-[12px] text-slate-400 font-medium">当前全宗</span>
+                  <span className="text-[15px] font-semibold text-slate-700">
+                    {currentFanzongCode} · {fanzongs.find(f => f.code === currentFanzongCode)?.name.split('（')[1]?.split('）')[0] || fanzongs.find(f => f.code === currentFanzongCode)?.name}
+                  </span>
+                </div>
+                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isFanzongDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {/* 下拉菜单 */}
+              {isFanzongDropdownOpen && (
+                <div className="absolute top-full right-0 mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-lg z-50 overflow-hidden">
+                  {fanzongs.map(f => (
+                    <button
+                      key={f.code}
+                      onClick={() => {
+                        setCurrentFanzongCode(f.code);
+                        setIsFanzongDropdownOpen(false);
+                        const matchingNode = treeData.find(node => node.type === 'fonds' && node.code === f.code);
+                        if (matchingNode) setSelectedNode(matchingNode);
+                        triggerToast(`已切换至：${f.name}`, 'success');
+                      }}
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-left transition-colors ${
+                        currentFanzongCode === f.code 
+                          ? 'bg-slate-100 text-slate-800 font-semibold' 
+                          : 'hover:bg-slate-50 text-slate-600'
+                      }`}
+                    >
+                      <Building className="w-3.5 h-3.5 text-slate-500" />
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[13px] truncate">{f.code} · {f.name.split('（')[1]?.split('）')[0] || f.name}</span>
+                        {f.status === 'inactive' && (
+                          <span className="text-[10px] text-slate-400 ml-1">（挂起）</span>
+                        )}
+                      </div>
+                      {currentFanzongCode === f.code && (
+                        <Check className="w-3.5 h-3.5 text-slate-600" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
- 
-            {/* HIGHLY INTERACTIVE AND POLISHED AVATAR PORTAL WITH FONDS SWITCHER */}
-            <div 
-              id="avatar-fonds-selector-portal"
-              className="flex items-center gap-3 bg-white border border-slate-200 p-1.5 pl-3.5 pr-2.5 rounded-2xl select-none transition-all hover:bg-slate-50 hover:border-slate-300 shadow-xs"
-            >
-              {/* Left Column: Switcher with Dropdown arrow */}
-              <div className="flex flex-col text-right">
-                <span className="text-[9px] text-slate-500 uppercase tracking-wider font-extrabold block mb-0.5">主全宗（公司实体）</span>
-                <div className="relative flex items-center gap-1">
-                  <select 
-                    value={currentFanzongCode}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setCurrentFanzongCode(val);
-                      
-                      // Automatically trigger tree node selection of matching Fonds to auto-filter the table
-                      const matchingNode = treeData.find(node => node.type === 'fonds' && node.code === val);
-                      if (matchingNode) {
-                        setSelectedNode(matchingNode);
-                      }
-                      triggerToast(`业务全宗已切换，当前执照：${fanzongs.find(f => f.code === val)?.name || val}`, 'success');
-                    }}
-                    className="bg-transparent text-slate-800 font-extrabold text-[11px] focus:outline-none cursor-pointer pr-4 appearance-none font-sans max-w-[140px] md:max-w-[200px] truncate"
-                  >
-                    {fanzongs.map(f => (
-                      <option key={f.code} value={f.code} className="bg-white text-slate-800 font-semibold text-xs">
-                        {f.code} {f.name.split('（')[1]?.split('）')[0] || f.name} {f.status === 'inactive' ? '[挂起]' : ''}
-                      </option>
-                    ))}
-                  </select>
-                  {/* Absolute chevron pointer to keep it beautifully aligned */}
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-0 pointer-events-none" />
+            
+            {/* 分隔线 */}
+            <div className="h-8 w-px bg-slate-200" />
+            
+            {/* 用户信息 - 简洁 */}
+            <div className="flex items-center gap-2.5">
+              <div className="relative">
+                <div className="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center text-white font-semibold text-sm shadow-sm">
+                  AD
                 </div>
+                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-[#F8FAFC]" />
               </div>
- 
-              {/* Vertical divider line */}
-              <div className="h-6 w-px bg-slate-200" />
- 
-              {/* Right Column: User Avatar and Badge */}
-              <div className="flex items-center gap-2">
-                <div className="relative">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-indigo-500 flex items-center justify-center text-white font-bold text-xs shadow border border-indigo-400/20 select-none">
-                    AD
-                  </div>
-                  <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2.5 rounded-full bg-emerald-500 border-2 border-slate-50 animate-pulse" />
+              <div className="hidden lg:flex flex-col">
+                  <span className="font-semibold text-slate-700 text-[15px]">admin</span>
+                  <span className="text-[12px] text-slate-400">安全主管</span>
                 </div>
-                <div className="hidden md:flex flex-col text-left">
-                  <span className="font-bold text-slate-800 text-xs">admin</span>
-                  <span className="text-[10px] text-slate-550 leading-none">安全主管</span>
-                </div>
-              </div>
             </div>
           </div>
         </header>
 
         {/* CONTAINER WORK AREA */}
         <main className="flex-1 w-full p-4 sm:p-5 overflow-y-auto">
+          {/* 0. DIRECTORY CONFIG VIEW */}
+          {activeMainMenu === 'directory-config' && (
+            <DirectoryConfigPanel />
+          )}
+
           {/* 1. DYNAMIC MAIN DASHBOARD ANALYTICS VIEW */}
           {activeMainMenu === 'dashboard' && (
             <div className="space-y-6 animate-in fade-in duration-200">
@@ -1383,125 +2328,78 @@ export default function App() {
             <div className="space-y-4 animate-in fade-in duration-200">
               {/* Stats dashboard removed from here to separate views completely */}
 
-              {/* Master action bar and layout grid split */}
-              <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch min-h-0">
-                
+              {/* Quarter and Month Selector - show for financial category view */}
+              {activeMainMenu === 'view-finance' && (
+                <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+                  <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
+                    {/* Quarter Tabs */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-slate-600">季度：</span>
+                      <div className="flex gap-2">
+                        {quarters.map(q => (
+                          <button
+                            key={q.id}
+                            onClick={() => {
+                              setSelectedQuarter(q.id);
+                              setSelectedMonth(q.months[0]);
+                            }}
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition-all cursor-pointer ${
+                              selectedQuarter === q.id
+                                ? 'bg-slate-700 text-white'
+                                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                            }`}
+                          >
+                            {q.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
 
-          {/* Sidebar Area: Categorized China Accounting Ledger Tree */}
-          <aside className="hidden md:block md:col-span-3 h-[calc(100vh-140px)] sticky top-0 overflow-hidden">
-            <AdvancedWorkbenchSidebar 
-              treeData={treeData} 
-              onNodeSelect={setSelectedNode} 
-              selectedNode={selectedNode}
-              onAddCategory={handleAddNewCategory}
-              activeView={activeMainMenu.replace('view-', '') as 'finance' | 'project' | 'time'}
-            />
-          </aside>
+                    {/* Month Selector */}
+                    <div className="flex items-center gap-3 ml-4">
+                      <div className="flex gap-2">
+                        {quarters.find(q => q.id === selectedQuarter)?.months.map(m => (
+                          <button
+                            key={m}
+                            onClick={() => setSelectedMonth(m)}
+                            className={`w-10 h-10 rounded-md text-sm font-medium transition-all cursor-pointer ${
+                              selectedMonth === m
+                                ? 'bg-sky-500 text-white'
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            }`}
+                          >
+                            {m}月
+                          </button>
+                        ))}
+                      </div>
+                    </div>
 
-          {/* Mobile tree navigation popup drawer */}
-          {mobileSidebarOpen && (
-            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex justify-start md:hidden animate-in fade-in duration-200">
-              <div className="bg-white w-[290px] h-full shadow-2xl relative flex flex-col animate-in slide-in-from-left duration-200">
-                <button 
-                  onClick={() => setMobileSidebarOpen(false)}
-                  className="absolute right-3 top-3 p-1 bg-slate-100 text-slate-500 hover:text-slate-800 rounded-full cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-                <div className="flex-1 overflow-y-auto pt-6">
-                  <AdvancedWorkbenchSidebar 
-                    treeData={treeData} 
-                    onNodeSelect={(node) => {
-                      setSelectedNode(node);
-                      setMobileSidebarOpen(false); // Close drawer
-                    }} 
-                    selectedNode={selectedNode}
-                    onAddCategory={handleAddNewCategory}
-                    activeView={activeMainMenu.replace('view-', '') as 'finance' | 'project' | 'time'}
-                  />
+                    {/* Current Date Display */}
+                    <div className="text-sm text-slate-500 ml-auto flex items-center gap-2">
+                      <span className="px-3 py-1 bg-slate-700 text-white rounded-md font-medium">{new Date().getFullYear()}/{new Date().getMonth() + 1}/{new Date().getDate()}</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          )}
+              )}
 
-          {/* Core main archives list workspace & toolbar */}
-          <div className="md:col-span-9 bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex flex-col min-h-[500px]">
+              {/* Master action bar and layout grid split - now full width without sidebar tree */}
+              <div className="flex-1 w-full min-h-0">
+
+
+          {/* Core main archives list workspace & toolbar - full width */}
+          <div className="w-full bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex flex-col min-h-[500px]">
             
             {/* Action Bar Header */}
-            <div className="bg-slate-50 border-b border-slate-100 p-4 flex flex-col lg:flex-row gap-4 items-center justify-between shrink-0">
-              
-              {/* Batch Actions Group */}
-              <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
-                <button 
-                  type="button"
-                  onClick={() => setIsUploadOpen(true)}
-                  className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl shadow-sm hover:shadow flex items-center gap-1.5 transition-colors cursor-pointer"
-                  id="action-smart-upload"
-                >
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>智能导入 (XML/OFD/PDF)</span>
-                </button>
-
-                <button 
-                  type="button"
-                  onClick={handleRunFourPropertiesCheck}
-                  disabled={isCheckingBatch}
-                  className={`px-3.5 py-2 text-white font-semibold text-xs rounded-xl shadow-sm hover:shadow flex items-center gap-1.5 transition-colors cursor-pointer ${
-                    isCheckingBatch ? 'bg-emerald-400' : 'bg-emerald-600 hover:bg-emerald-700'
-                  }`}
-                  id="action-four-props"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
-                  <span>{isCheckingBatch ? '四性验证引擎中...' : '一键“四性检测”'}</span>
-                </button>
-
-                <button 
-                  type="button"
-                  onClick={handleAutoGroup}
-                  className="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs rounded-xl shadow-sm hover:shadow flex items-center gap-1.5 transition-colors cursor-pointer"
-                  id="action-auto-assembly"
-                >
-                  <FolderPlus className="w-3.5 h-3.5" />
-                  <span>一键自动组卷</span>
-                </button>
-
-                <button 
-                  type="button"
-                  onClick={handleAssignVerifyCode}
-                  className="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white font-semibold text-xs rounded-xl shadow-sm hover:shadow flex items-center gap-1.5 transition-colors cursor-pointer"
-                  id="action-verify-code"
-                >
-                  <Notebook className="w-3.5 h-3.5" />
-                  <span>赋予/校验档号</span>
-                </button>
-
-                {/* Directory Settings Aggregated Actions */}
-                <div className="flex items-center gap-2 border-l border-slate-200 ml-1 pl-3">
-                  <button className="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer border border-indigo-200">
-                    <Link2 className="w-3.5 h-3.5" />
-                    <span>智能关联勾对</span>
-                  </button>
-                  <button className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-300 shadow-sm">
-                    <CheckSquare className="w-3.5 h-3.5 shrink-0 text-slate-500" />
-                    <span>跨维度检查</span>
-                  </button>
-                  <button className="hidden md:flex px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-xl items-center gap-1.5 transition-colors cursor-pointer border border-slate-300 shadow-sm">
-                    <Layers className="w-3.5 h-3.5 shrink-0 text-slate-500" />
-                    <span>批量导出全卷清单</span>
-                  </button>
+            <div className="bg-slate-50 border-b border-slate-100 p-3 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder="搜索档案..." 
+                    className="pl-8 pr-3 py-1.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 w-48"
+                  />
                 </div>
-              </div>
-
-              {/* Cascade Search inputs */}
-              <div className="relative w-full lg:w-72">
-                <input
-                  type="text"
-                  placeholder="全文检索：凭证号/系统档号/内容/发票目..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="w-full bg-white border border-slate-200 py-1.5 pl-8 pr-4 rounded-xl text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-blue-500"
-                />
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
               </div>
             </div>
 
@@ -2650,11 +3548,11 @@ export default function App() {
       <div className="animate-in fade-in duration-200">
         <DigitalWarehousePanel triggerToast={triggerToast} />
       </div>
-    ) : (
+    ) : activeMainMenu === 'sys-log' ? (
       <div className="animate-in fade-in duration-200">
         <AuditLogsPanel records={records} triggerToast={triggerToast} />
       </div>
-    )}
+    ) : null}
   </main>
 </div>
 
@@ -2825,5 +3723,6 @@ export default function App() {
         </div>
       )}
     </div>
+    </DirectoryConfigProvider>
   );
 }
