@@ -2039,7 +2039,7 @@ export default function App() {
         </header>
 
         {/* CONTAINER WORK AREA */}
-        <main className="flex-1 w-full p-4 sm:p-5 overflow-y-auto">
+        <main className="flex-1 w-full overflow-hidden flex flex-col p-4 sm:p-5">
           {/* 0. DIRECTORY CONFIG VIEW */}
           {activeMainMenu === 'directory-config' && (
             <DirectoryConfigPanel />
@@ -2330,7 +2330,7 @@ export default function App() {
 
               {/* Quarter and Month Selector - show for financial category view */}
               {activeMainMenu === 'view-finance' && (
-                <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+                <div className="shrink-0 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm mb-4">
                   <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
                     {/* Quarter Tabs */}
                     <div className="flex items-center gap-2">
@@ -2456,7 +2456,8 @@ export default function App() {
                   </div>
                 </div>
               ) : (
-                <div className="flex-1 overflow-auto min-h-0">
+                <div className="flex-1 overflow-auto min-h-0 flex flex-col">
+                  <div className="flex-1 overflow-auto">
                   <table className="w-full min-w-[1250px] text-left border-collapse table-auto" id="archives-main-table">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 text-[11px] font-extrabold uppercase tracking-wider select-none">
@@ -2667,6 +2668,7 @@ export default function App() {
                   )}
                 </tbody>
                   </table>
+                  </div>
                 </div>
               )}
             </div>
