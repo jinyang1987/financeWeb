@@ -2325,7 +2325,7 @@ export default function App() {
 
           {/* 2. ARCHIVES DETAIL WORKBENCH GRID AREA */}
           {['view-finance', 'view-project', 'view-time'].includes(activeMainMenu) ? (
-            <div className="space-y-4 animate-in fade-in duration-200">
+            <div className="flex flex-col h-full animate-in fade-in duration-200">
               {/* Stats dashboard removed from here to separate views completely */}
 
               {/* Quarter and Month Selector - show for financial category view */}
@@ -2420,7 +2420,7 @@ export default function App() {
             )}
 
             {/* Aggregate Dashboard OR List Table container */}
-            <div className="flex-1 overflow-x-auto min-h-0">
+            <div className="flex-1 overflow-auto min-h-0 flex flex-col">
               {selectedNode?.id === 'time-2026-05' ? (
                 <div className="p-6 space-y-6 animate-in fade-in duration-200">
                   <div className="mb-2 flex items-center justify-between">
