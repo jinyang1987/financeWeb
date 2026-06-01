@@ -2420,9 +2420,9 @@ export default function App() {
             )}
 
             {/* Aggregate Dashboard OR List Table container */}
-            <div className="flex-1 overflow-auto min-h-0 flex flex-col">
+            <div className="flex-1 min-h-0 overflow-hidden flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm">
               {selectedNode?.id === 'time-2026-05' ? (
-                <div className="p-6 space-y-6 animate-in fade-in duration-200">
+                <div className="flex-1 overflow-auto p-6 space-y-6 animate-in fade-in duration-200">
                   <div className="mb-2 flex items-center justify-between">
                     <h3 className="text-xl font-extrabold text-slate-800 flex items-center gap-2">
                       <Grid className="w-6 h-6 text-indigo-500" />
@@ -2456,7 +2456,8 @@ export default function App() {
                   </div>
                 </div>
               ) : (
-                <table className="w-full min-w-[1250px] text-left border-collapse table-auto" id="archives-main-table">
+                <div className="flex-1 overflow-auto min-h-0">
+                  <table className="w-full min-w-[1250px] text-left border-collapse table-auto" id="archives-main-table">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 text-[11px] font-extrabold uppercase tracking-wider select-none">
                     <th className="p-3.5 w-10 text-center whitespace-nowrap">
@@ -2665,7 +2666,8 @@ export default function App() {
                     </tr>
                   )}
                 </tbody>
-              </table>
+                  </table>
+                </div>
               )}
             </div>
 
