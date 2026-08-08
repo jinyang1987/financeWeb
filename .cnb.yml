@@ -1,14 +1,62 @@
-# 这里是一个示例 .cnb.yml
-  
-  # 匹配main分支
-  main:
-    # 触发事件为 push 事件
-    push:
-      # 这里是阶段任务示例，可配置任意多个阶段，这里以一个阶段为例
-      - name: "your first CNB building"
-        stages:
-          # 使用流水线输出你的构建配置数据
-          - name: echo your build data
-            script: echo ${CNB_BUILD_USER} 通过 ${CNB_BRANCH} 分支触发了 ${CNB_EVENT} 事件
-  
-  # 更多资料见 https://docs.cnb.cool/build/quick-start.html
+# financeDA 会计档案管理系统 - 云原生开发环境一键启动配置
+# 打开"云原生开发"WebIDE 后自动：
+#   1. 安装 Java17 + Maven + PostgreSQL（ams-server 后端依赖）
+#   2. 安装 financeWeb React 前端依赖
+#   3. 构建 ams-server
+#   4. 启动三个服务：
+#      - React 前端 Vite   http://localhost:5000
+#      - Express 中间服务  http://localhost:3001
+#      - ams-server 后端   http://localhost:8081
+# 访问方式：WebIDE 的 PORTS 面板添加端口映射即可（服务已绑定 0.0.0.0）
+
+$:
+  vscode:
+    - docker:
+        image: cnbcool/default-dev-env:latest
+      services:
+        - vscode
+        - docker
+      stages:
+        - name: prepare
+          script: |
+            set -e
+            echo "==> 安装 Java17 / Maven / PostgreSQL"
+            apt-get update -qq
+            apt-get install -y -qq openjdk-17-jdk-headless maven postgresql postgresql-contrib
+            echo "==> 启动 PostgreSQL 并初始化 alfresco 用户/库"
+            service postgresql start || pg_ctlcluster 15 main start
+            su - postgres -c "psql -tc \"SELECT 1 FROM pg_roles WHERE rolname='alfresco'\" | grep -q 1 || psql -c \"CREATE USER alfresco WITH PASSWORD 'alfresco' SUPERUSER;\""
+            su - postgres -c "psql -tc \"SELECT 1 FROM pg_database WHERE datname='alfresco'\" | grep -q 1 || createdb -O alfresco alfresco"
+            echo "==> 安装 financeWeb 前端依赖"
+            cd /workspace/financeWeb && npm install --no-audit --no-fund
+            echo "==> 构建 ams-server"
+            cd /workspace/ams-server && mvn -q -DskipTests package
+        - name: start
+          script: |
+            service postgresql start || pg_ctlcluster 15 main start
+            echo "==> 启动 Express 中间服务 (3001)"
+            cd /workspace/financeWeb
+            nohup npm run server > /tmp/server-express.log 2>&1 &
+            echo "==> 启动 React 前端 Vite (5000)"
+            nohup npm run dev > /tmp/vite.log 2>&1 &
+            echo "==> 启动 ams-server 后端 (8081)"
+            cd /workspace/ams-server
+            AMS_DB_URL="jdbc:postgresql://localhost:5432/alfresco?currentSchema=ams" \
+            AMS_DB_USER=alfresco AMS_DB_PASSWORD=alfresco \
+            AMS_OCR_ENABLED=false AMS_OCR_ENGINE=local \
+            nohup java -jar target/ams-server-0.0.1-SNAPSHOT.jar > /tmp/ams-server.log 2>&1 &
+            sleep 8
+            echo "========================================"
+            echo "前端:   http://localhost:5000  (React19 + Vite)"
+            echo "中间件: http://localhost:3001  (Express API)"
+            echo "后端:   http://localhost:8081  (ams-server, 健康检查 /api/health)"
+            echo "在 WebIDE PORTS 面板添加 5000 端口映射即可预览"
+            echo "========================================"
+
+# 保留主分支 push 构建示例
+main:
+  push:
+    - name: "financeDA build"
+      stages:
+        - name: echo
+          script: echo ${CNB_BUILD_USER} 通过 ${CNB_BRANCH} 分支触发了 ${CNB_EVENT} 事件
