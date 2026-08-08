@@ -1,0 +1,34 @@
+  ------
+  Alfresco SDK Prerequisites
+
+
+Alfresco SDK\x99 Pre-Requisites
+
+
+    The only real prerequisite of the Alfresco SDK\x99 Apache Maven 3.3.0 (or later) installed (and properly configured) on your machine;
+    neither <<an IDE>> nor <<web container or database>> are required.
+    
+    Additional tips:
+    
+    * It is strongly advised to use the latest Apache Maven official binary distributions downloaded from the {{{http://maven.apache.org}official mirrors}}; avoid OS-specific distributions as much as possible.
+
+    * Refer to this {{{http://docs.alfresco.com/community/concepts/alfresco-sdk-compatibility.html}matrix}} for Alfresco/SDK version compatibility
+    
+    * Java 1.8 is <<required>> to run Alfresco 5.1.c+ and the SDK3
+    
+    * <<No manual downloading>> of Alfresco distribution is required.
+     Alfresco platform is retrieved automatically from {{{https://artifacts.alfresco.com} the Alfresco Artifacts Repository}}
+     based on the <<<alfresco.groupId>>> and <<<alfresco.version>>> POM properties 
+
+    * If you're an Alfresco customer, you can setup a ~/.m2/settings.xml as documented on {{{https://docs.alfresco.com/content-services/latest/develop/sdk/#how-to-configure-private-alfresco-nexus-repository-enterprisemvnrepo} Alfresco Docs page}} and specify <<<-Penterprise>>> on your Maven build command to use the latest Alfresco Enterprise version
+
+
+Enable hot class reload with spring-loaded
+
+    In order to enable hot class reload you should use the {{{http://hotswapagent.org}HotSwap Agent}} and run all your maven builds with it configured in the JVM.
+    To achieve this you can:
+    
+    * Follow the {{{http://hotswapagent.org/mydoc_quickstart.html}install instructions for HotSwap Agent}}.
+    This includes installing the correct {{{https://github.com/dcevm/dcevm/releases}DCEVM Java Patch}} and enabling HotSwap Agent in your MAVEN_OPTS
+    
+    * Export the following MAVEN_OPTS: <<<MAVEN_OPTS="$MAVEN_OPTS -javaagent:/path/to/your/hotswap-agent.jar">>>.

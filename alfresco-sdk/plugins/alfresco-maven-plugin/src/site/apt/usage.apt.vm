@@ -1,0 +1,61 @@
+  ------
+  Usage
+
+
+How to use this plugin?
+
+  There are fundamentally two methods to use this plugin:
+  
+  [[1]] Using Archetypes provided in the Alfresco SDK
+
+  [[2]] Via direct configuration in your POM
+  
+* Method 1 - Using Alfresco SDK Archetypes
+
+  Two sample archetypes already use the plugin and provide best practice example on how to use it:
+  
+  [[1]] The {{{../../archetypes/alfresco-platform-jar-archetype/index.html} Alfresco Platform JAR Archetype}} provides a sample of JAR packaging with AMP as an optional assembly for 3rd party dependencies
+  
+  [[2]] The {{{../../archetypes/alfresco-allinone-archetype/index.html} Alfresco All-in-One Archetype}} provides a sample using JARs for both Alfresco Platform and Share
+  
+
+* Method 3 - Direct configuration in POM
+
+   If you want more control over the plugin behavior you can use it directly in your POM.
+
++---+
+<project>
+  [...]
+  <build>
+    <plugins>
+      ...
+      <plugin>
+          <groupId>org.alfresco.maven.plugin</groupId>
+          <artifactId>alfresco-maven-plugin</artifactId>
+          <version>${project.version}</version>
+          <plugin>
+              <groupId>org.alfresco.maven.plugin</groupId>
+              <artifactId>alfresco-maven-plugin</artifactId>
+              <version>3.0.0</version>
+              <configuration>
+                  <alfrescoEdition>community</alfrescoEdition>
+                  <enableH2>true</enableH2>
+                  <enablePlatform>true</enablePlatform>
+                  <enableSolr>true</enableSolr>
+                  <enableShare>false</enableShare>*
+                  <platformModules>
+                      <moduleDependency>
+                          <groupId>${alfresco.groupId}</groupId>
+                          <artifactId>alfresco-share-services</artifactId>
+                          <version>${alfresco.share.version}</version>
+                          <type>amp</type>
+                      </moduleDependency>
+                  </platformModules>
+              </configuration>
+        </plugin>
+        ...
+    </plugins>
+  </build>
+  [...]
+</project>
++---+

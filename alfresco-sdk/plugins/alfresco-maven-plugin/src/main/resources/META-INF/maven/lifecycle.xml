@@ -1,0 +1,17 @@
+<lifecycles>
+  <lifecycle>
+    <id>amp</id>
+    <phases>
+      <phase>
+        <id>initialize</id>
+        <executions>
+          <execution>
+            <goals>
+              <goal>set-version</goal>
+            </goals>
+          </execution>
+        </executions>
+      </phase>
+    </phases>
+  </lifecycle>
+</lifecycles>

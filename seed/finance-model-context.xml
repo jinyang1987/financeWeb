@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+  会计档案内容模型 v2 — loose-file 热部署注册（容器重建后恢复用）
+  正式落点：alfresco-aio-platform 模块 bootstrap-context.xml（本文件仅用于 shared/classes 热部署）
+  部署：docker cp 至 /usr/local/tomcat/shared/classes/alfresco/extension/ 后重启 acs
+  注意：不要配置 labels 属性 —— 引用不存在的资源包会导致 dictionaryBootstrap
+        抛 MissingResourceException、Spring context 初始化失败、整个 /alfresco 404（2026-07-21 实测）
+-->
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+          http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
+
+    <bean id="financeExtension.dictionaryBootstrap" parent="dictionaryModelBootstrap" depends-on="dictionaryBootstrap">
+        <property name="models">
+            <list>
+                <value>alfresco/extension/finance-model.xml</value>
+            </list>
+        </property>
+    </bean>
+</beans>

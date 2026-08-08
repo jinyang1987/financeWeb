@@ -1,0 +1,2 @@
+-- ams-server Flyway 迁移目录
+-- P0-3 将放置 V1__init.sql（ams schema 13 张业务表）

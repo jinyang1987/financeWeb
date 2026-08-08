@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<model name="finance:contentModel" xmlns="http://www.alfresco.org/model/dictionary/1.0">
+    <description>Finance Archive Management - Fonds &amp; Category Model</description>
+    <author>Finance Web</author>
+    <version>1.0</version>
+
+    <imports>
+        <import uri="http://www.alfresco.org/model/dictionary/1.0" prefix="d"/>
+        <import uri="http://www.alfresco.org/model/content/1.0" prefix="cm"/>
+    </imports>
+
+    <namespaces>
+        <namespace uri="http://www.finance.org/model/content/1.0" prefix="finance"/>
+    </namespaces>
+
+    <types>
+        <!-- ============================================================
+             Fonds type - 会计全宗
+             Extends cm:folder so it can contain child folders
+             ============================================================ -->
+        <type name="finance:fonds">
+            <title>Fonds (会计全宗)</title>
+            <parent>cm:folder</parent>
+            <properties>
+                <property name="finance:code">
+                    <title>全宗号</title>
+                    <type>d:text</type>
+                    <mandatory>true</mandatory>
+                </property>
+                <property name="finance:fondsName">
+                    <title>全宗名称</title>
+                    <type>d:text</type>
+                    <mandatory>true</mandatory>
+                </property>
+                <property name="finance:status">
+                    <title>状态</title>
+                    <type>d:text</type>
+                    <default>active</default>
+                </property>
+                <property name="finance:address">
+                    <title>地址</title>
+                    <type>d:text</type>
+                </property>
+                <property name="finance:syncSource">
+                    <title>同步来源</title>
+                    <type>d:text</type>
+                </property>
+                <property name="finance:custodianCode">
+                    <title>代管方全宗号</title>
+                    <type>d:text</type>
+                </property>
+                <property name="finance:companyId">
+                    <title>所属公司组织ID</title>
+                    <type>d:text</type>
+                </property>
+            </properties>
+        </type>
+
+        <!-- ============================================================
+             Category type - 档案门类
+             Extends cm:folder, placed under a fonds
+             ============================================================ -->
+        <type name="finance:category">
+            <title>Category (档案门类)</title>
+            <parent>cm:folder</parent>
+            <properties>
+                <property name="finance:categoryCode">
+                    <title>门类代码</title>
+                    <type>d:text</type>
+                    <mandatory>true</mandatory>
+                </property>
+                <property name="finance:categoryName">
+                    <title>门类名称</title>
+                    <type>d:text</type>
+                </property>
+                <property name="finance:sortOrder">
+                    <title>排序号</title>
+                    <type>d:int</type>
+                    <default>0</default>
+                </property>
+                <property name="finance:properties">
+                    <title>元数据属性配置 (JSON)</title>
+                    <type>d:text</type>
+                </property>
+            </properties>
+        </type>
+    </types>
+</model>

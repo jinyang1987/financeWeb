@@ -1,0 +1,71 @@
+server:
+  port: 8081
+  servlet:
+    context-path: /api
+    encoding:
+      # multipart 表单字段中文按 UTF-8 解码（否则 Tomcat 默认 ISO-8859-1 乱码）
+      charset: UTF-8
+      force: true
+  tomcat:
+    # multipart 上传一次携带 10+ 个元数据字段，默认 10 个 part 上限会拒收
+    max-part-count: 100
+
+spring:
+  application:
+    name: ams-server
+  servlet:
+    multipart:
+      # 凭证扫描件/OFD 可达数 MB，默认 1MB 会直接拒收
+      max-file-size: 50MB
+      max-request-size: 60MB
+  datasource:
+    # 与 Alfresco 共用 PG 实例（docker postgres:16.5，宿主机 15432），独立 schema `ams`
+    url: ${AMS_DB_URL:jdbc:postgresql://localhost:15432/alfresco?currentSchema=ams}
+    username: ${AMS_DB_USER:alfresco}
+    password: ${AMS_DB_PASSWORD:alfresco}
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 10000
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+    properties:
+      hibernate:
+        default_schema: ams
+  flyway:
+    enabled: true
+    # Flyway 自动创建 schema `ams` 并在此管理全部业务表
+    schemas: ams
+    default-schema: ams
+    locations: classpath:db/migration
+    create-schemas: true
+    baseline-on-migrate: true
+    baseline-version: 0
+
+# 业务参数
+ams:
+  alfresco:
+    # Alfresco REST v1 基础地址（服务端内网直连）
+    base-url: ${ALFRESCO_BASE_URL:http://localhost:8080/alfresco}
+    api-path: /api/-default-/public/alfresco/versions/1
+  cors:
+    allowed-origins: ${AMS_CORS_ORIGINS:http://localhost:5000}
+  seed:
+    enabled: ${AMS_SEED_ENABLED:true}
+    # seed 用管理员账号（仅开发环境）
+    admin-user: ${AMS_SEED_ADMIN_USER:admin}
+    admin-password: ${AMS_SEED_ADMIN_PASSWORD:admin}
+  ocr:
+    # OCR 引擎：docker = docker exec 调 tesseract 工具箱容器（AIO 默认形态）；local = Tess4J 原生兜底
+    enabled: ${AMS_OCR_ENABLED:true}
+    engine: ${AMS_OCR_ENGINE:docker}
+    docker-container: ${AMS_OCR_CONTAINER:docker-alfresco-aio-tesseract-1}
+    language: ${AMS_OCR_LANG:chi_sim+eng}
+    max-pages: ${AMS_OCR_MAX_PAGES:3}
+    timeout-seconds: ${AMS_OCR_TIMEOUT:60}
+
+logging:
+  level:
+    root: info
+    com.finance.ams: debug

@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  alfresco:
+    image: alfresco/alfresco-content-repository-community:26.1.0
+    environment:
+      JAVA_TOOL_OPTIONS: "-Dencryption.keystore.type=JCEKS -Dencryption.cipherAlgorithm=AES/CBC/PKCS5Padding -Dencryption.keyAlgorithm=AES -Dencryption.keystore.location=/usr/local/tomcat/shared/classes/alfresco/extension/keystore/keystore -Dmetadata-keystore.password=mp6yc0UD9e -Dmetadata-keystore.aliases=metadata -Dmetadata-keystore.metadata.password=oKIWzVdEdA -Dmetadata-keystore.metadata.algorithm=AES"
+      JAVA_OPTS: "-Xms512m -Xmx2g -Dfile.encoding=UTF-8 -Ddb.driver=org.postgresql.Driver -Ddb.url=jdbc:postgresql://postgres:5432/alfresco?charSet=UTF-8 -Ddb.username=alfresco -Ddb.password=alfresco -Dhibernate.dialect=org.hibernate.dialect.PostgreSQLDialect"
+    ports:
+      - "8080:8080"
+    volumes:
+      - alfresco-data:/usr/local/tomcat/alf_data
+    depends_on:
+      - postgres
+
+  share:
+    image: alfresco/alfresco-share:26.1.0
+    environment:
+      REPO_HOST: alfresco
+      REPO_PORT: 8080
+    ports:
+      - "8180:8080"
+    depends_on:
+      - alfresco
+
+  postgres:
+    image: postgres:16.5
+    environment:
+      POSTGRES_DB: alfresco
+      POSTGRES_USER: alfresco
+      POSTGRES_PASSWORD: alfresco
+    command: postgres -c max_connections=300 -c client_encoding=UTF8 -c server_encoding=UTF8
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+volumes:
+  alfresco-data:
+  postgres-data:

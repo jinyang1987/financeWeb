@@ -1,0 +1,319 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Finance Archive Management - Content Model v2
+  会计档案管理内容模型（79号令 + DA/T 13/39/42/94）
+
+  类型体系：
+    finance:fonds          全宗（现行/代管，历史沿革）
+    finance:category       档案门类（KP/KB/FB/QT）
+    finance:archiveBox     档案盒（盒级元数据 B 系列）
+    finance:volume         案卷（卷级元数据 V 系列）
+    finance:record         件/档案记录（件级元数据 M 系列 + 业务扩展）
+    finance:sourceDocument 原始凭证（子件级，96 类，9 公共字段 + 扩展）
+  方面：
+    finance:fourChecked    四性检测结果（真实性/完整性/可用性/安全性）
+-->
+<model name="finance:contentModel" xmlns="http://www.alfresco.org/model/dictionary/1.0">
+  <description>Finance Archive Management - Fonds, Category, Box, Volume, Record, SourceDocument Model v2</description>
+  <author>Finance Web</author>
+  <version>2.0</version>
+
+  <imports>
+    <import uri="http://www.alfresco.org/model/dictionary/1.0" prefix="d"/>
+    <import uri="http://www.alfresco.org/model/content/1.0" prefix="cm"/>
+  </imports>
+
+  <namespaces>
+    <namespace uri="http://www.finance.org/model/content/1.0" prefix="finance"/>
+  </namespaces>
+
+  <!-- ═══════════ 枚举约束 ═══════════ -->
+  <constraints>
+    <constraint name="finance:typeCodeList" type="LIST">
+      <parameter name="allowedValues"><list><value>KP</value><value>KB</value><value>FB</value><value>QT</value></list></parameter>
+    </constraint>
+    <constraint name="finance:retentionList" type="LIST">
+      <parameter name="allowedValues"><list><value>永久</value><value>30年</value><value>10年</value></list></parameter>
+    </constraint>
+    <constraint name="finance:retentionCodeList" type="LIST">
+      <parameter name="allowedValues"><list><value>Y</value><value>D30</value><value>D10</value></list></parameter>
+    </constraint>
+    <constraint name="finance:securityList" type="LIST">
+      <parameter name="allowedValues"><list><value>普通</value><value>内部</value><value>秘密</value><value>机密</value></list></parameter>
+    </constraint>
+    <constraint name="finance:carrierList" type="LIST">
+      <parameter name="allowedValues"><list><value>electronic</value><value>paper</value><value>mixed</value></list></parameter>
+    </constraint>
+    <constraint name="finance:recordStatusList" type="LIST">
+      <parameter name="allowedValues"><list><value>仅件数据</value><value>待审核</value><value>已组卷</value></list></parameter>
+    </constraint>
+    <constraint name="finance:boxStatusList" type="LIST">
+      <parameter name="allowedValues"><list><value>active</value><value>sealed</value><value>stored</value><value>destroyed</value></list></parameter>
+    </constraint>
+    <constraint name="finance:volumeStatusList" type="LIST">
+      <parameter name="allowedValues"><list><value>draft</value><value>confirmed</value><value>transferred</value><value>destroyed</value></list></parameter>
+    </constraint>
+    <constraint name="finance:sourceList" type="LIST">
+      <parameter name="allowedValues"><list><value>digital-native</value><value>digitized</value></list></parameter>
+    </constraint>
+    <constraint name="finance:businessCategoryList" type="LIST">
+      <parameter name="allowedValues"><list><value>采购</value><value>销售</value><value>费用</value><value>资产</value><value>薪酬</value><value>存货</value><value>资金</value><value>结算</value><value>特殊</value></list></parameter>
+    </constraint>
+    <constraint name="finance:reportCategoryList" type="LIST">
+      <parameter name="allowedValues"><list><value>法定对外</value><value>内部管理</value><value>专项报告</value></list></parameter>
+    </constraint>
+    <constraint name="finance:reportPeriodList" type="LIST">
+      <parameter name="allowedValues"><list><value>月度</value><value>季度</value><value>年度</value></list></parameter>
+    </constraint>
+    <constraint name="finance:fondsStatusList" type="LIST">
+      <parameter name="allowedValues"><list><value>active</value><value>custodial</value></list></parameter>
+    </constraint>
+  </constraints>
+
+  <types>
+    <!-- ═══════════ 全宗 ═══════════ -->
+    <type name="finance:fonds">
+      <title>Fonds (会计全宗)</title>
+      <parent>cm:folder</parent>
+      <properties>
+        <property name="finance:code">
+          <title>全宗号</title><type>d:text</type><mandatory>true</mandatory>
+        </property>
+        <property name="finance:fondsName">
+          <title>全宗名称</title><type>d:text</type><mandatory>true</mandatory>
+        </property>
+        <property name="finance:status">
+          <title>状态</title><type>d:text</type><default>active</default>
+          <constraints><constraint ref="finance:fondsStatusList"/></constraints>
+        </property>
+        <property name="finance:address"><title>地址</title><type>d:text</type></property>
+        <property name="finance:syncSource"><title>同步来源</title><type>d:text</type></property>
+        <property name="finance:custodianCode"><title>代管方全宗号</title><type>d:text</type></property>
+        <property name="finance:companyId"><title>所属公司组织ID</title><type>d:text</type></property>
+        <property name="finance:enableYear"><title>启用年度</title><type>d:int</type></property>
+        <property name="finance:remark"><title>备注（历史沿革）</title><type>d:text</type></property>
+      </properties>
+    </type>
+
+    <!-- ═══════════ 档案门类 ═══════════ -->
+    <type name="finance:category">
+      <title>Category (档案门类)</title>
+      <parent>cm:folder</parent>
+      <properties>
+        <property name="finance:categoryCode">
+          <title>门类代码</title><type>d:text</type><mandatory>true</mandatory>
+        </property>
+        <property name="finance:categoryName"><title>门类名称</title><type>d:text</type></property>
+        <property name="finance:sortOrder"><title>排序号</title><type>d:int</type><default>0</default></property>
+        <property name="finance:properties"><title>元数据属性配置 (JSON)</title><type>d:text</type></property>
+      </properties>
+    </type>
+
+    <!-- ═══════════ 档案盒（盒级元数据 B 系列） ═══════════ -->
+    <type name="finance:archiveBox">
+      <title>Archive Box (档案盒)</title>
+      <parent>cm:folder</parent>
+      <properties>
+        <property name="finance:boxNo">
+          <title>盒号</title><type>d:text</type><mandatory>true</mandatory>
+        </property>
+        <property name="finance:boxName"><title>盒名称</title><type>d:text</type></property>
+        <property name="finance:boxTypeCode">
+          <title>档案类别代码</title><type>d:text</type>
+          <constraints><constraint ref="finance:typeCodeList"/></constraints>
+        </property>
+        <property name="finance:location"><title>存放位置（柜-架-层）</title><type>d:text</type></property>
+        <property name="finance:boxRetention">
+          <title>保管期限</title><type>d:text</type>
+          <constraints><constraint ref="finance:retentionList"/></constraints>
+        </property>
+        <property name="finance:boxYear"><title>形成年度</title><type>d:int</type></property>
+        <property name="finance:boxStatus">
+          <title>盒状态</title><type>d:text</type><default>active</default>
+          <constraints><constraint ref="finance:boxStatusList"/></constraints>
+        </property>
+        <property name="finance:boxSecurityLevel">
+          <title>密级</title><type>d:text</type><default>普通</default>
+          <constraints><constraint ref="finance:securityList"/></constraints>
+        </property>
+        <property name="finance:volumeCount"><title>盒内卷数</title><type>d:int</type><default>0</default></property>
+        <property name="finance:boxTotalItems"><title>盒内件数</title><type>d:int</type><default>0</default></property>
+        <property name="finance:volumeCodeRange"><title>卷级档号起止范围</title><type>d:text</type></property>
+        <property name="finance:boxRemark"><title>盒备注</title><type>d:text</type></property>
+      </properties>
+    </type>
+
+    <!-- ═══════════ 案卷（卷级元数据 V 系列） ═══════════ -->
+    <type name="finance:volume">
+      <title>Volume (案卷)</title>
+      <parent>cm:folder</parent>
+      <properties>
+        <property name="finance:volumeCode">
+          <title>卷级档号（DA/T 13）</title><type>d:text</type><mandatory>true</mandatory>
+        </property>
+        <property name="finance:title">
+          <title>案卷题名</title><type>d:text</type><mandatory>true</mandatory>
+        </property>
+        <property name="finance:typeCode">
+          <title>档案类别代码</title><type>d:text</type>
+          <constraints><constraint ref="finance:typeCodeList"/></constraints>
+        </property>
+        <property name="finance:volumeArchiveType"><title>档案类别名称</title><type>d:text</type></property>
+        <property name="finance:volumeYear"><title>年度</title><type>d:int</type></property>
+        <property name="finance:volumeRetention">
+          <title>保管期限</title><type>d:text</type>
+          <constraints><constraint ref="finance:retentionList"/></constraints>
+        </property>
+        <property name="finance:retentionCode">
+          <title>保管期限代码</title><type>d:text</type>
+          <constraints><constraint ref="finance:retentionCodeList"/></constraints>
+        </property>
+        <property name="finance:volumeStatus">
+          <title>案卷状态</title><type>d:text</type><default>draft</default>
+          <constraints><constraint ref="finance:volumeStatusList"/></constraints>
+        </property>
+        <property name="finance:volumeTotalItems"><title>卷内件数</title><type>d:int</type><default>0</default></property>
+        <property name="finance:totalPages"><title>卷内页数</title><type>d:int</type><default>0</default></property>
+        <property name="finance:pageStart"><title>起始页号</title><type>d:int</type></property>
+        <property name="finance:pageEnd"><title>终止页号</title><type>d:int</type></property>
+        <property name="finance:volumeCarrierType">
+          <title>介质类型</title><type>d:text</type><default>electronic</default>
+          <constraints><constraint ref="finance:carrierList"/></constraints>
+        </property>
+        <property name="finance:volumeSecurityLevel">
+          <title>密级</title><type>d:text</type><default>普通</default>
+          <constraints><constraint ref="finance:securityList"/></constraints>
+        </property>
+        <property name="finance:cabinetNo"><title>柜号</title><type>d:text</type></property>
+        <property name="finance:shelfNo"><title>架号</title><type>d:text</type></property>
+        <property name="finance:dateFrom"><title>卷内日期起</title><type>d:date</type></property>
+        <property name="finance:dateTo"><title>卷内日期止</title><type>d:date</type></property>
+        <property name="finance:createdDate"><title>组卷日期</title><type>d:date</type></property>
+        <property name="finance:createdBy"><title>组卷人</title><type>d:text</type></property>
+        <property name="finance:digitalHash"><title>数字化副本整体哈希</title><type>d:text</type></property>
+        <property name="finance:scanned"><title>是否完成数字化扫描</title><type>d:boolean</type><default>false</default></property>
+      </properties>
+      <associations>
+        <child-association name="finance:volumeItems">
+          <title>卷内件</title>
+          <target><class>finance:record</class></target>
+        </child-association>
+      </associations>
+    </type>
+
+    <!-- ═══════════ 件/档案记录（件级元数据 M 系列 + 业务扩展） ═══════════ -->
+    <type name="finance:record">
+      <title>Record (档案记录/件)</title>
+      <parent>cm:content</parent>
+      <properties>
+        <property name="finance:archiveCode">
+          <title>件级档号（DA/T 13）</title><type>d:text</type><mandatory>true</mandatory><index enabled="true"><atomic>true</atomic><stored>false</stored><tokenised>both</tokenised></index>
+        </property>
+        <property name="finance:voucherNo"><title>凭证字号（M31）</title><type>d:text</type><index enabled="true"><atomic>true</atomic><stored>false</stored><tokenised>both</tokenised></index></property>
+        <property name="finance:archiveType"><title>档案类型（M14）</title><type>d:text</type><index enabled="true"><atomic>true</atomic><stored>false</stored><tokenised>both</tokenised></index></property>
+        <property name="finance:department"><title>责任部门（M13）</title><type>d:text</type></property>
+        <property name="finance:amount"><title>金额合计（M35）</title><type>d:double</type></property>
+        <property name="finance:year"><title>会计年度（M11）</title><type>d:int</type><index enabled="true"><atomic>true</atomic><stored>false</stored><tokenised>both</tokenised></index></property>
+        <property name="finance:month"><title>会计月份（M41）</title><type>d:int</type></property>
+        <property name="finance:retention">
+          <title>保管期限（M12）</title><type>d:text</type>
+          <constraints><constraint ref="finance:retentionList"/></constraints>
+        </property>
+        <property name="finance:recordStatus">
+          <title>组卷状态</title><type>d:text</type><default>仅件数据</default>
+          <constraints><constraint ref="finance:recordStatusList"/></constraints>
+        </property>
+        <property name="finance:voucherCategory"><title>记账凭证子类型</title><type>d:text</type></property>
+        <property name="finance:subType"><title>账簿/其他子类型</title><type>d:text</type></property>
+        <property name="finance:reportCategory">
+          <title>报表分类</title><type>d:text</type>
+          <constraints><constraint ref="finance:reportCategoryList"/></constraints>
+        </property>
+        <property name="finance:reportPeriod">
+          <title>报表期间</title><type>d:text</type>
+          <constraints><constraint ref="finance:reportPeriodList"/></constraints>
+        </property>
+        <property name="finance:preparer"><title>制单人</title><type>d:text</type></property>
+        <property name="finance:accountSubject"><title>会计科目</title><type>d:text</type></property>
+        <property name="finance:securityLevel">
+          <title>密级</title><type>d:text</type><default>普通</default>
+          <constraints><constraint ref="finance:securityList"/></constraints>
+        </property>
+        <property name="finance:source">
+          <title>来源标记</title><type>d:text</type><default>digital-native</default>
+          <constraints><constraint ref="finance:sourceList"/></constraints>
+        </property>
+        <property name="finance:carrierType">
+          <title>载体类型</title><type>d:text</type><default>electronic</default>
+          <constraints><constraint ref="finance:carrierList"/></constraints>
+        </property>
+        <property name="finance:volumeItemNo"><title>卷内件号</title><type>d:int</type></property>
+        <property name="finance:numbered"><title>是否已赋号</title><type>d:boolean</type><default>false</default></property>
+        <property name="finance:numberedDate"><title>赋号日期</title><type>d:date</type></property>
+        <property name="finance:storageLocation"><title>实体存储位置</title><type>d:text</type></property>
+        <property name="finance:ocrText"><title>OCR 全文</title><type>d:text</type></property>
+        <property name="finance:recordRemark"><title>备注</title><type>d:text</type></property>
+      </properties>
+      <associations>
+        <child-association name="finance:recordSourceDocs">
+          <title>所附原始凭证</title>
+          <target><class>finance:sourceDocument</class></target>
+        </child-association>
+      </associations>
+    </type>
+
+    <!-- ═══════════ 原始凭证（子件级） ═══════════ -->
+    <type name="finance:sourceDocument">
+      <title>Source Document (原始凭证)</title>
+      <parent>cm:content</parent>
+      <properties>
+        <property name="finance:documentNo">
+          <title>单据编号</title><type>d:text</type><mandatory>true</mandatory><index enabled="true"><atomic>true</atomic><stored>false</stored><tokenised>both</tokenised></index>
+        </property>
+        <property name="finance:docTypeCode"><title>类型编码</title><type>d:text</type><index enabled="true"><atomic>true</atomic><stored>false</stored><tokenised>both</tokenised></index></property>
+        <property name="finance:docTypeName"><title>类型名称</title><type>d:text</type></property>
+        <property name="finance:transactionDate"><title>业务发生日期</title><type>d:date</type></property>
+        <property name="finance:amountLower"><title>小写金额</title><type>d:double</type></property>
+        <property name="finance:amountUpper"><title>大写金额（防篡改）</title><type>d:text</type></property>
+        <property name="finance:counterpartyName"><title>对方单位名称</title><type>d:text</type><index enabled="true"><atomic>true</atomic><stored>false</stored><tokenised>both</tokenised></index></property>
+        <property name="finance:counterpartyTaxId"><title>对方纳税人识别号</title><type>d:text</type></property>
+        <property name="finance:counterpartyAddress"><title>对方地址电话</title><type>d:text</type></property>
+        <property name="finance:counterpartyBankAccount"><title>对方开户行及账号</title><type>d:text</type></property>
+        <property name="finance:summary"><title>摘要/事由</title><type>d:text</type></property>
+        <property name="finance:businessCategory">
+          <title>业务分类</title><type>d:text</type>
+          <constraints><constraint ref="finance:businessCategoryList"/></constraints>
+        </property>
+        <property name="finance:sdPreparer"><title>制单人</title><type>d:text</type></property>
+        <property name="finance:reviewer"><title>审核人</title><type>d:text</type></property>
+        <property name="finance:attachmentCount"><title>附件张数</title><type>d:int</type><default>0</default></property>
+        <property name="finance:parentVoucherNo"><title>所属记账凭证号</title><type>d:text</type><index enabled="true"><atomic>true</atomic><stored>false</stored><tokenised>both</tokenised></index></property>
+        <property name="finance:attachmentSequence"><title>附件顺序号</title><type>d:int</type></property>
+        <property name="finance:sdCarrierType">
+          <title>载体类型</title><type>d:text</type>
+          <constraints><constraint ref="finance:carrierList"/></constraints>
+        </property>
+        <property name="finance:sdSource">
+          <title>来源标记</title><type>d:text</type>
+          <constraints><constraint ref="finance:sourceList"/></constraints>
+        </property>
+        <property name="finance:extFields"><title>类型扩展字段 (JSON)</title><type>d:text</type></property>
+      </properties>
+    </type>
+  </types>
+
+  <!-- ═══════════ 方面 ═══════════ -->
+  <aspects>
+    <aspect name="finance:fourChecked">
+      <title>四性检测结果</title>
+      <properties>
+        <property name="finance:checkReal"><title>真实性通过</title><type>d:boolean</type><default>false</default></property>
+        <property name="finance:checkComplete"><title>完整性通过</title><type>d:boolean</type><default>false</default></property>
+        <property name="finance:checkUsable"><title>可用性通过</title><type>d:boolean</type><default>false</default></property>
+        <property name="finance:checkSafe"><title>安全性通过</title><type>d:boolean</type><default>false</default></property>
+        <property name="finance:checkedAt"><title>检测时间</title><type>d:datetime</type></property>
+        <property name="finance:checkReportRef"><title>检测报告ID</title><type>d:text</type></property>
+      </properties>
+    </aspect>
+  </aspects>
+</model>

@@ -1,0 +1,23 @@
+  ------
+  Introduction
+
+Introduction
+
+  The Alfresco Maven Plugin provides development features to manage {{{http://www.alfresco.com}Alfresco Platform}} WAR, JAR and {{{https://community.alfresco.com/docs/DOC-5146-amp-files}AMP}} project lifecycles.
+
+* Goals Overview
+
+  The Alfresco Maven Plugin has three goals:
+
+  *{{{./run-mojo.html}alfresco:run}} Starts up Alfresco Platform, Share and Solr with your and 3rd party customizations
+
+  *{{{./install-mojo.html}alfresco:install}} Installs one or multiple AMPs into an Alfresco WAR / exploded WAR folder embedding {{{http://wiki.alfresco.com/wiki/Module_Management_Tool} Alfresco MMT}} 
+  
+
+ Full information is available at the {{{./plugin-info.html}goals page}}.
+
+* Usage
+
+  General instructions on how to use the Alfresco Maven Plugin can be found on the {{{./usage.html}usage page}}.
+  
+  For more complex usage of the Maven Alfresco Plugin check the {{{./advanced-usage.html}advanced usage page}}.

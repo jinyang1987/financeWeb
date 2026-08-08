@@ -1,0 +1,224 @@
+name: Alfresco SDK CI
+
+on:
+  pull_request:
+    branches:
+      - master
+      - fix/**
+      - feature/**
+  push:
+    branches:
+      - master
+      - fix/**
+      - feature/**
+  workflow_dispatch:
+
+env:
+  JAVA_VERSION: '21'
+  MAVEN_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+  MAVEN_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+  MAVEN_CENTRAL_USERNAME: ${{ secrets.OSS_SONATYPE_USERNAME }}
+  MAVEN_CENTRAL_PASSWORD: ${{ secrets.OSS_SONATYPE_PASSWORD }}
+  GITHUB_ACTIONS_DEPLOY_TIMEOUT: 90
+
+jobs:
+  pre_commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: Alfresco/alfresco-build-tools/.github/actions/pre-commit@v15.7.1
+
+  veracode_sca:
+    name: "Veracode - Source Clear Scan (SCA)"
+    runs-on: ubuntu-latest
+    if: >
+      github.ref_name == 'master' ||
+      github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: Alfresco/alfresco-build-tools/.github/actions/get-build-info@v15.7.1
+      - uses: Alfresco/alfresco-build-tools/.github/actions/setup-java-build@v15.7.1
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+      - name: "Clean-up SNAPSHOT artifacts"
+        run: find "${HOME}/.m2/repository/" -type d -name "*-SNAPSHOT*" | xargs -r -l rm -rf
+      - uses: Alfresco/alfresco-build-tools/.github/actions/veracode@v15.7.1
+        continue-on-error: true
+        with:
+          srcclr-api-token: ${{ secrets.SRCCLR_API_TOKEN }}
+
+  build:
+    name: "Build application"
+    runs-on: ubuntu-latest
+    needs: [pre_commit]
+    if: "!contains(github.event.head_commit.message, '[skip tests]')"
+    env:
+      MAVEN_CLI_OPTS: >
+        -B -q -e -fae -V -DinstallAtEnd=true -U
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: Alfresco/alfresco-build-tools/.github/actions/setup-java-build@v15.7.1
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+      - name: "Build"
+        run: mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
+      - name: "Verify"
+        run: mvn $MAVEN_CLI_OPTS verify -Dlogging.root.level=off -Dspring.main.banner-mode=off
+
+  tests:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: >
+      !(failure() || cancelled()) &&
+      !contains(github.event.head_commit.message, '[skip tests]')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: "current version Java 21"
+            java-version: 21
+          - name: "26.1 Enterprise Java 21"
+            java-version: 21
+            suite: -Penterprise-261-tests
+          - name: "26.1 Community Java 21"
+            java-version: 21
+            suite: -Pcommunity-261-tests
+          - name: "25.4 Enterprise Java 17"
+            java-version: 17
+            suite: -Penterprise-254-tests
+          - name: "25.4 Community Java 17"
+            java-version: 17
+            suite: -Pcommunity-254-tests
+          - name: "25.2 Enterprise Java 17"
+            java-version: 17
+            suite: -Penterprise-252-tests
+          - name: "25.2 Community Java 17"
+            java-version: 17
+            suite: -Pcommunity-252-tests
+          - name: "25.1 Enterprise Java 17"
+            java-version: 17
+            suite: -Penterprise-251-tests
+          - name: "25.1 Community Java 17"
+            java-version: 17
+            suite: -Pcommunity-251-tests
+          - name: "23.5 Enterprise Java 17"
+            java-version: 17
+            suite: -Penterprise-235-tests
+          - name: "23.4 Enterprise Java 17"
+            java-version: 17
+            suite: -Penterprise-234-tests
+          - name: "23.4 Community Java 17"
+            java-version: 17
+            suite: -Pcommunity-234-tests
+          - name: "23.3 Enterprise Java 17"
+            java-version: 17
+            suite: -Penterprise-233-tests
+          - name: "23.3 Community Java 17"
+            java-version: 17
+            suite: -Pcommunity-233-tests
+          - name: "23.2 Enterprise Java 17"
+            java-version: 17
+            suite: -Penterprise-232-tests
+          - name: "23.2 Community Java 17"
+            java-version: 17
+            suite: -Pcommunity-232-tests
+          - name: "23.1 Enterprise Java 17"
+            java-version: 17
+            suite: -Penterprise-231-tests
+          - name: "23.1 Community Java 17"
+            java-version: 17
+            suite: -Pcommunity-231-tests
+          - name: "7.4 Enterprise Java 17"
+            java-version: 17
+            suite: -Penterprise-74-tests
+          - name: "7.4 Community Java 17"
+            java-version: 17
+            suite: -Pcommunity-74-tests
+          - name: "7.4 Enterprise Java 11"
+            java-version: 11
+            suite: -Penterprise-74-tests
+          - name: "7.4 Community Java 11"
+            java-version: 11
+            suite: -Pcommunity-74-tests
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: Alfresco/alfresco-build-tools/.github/actions/get-build-info@v15.7.1
+      - uses: Alfresco/alfresco-build-tools/.github/actions/setup-java-build@v15.7.1
+        with:
+          java-version: ${{ matrix.java-version }}
+      - name: "Login to Docker Hub"
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: "Login to Quay.io"
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+      - name: "Build"
+        run: mvn clean install -B ${{ matrix.suite }}
+
+  check_version:
+    name: "Check version"
+    runs-on: ubuntu-latest
+    needs: [tests]
+    if: >
+      contains(github.event.head_commit.message, '[publish]')
+    outputs:
+        is_ga: ${{ steps.publish_version.outputs.is_ga }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: Alfresco/alfresco-build-tools/.github/actions/get-build-info@v15.7.1
+      - uses: Alfresco/alfresco-build-tools/.github/actions/setup-java-build@v15.7.1
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+      - name: "Check version"
+        id: publish_version
+        run: |
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          if [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "is_ga=true" >> $GITHUB_OUTPUT
+            echo "GA version detected: $VERSION"
+          else
+            echo "is_ga=false" >> $GITHUB_OUTPUT
+            echo "Non GA version detected: $VERSION"
+          fi
+
+  publish:
+    name: "Publish artifacts"
+    runs-on: ubuntu-latest
+    needs: [tests, check_version]
+    if: >
+      contains(github.event.head_commit.message, '[publish]') && needs.check_version.outputs.is_ga == 'true'
+    env:
+      GPG_SIGNING_PASSPHRASE: ${{ secrets.GPG_SIGNING_PASSPHRASE }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: Alfresco/alfresco-build-tools/.github/actions/get-build-info@v15.7.1
+      - uses: Alfresco/alfresco-build-tools/.github/actions/setup-java-build@v15.7.1
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+      - name: "Build"
+        run: mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
+      - name: Set up Maven Central credentials
+        run:  |
+          mkdir -p ~/.m2
+          envsubst < ${{ github.workspace }}/.ci.settings.xml > ~/.m2/settings.xml
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+      - name: Import GPG key
+        env:
+          GPG_TTY: $(tty)
+        run: |
+          echo "${{ secrets.GPG_SIGNING_PRIVATE_KEY }}" | gpg --batch --import
+          echo "use-agent" >> ~/.gnupg/gpg.conf
+          echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+          gpg --batch --yes --pinentry-mode loopback --passphrase $GPG_SIGNING_PASSPHRASE --list-keys
+      - name: "Publish"
+        timeout-minutes: ${{ fromJSON(env.GITHUB_ACTIONS_DEPLOY_TIMEOUT) }}
+        run: |
+          mvn --batch-mode clean package gpg:sign central-publishing:publish -P sdk-release -DskipTests=true -Dgpg.passphrase=$GPG_SIGNING_PASSPHRASE

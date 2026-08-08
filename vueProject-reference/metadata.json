@@ -1,0 +1,6 @@
+{
+  "name": "Accounting Archive System",
+  "description": "A dashboard for managing accounting archives.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
