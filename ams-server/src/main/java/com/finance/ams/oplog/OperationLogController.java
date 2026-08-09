@@ -31,7 +31,8 @@ public class OperationLogController {
       @RequestParam(required = false) String orderId,
       @RequestParam(defaultValue = "0") int skip,
       @RequestParam(defaultValue = "50") int limit) {
-    if (userId == null || userId.isBlank()) throw new BizException(HttpStatus.UNAUTHORIZED, "SESSION_EXPIRED", "缺少会话凭据");
+    if (userId == null || userId.isBlank() || ticket == null || ticket.isBlank())
+      throw new BizException(HttpStatus.UNAUTHORIZED, "SESSION_EXPIRED", "缺少会话凭据，请重新登录");
     List<Map<String, Object>> items = service.query(actorId, action, orderId, skip, limit);
     long total = service.count(actorId, action);
     return Map.of("items", items, "total", total, "skip", skip, "limit", limit);

@@ -58,6 +58,11 @@ public class BorrowService {
     if (items == null || items.isEmpty()) throw BizException.badRequest("VALIDATION_FAILED", "借阅明细不能为空");
     if (reasonType.isBlank()) throw BizException.badRequest("VALIDATION_FAILED", "借阅事由不能为空");
 
+    // 安全：申请人身份以后端会话为准，忽略前端任意填写的 applicantName/EmpNo/Dept（防冒名）
+    if (userName == null || userName.isBlank()) {
+      throw BizException.badRequest("VALIDATION_FAILED", "无法确认申请人身份，请重新登录");
+    }
+
     // 校验借阅天数
     long days = java.time.temporal.ChronoUnit.DAYS.between(LocalDate.parse(startDate), LocalDate.parse(endDate));
     if (days > MAX_BORROW_DAYS) throw BizException.badRequest("VALIDATION_FAILED", "借阅天数不能超过 " + MAX_BORROW_DAYS + " 天");

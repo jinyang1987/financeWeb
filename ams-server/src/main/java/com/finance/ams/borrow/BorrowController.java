@@ -8,6 +8,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.*;
 
 import com.finance.ams.api.BizException;
+import com.finance.ams.auth.AuthService;
+import com.finance.ams.auth.AuthUser;
 
 /**
  * 借阅域端点（P2-1/2/3）
@@ -29,9 +31,11 @@ import com.finance.ams.api.BizException;
 public class BorrowController {
 
   private final BorrowService service;
+  private final AuthService authService;
 
-  public BorrowController(BorrowService service) {
+  public BorrowController(BorrowService service, AuthService authService) {
     this.service = service;
+    this.authService = authService;
   }
 
   @PostMapping("/orders")
@@ -40,9 +44,10 @@ public class BorrowController {
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
       @RequestBody Map<String, Object> body) {
     requireAuth(userId, ticket);
-    return service.submitOrder(userId,
-        str(body.get("applicantName")), str(body.get("applicantEmpNo")),
-        str(body.get("applicantDept")), body);
+    // 安全：申请人姓名/工号/部门一律以服务端会话（Alfresco ticket 校验）为准，
+    // 忽略请求体里任意填写的 applicantName/EmpNo/Dept，防止冒名申请。
+    AuthUser me = authService.me(userId, ticket);
+    return service.submitOrder(me.account(), me.name(), me.empNo(), me.dept(), body);
   }
 
   @GetMapping("/orders")
@@ -71,6 +76,8 @@ public class BorrowController {
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
       @PathVariable String id, @RequestBody(required = false) Map<String, String> body) {
     requireAuth(userId, ticket);
+    // 审批：部门经理 / 财务总监 / HRVP / 档案管理员 均可按审批链执行
+    requireAnyRole(userId, ticket, "dept_manager", "cfo", "hrvp", "archivist", "archive_director");
     return service.approve(id, userId, body != null ? body.get("comment") : null);
   }
 
@@ -80,6 +87,7 @@ public class BorrowController {
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
       @PathVariable String id, @RequestBody(required = false) Map<String, String> body) {
     requireAuth(userId, ticket);
+    requireAnyRole(userId, ticket, "dept_manager", "cfo", "hrvp", "archivist", "archive_director");
     return service.reject(id, userId, body != null ? body.get("comment") : null);
   }
 
@@ -89,6 +97,7 @@ public class BorrowController {
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
       @PathVariable String id) {
     requireAuth(userId, ticket);
+    requireAnyRole(userId, ticket, "archivist", "archive_director", "admin");
     return service.terminateOrder(id, userId);
   }
 
@@ -98,6 +107,7 @@ public class BorrowController {
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
       @PathVariable String id) {
     requireAuth(userId, ticket);
+    requireAnyRole(userId, ticket, "archivist", "archive_director", "admin");
     return service.checkout(id, userId);
   }
 
@@ -107,6 +117,7 @@ public class BorrowController {
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
       @PathVariable String id) {
     requireAuth(userId, ticket);
+    requireAnyRole(userId, ticket, "archivist", "archive_director", "admin");
     return service.returnFulfillment(id, userId);
   }
 
@@ -145,6 +156,21 @@ public class BorrowController {
   private void requireAuth(String userId, String ticket) {
     if (userId == null || userId.isBlank() || ticket == null || ticket.isBlank())
       throw new BizException(HttpStatus.UNAUTHORIZED, "SESSION_EXPIRED", "缺少会话凭据");
+  }
+
+  /** 校验会话并返回当前用户；ticket 无效/过期时抛 401 */
+  private AuthUser currentUser(String userId, String ticket) {
+    return authService.me(userId, ticket);
+  }
+
+  /** 当前用户是否具备任一所需角色（admin 恒通过） */
+  private void requireAnyRole(String userId, String ticket, String... roles) {
+    AuthUser me = currentUser(userId, ticket);
+    if (me.roles().contains("admin")) return;
+    for (String r : roles) {
+      if (me.roles().contains(r)) return;
+    }
+    throw new BizException(HttpStatus.FORBIDDEN, "FORBIDDEN", "无权限执行该操作（需要角色: " + String.join("/", roles) + "）");
   }
 
   private static String str(Object o) { return o == null ? "" : String.valueOf(o); }

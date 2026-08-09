@@ -575,7 +575,10 @@ const VoucherUploadModal: React.FC<VoucherUploadModalProps> = ({ open, onClose, 
           amount: parseFloat((display.amount || '').replace(/,/g, '')) || undefined,
           retention: '30年',
           source: 'digitized',
-          carrierType: 'paper',
+          // 载体随文件类型：PDF/图片/OFD 等电子文件默认 electronic，扫描件才为 paper
+          carrierType: f.file.type === 'application/pdf' || f.file.type.startsWith('image/')
+            ? 'electronic'
+            : 'paper',
           voucherCategory: cat === '记账凭证' || cat === '原始凭证' ? cat : undefined,
         });
         okRecordIds.push(rec.id);

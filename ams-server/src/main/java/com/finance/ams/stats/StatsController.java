@@ -6,8 +6,11 @@ import java.util.Map;
 
 import javax.sql.DataSource;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.web.bind.annotation.*;
+
+import com.finance.ams.api.BizException;
 
 /**
  * 统计聚合端点（P4-4）：服务端 SQL 聚合
@@ -26,6 +29,7 @@ public class StatsController {
   public Map<String, Object> inventory(
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket) {
+    requireAuth(userId, ticket);
     Map<String, Object> result = new LinkedHashMap<>();
     result.put("borrowOrders", jdbc.sql("SELECT COUNT(*) FROM ams_borrow_order").query(Long.class).single());
     result.put("activeFulfillments", jdbc.sql("SELECT COUNT(*) FROM ams_fulfillment WHERE status IN ('granted','lent','pending','queued')").query(Long.class).single());
@@ -39,6 +43,7 @@ public class StatsController {
   public Map<String, Object> lifecycle(
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket) {
+    requireAuth(userId, ticket);
     Map<String, Object> result = new LinkedHashMap<>();
     result.put("inspectionByPhase", jdbc.sql(
         "SELECT phase, all_pass, COUNT(*) AS cnt FROM ams_inspection_report GROUP BY phase, all_pass").query().listOfRows());
@@ -54,6 +59,7 @@ public class StatsController {
   public Map<String, Object> compliance(
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket) {
+    requireAuth(userId, ticket);
     Map<String, Object> result = new LinkedHashMap<>();
     result.put("overdueFulfillments", jdbc.sql("SELECT COUNT(*) FROM ams_fulfillment WHERE status='overdue'").query(Long.class).single());
     result.put("blacklistCandidates", jdbc.sql("""
@@ -70,11 +76,18 @@ public class StatsController {
   public Map<String, Object> borrow(
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket) {
+    requireAuth(userId, ticket);
     Map<String, Object> result = new LinkedHashMap<>();
     result.put("byStatus", jdbc.sql("SELECT status, COUNT(*) AS cnt FROM ams_borrow_order GROUP BY status").query().listOfRows());
     result.put("overdue", jdbc.sql("SELECT COUNT(*) FROM ams_fulfillment WHERE status='overdue'").query(Long.class).single());
     result.put("fulfillmentByType", jdbc.sql("SELECT type, status, COUNT(*) AS cnt FROM ams_fulfillment GROUP BY type, status").query().listOfRows());
     return result;
+  }
+
+  private void requireAuth(String userId, String ticket) {
+    if (userId == null || userId.isBlank() || ticket == null || ticket.isBlank()) {
+      throw new BizException(HttpStatus.UNAUTHORIZED, "SESSION_EXPIRED", "缺少会话凭据，请重新登录");
+    }
   }
 }
 

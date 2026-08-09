@@ -35,6 +35,7 @@ public class InspectionController {
   }
 
   private void requireAuth(String userId, String ticket) {
-    if (userId == null || userId.isBlank()) throw new BizException(HttpStatus.UNAUTHORIZED, "SESSION_EXPIRED", "缺少会话凭据");
+    if (userId == null || userId.isBlank() || ticket == null || ticket.isBlank())
+      throw new BizException(HttpStatus.UNAUTHORIZED, "SESSION_EXPIRED", "缺少会话凭据，请重新登录");
   }
 }
