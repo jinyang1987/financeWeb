@@ -1,5 +1,7 @@
 package com.finance.ams.auth;
 
+import java.util.Map;
+
 import jakarta.validation.constraints.NotBlank;
 
 import org.springframework.http.ResponseEntity;
@@ -46,5 +48,15 @@ public class AuthController {
       @RequestHeader("X-User-Id") String userId,
       @RequestHeader("X-Alfresco-Ticket") String ticket) {
     return authService.me(userId, ticket);
+  }
+
+  /**
+   * 换发有效 Alfresco ticket（供前端 Alfresco 直连：单位管理/组织人员，
+   * 走 alf_ticket 参数；其登录 ticket 会过期，而 ams-server 业务接口因内存会话优先不受影响——
+   * 故直连需独立换发 admin 凭证 ticket，过期时前端 401 后自动重试本端点）。
+   */
+  @GetMapping("/alfresco-ticket")
+  public Map<String, String> alfrescoTicket() {
+    return Map.of("ticket", authService.alfrescoTicket());
   }
 }

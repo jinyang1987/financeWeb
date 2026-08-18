@@ -60,7 +60,9 @@ public class YonyouScheduler {
       String period = YonyouSyncService.previousPeriod();
       log.info("用友自动归档触发: 期间 {}", period);
       try {
-        sync.syncNow(period, "auto", "scheduler", null, null);
+        // 去向跟随数据源连接配置（系统管理→连接配置，2026-08-16 配置收敛）
+        String dest = cfg.destination();
+        sync.syncNow(period, "auto", "scheduler", null, null, false, dest.isBlank() ? null : dest);
       } catch (Exception e) {
         log.error("用友自动归档失败: {}", e.getMessage());
       } finally {

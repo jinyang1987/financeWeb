@@ -66,6 +66,47 @@ export async function fetchBoxVolumes(boxId: string): Promise<BoxVolumeDto[]> {
   return http.get<BoxVolumeDto[]>(`/boxes/${boxId}/volumes`);
 }
 
+// ─── 盒写操作（2026-08-16 贯通修复，真服务端持久化） ───
+
+/** 封盒（active → sealed） */
+export async function sealBoxApi(boxId: string): Promise<ArchiveBox> {
+  return dtoToBox(await http.post<BoxDto>(`/boxes/${boxId}/seal`));
+}
+
+/** 开封（sealed → active） */
+export async function unsealBoxApi(boxId: string): Promise<ArchiveBox> {
+  return dtoToBox(await http.post<BoxDto>(`/boxes/${boxId}/unseal`));
+}
+
+/** 架位坐标（库房-架-列-层-位，2026-08-17 密集架模型） */
+export interface ShelfPosition {
+  room: string;
+  rack: string;
+  column: number;
+  layer: number;
+  cell: number;
+}
+
+/** 上架（指定架位；active/sealed → stored，占用互斥由服务端校验） */
+export async function shelveBoxApi(boxId: string, pos: ShelfPosition): Promise<ArchiveBox> {
+  return dtoToBox(await http.post<BoxDto>(`/boxes/${boxId}/shelve`, pos));
+}
+
+/** 上架（自动分配第一个空格位） */
+export async function shelveBoxAutoApi(boxId: string): Promise<ArchiveBox> {
+  return dtoToBox(await http.post<BoxDto>(`/boxes/${boxId}/shelve`, { auto: true }));
+}
+
+/** 下架（stored → sealed，架位清除） */
+export async function unshelveBoxApi(boxId: string): Promise<ArchiveBox> {
+  return dtoToBox(await http.post<BoxDto>(`/boxes/${boxId}/unshelve`));
+}
+
+/** 删除空盒（盒内有卷或在架时服务端拒绝） */
+export async function deleteBoxApi(boxId: string): Promise<void> {
+  await http.delete(`/boxes/${boxId}`);
+}
+
 // ─── DTO → 前端模型映射 ───
 
 export function dtoToBox(dto: BoxDto): ArchiveBox {

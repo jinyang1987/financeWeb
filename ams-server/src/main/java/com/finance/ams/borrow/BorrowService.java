@@ -7,18 +7,23 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import javax.sql.DataSource;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.finance.ams.api.BizException;
 import com.finance.ams.code.CodeSerialService;
+import com.finance.ams.configcenter.ConfigService;
 import com.finance.ams.oplog.OperationLogService;
 
 /**
@@ -26,6 +31,13 @@ import com.finance.ams.oplog.OperationLogService;
  *
  * 算法镜像前端 borrowEngine.ts（20 个测试用例守护），迁移到 Java 后端。
  * 四表：ams_borrow_order / ams_borrow_item / ams_approval_step / ams_fulfillment。
+ *
+ * 审批链组链规则（2026-08-18 起配置驱动）：
+ *   读取 ams_config('workflow.config') 中「借阅利用」流程（wf-borrow-approval）的
+ *   chainRules（base + escalation(when/appendRole) + final）动态组链；
+ *   配置缺失/停用/解析失败时回退内置默认链（与原硬编码行为一致）。
+ *   与 Activiti OperateVariablesListener 的「审批人按变量约定动态计算」同思想，
+ *   但规则由管理员在流程配置页显式维护，不做隐式变量魔术。
  */
 @Service
 public class BorrowService {
@@ -33,15 +45,22 @@ public class BorrowService {
   private static final Logger log = LoggerFactory.getLogger(BorrowService.class);
   private static final int MAX_BORROW_DAYS = 30;
   private static final int EXPIRY_WARN_DAYS = 3;
+  /** 可作为审批节点的角色集合（与审批中心服务能力对齐） */
+  private static final Set<String> APPROVER_ROLES =
+      Set.of("dept_manager", "cfo", "hrvp", "archivist", "archive_director");
 
   private final JdbcClient jdbc;
   private final CodeSerialService serials;
   private final OperationLogService oplog;
+  private final ConfigService config;
+  private final ObjectMapper json = new ObjectMapper();
 
-  public BorrowService(DataSource dataSource, CodeSerialService serials, OperationLogService oplog) {
+  public BorrowService(DataSource dataSource, CodeSerialService serials, OperationLogService oplog,
+                       ConfigService config) {
     this.jdbc = JdbcClient.create(dataSource);
     this.serials = serials;
     this.oplog = oplog;
+    this.config = config;
   }
 
   // ═══════════════════ 提交申请 ═══════════════════
@@ -77,22 +96,18 @@ public class BorrowService {
     String orderId = UUID.randomUUID().toString();
     String now = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 
-    // 计算审批链
-    boolean needsCfo = items.stream().anyMatch(it -> {
+    // 计算审批链：数据条件（高危权限/涉密）+ 流程配置组链规则（wf-borrow-approval.chainRules）
+    boolean extendedPerms = items.stream().anyMatch(it -> {
       List<String> perms = (List<String>) it.get("electronicPerms");
       String pm = str(it.get("physicalMode"));
       return (perms != null && (perms.contains("download") || perms.contains("print"))) || !"none".equals(pm);
     });
-    boolean hasSensitive = items.stream().anyMatch(it -> {
+    boolean sensitive = items.stream().anyMatch(it -> {
       String sl = str(it.get("securityLevel"));
       return "秘密".equals(sl) || "机密".equals(sl);
     });
 
-    List<String> roles = new ArrayList<>();
-    roles.add("dept_manager");
-    if (needsCfo) roles.add("cfo");
-    if (hasSensitive) roles.add("hrvp");
-    roles.add("archivist");
+    List<String> roles = resolveChain(extendedPerms, sensitive);
 
     // 写入主单
     jdbc.sql("""
@@ -185,13 +200,83 @@ public class BorrowService {
     return view;
   }
 
+  // ═══════════════════ 审批链组链（配置驱动，2026-08-18） ═══════════════════
+
+  /**
+   * 按流程配置组链：wf-borrow-approval.chainRules { base[], escalation[{when,appendRole}], final }。
+   * escalation.when：extended_perms=含下载/打印/实体调阅；sensitive=涉密（秘密/机密）。
+   * 任何异常（无配置/流程停用/规则缺失/全部非法角色）一律回退内置默认链——
+   * 与原硬编码行为严格一致，保证配置错误不阻塞借阅业务。
+   */
+  private List<String> resolveChain(boolean extendedPerms, boolean sensitive) {
+    List<String> roles = defaultChain(extendedPerms, sensitive);
+    try {
+      var entry = config.get("workflow.config");
+      if (entry.isEmpty()) return roles;
+      JsonNode wfs = json.readTree(entry.get().valueJson()).path("state").path("workflows");
+      if (!wfs.isArray()) return roles;
+      for (JsonNode wf : wfs) {
+        if (!"wf-borrow-approval".equals(wf.path("id").asText())) continue;
+        if (!wf.path("active").asBoolean(true)) {
+          log.info("借阅审批链：流程配置「借阅利用」已停用，回退默认链 {}", roles);
+          return roles;
+        }
+        JsonNode rules = wf.path("chainRules");
+        if (!rules.isObject()) return roles;
+
+        List<String> built = new ArrayList<>();
+        if (rules.path("base").isArray()) {
+          rules.path("base").forEach(r -> appendRole(built, r.asText()));
+        }
+        JsonNode esc = rules.path("escalation");
+        if (esc.isArray()) {
+          for (JsonNode e : esc) {
+            String when = e.path("when").asText();
+            if (("extended_perms".equals(when) && extendedPerms) || ("sensitive".equals(when) && sensitive)) {
+              appendRole(built, e.path("appendRole").asText());
+            }
+          }
+        }
+        appendRole(built, rules.path("final").asText());
+
+        List<String> valid = built.stream().filter(APPROVER_ROLES::contains).distinct().toList();
+        if (valid.isEmpty()) {
+          log.warn("借阅审批链：配置规则无有效角色，回退默认链 {}", roles);
+          return roles;
+        }
+        log.info("借阅审批链按流程配置组链（v{}）：{}", wf.path("version").asInt(0), valid);
+        return valid;
+      }
+      return roles;
+    } catch (Exception e) {
+      log.warn("读取流程配置失败，回退默认审批链 {}: {}", roles, e.getMessage());
+      return roles;
+    }
+  }
+
+  /** 内置默认链（配置缺省/停用时的行为，与原硬编码一致） */
+  private static List<String> defaultChain(boolean extendedPerms, boolean sensitive) {
+    List<String> roles = new ArrayList<>();
+    roles.add("dept_manager");
+    if (extendedPerms) roles.add("cfo");
+    if (sensitive) roles.add("hrvp");
+    roles.add("archivist");
+    return roles;
+  }
+
+  private static void appendRole(List<String> roles, String role) {
+    if (role != null && !role.isBlank() && !roles.contains(role)) roles.add(role);
+  }
+
   // ═══════════════════ 审批 ═══════════════════
 
   @Transactional
-  public Map<String, Object> approve(String orderId, String actedBy, String comment) {
+  public Map<String, Object> approve(String orderId, com.finance.ams.auth.AuthUser actor, String comment) {
     Map<String, Object> order = requireOrder(orderId);
     requireStatus(order, "approving", "仅审批中的单据可审批");
     int step = intVal(order.get("current_step"));
+    String actedBy = actor.account();
+    requireStepRole(orderId, step, actor);
 
     jdbc.sql("UPDATE ams_approval_step SET status='approved', acted_by=?, acted_at=NOW(), comment=? WHERE order_id=? AND seq=?")
         .param(actedBy).param(comment).param(orderId).param(step + 1).update();
@@ -202,7 +287,7 @@ public class BorrowService {
       jdbc.sql("UPDATE ams_borrow_order SET current_step=?, status='fulfilling', updated_at=NOW() WHERE id=?")
           .param(step + 1).param(orderId).update();
       splitFulfillments(orderId, order);
-      oplog.append(actedBy, actedBy, "审批通过（终审）", orderId, orderId, comment != null ? comment : "终审通过，系统自动拆单履约");
+      oplog.append(actedBy, actor.name(), "审批通过（终审）", orderId, orderId, comment != null ? comment : "终审通过，系统自动拆单履约");
       log.info("借阅单 {} 终审通过，已拆单", orderId);
     } else {
       jdbc.sql("UPDATE ams_borrow_order SET current_step=?, updated_at=NOW() WHERE id=?")
@@ -212,16 +297,34 @@ public class BorrowService {
   }
 
   @Transactional
-  public Map<String, Object> reject(String orderId, String actedBy, String comment) {
+  public Map<String, Object> reject(String orderId, com.finance.ams.auth.AuthUser actor, String comment) {
     Map<String, Object> order = requireOrder(orderId);
     requireStatus(order, "approving", "仅审批中的单据可驳回");
     int step = intVal(order.get("current_step"));
+    String actedBy = actor.account();
+    requireStepRole(orderId, step, actor);
+
     jdbc.sql("UPDATE ams_approval_step SET status='rejected', acted_by=?, acted_at=NOW(), comment=? WHERE order_id=? AND seq=?")
         .param(actedBy).param(comment).param(orderId).param(step + 1).update();
     jdbc.sql("UPDATE ams_borrow_order SET status='rejected', updated_at=NOW() WHERE id=?").param(orderId).update();
-    oplog.append(actedBy, actedBy, "审批驳回", orderId, orderId, comment != null ? comment : "审批驳回");
+    oplog.append(actedBy, actor.name(), "审批驳回", orderId, orderId, comment != null ? comment : "审批驳回");
     log.info("借阅单 {} 已驳回", orderId);
     return getOrder(orderId);
+  }
+
+  /**
+   * 审批步骤角色硬校验（2026-08-18 越级审批修复）：
+   * 原实现仅要求"5 角色任一"，部门经理可直接批掉 CFO/HR 步骤。
+   * 现要求当前用户真实持有当前步骤角色（admin 不豁免——审批是业务行为，非系统管理）。
+   */
+  private void requireStepRole(String orderId, int currentStep, com.finance.ams.auth.AuthUser actor) {
+    String stepRole = jdbc.sql("SELECT role FROM ams_approval_step WHERE order_id=? AND seq=?")
+        .param(orderId).param(currentStep + 1).query(String.class).optional()
+        .orElseThrow(() -> BizException.conflict("STATE_CONFLICT", "当前审批步骤不存在或已被处理"));
+    if (!actor.roles().contains(stepRole)) {
+      throw new BizException(org.springframework.http.HttpStatus.FORBIDDEN, "FORBIDDEN",
+          "当前步骤需要「" + stepRole + "」角色审批，您不具备该角色");
+    }
   }
 
   // ═══════════════════ 拆单 ═══════════════════
@@ -273,6 +376,23 @@ public class BorrowService {
           .param(str(entry.getValue().get(0).get("title")))
           .update();
     }
+  }
+
+  // ═══════════════════ 申请人本人撤销（审批中） ═══════════════════
+
+  @Transactional
+  public Map<String, Object> cancelOrder(String orderId, String applicantId) {
+    Map<String, Object> order = requireOrder(orderId);
+    requireStatus(order, "approving", "仅审批中的借阅单可撤销");
+    // 安全：仅申请人本人可撤销（服务端会话校验身份，防他人代撤）
+    if (!applicantId.equals(str(order.get("applicant_id")))) {
+      throw new BizException(HttpStatus.FORBIDDEN, "FORBIDDEN", "仅申请人本人可撤销该借阅单");
+    }
+    jdbc.sql("UPDATE ams_borrow_order SET status='terminated', updated_at=NOW() WHERE id=? AND status='approving'")
+        .param(orderId).update();
+    oplog.append(applicantId, applicantId, "撤销借阅申请", orderId, orderId, "申请人在审批中主动撤销借阅申请");
+    log.info("借阅申请撤销: {}（申请人 {}）", orderId, applicantId);
+    return getOrder(orderId);
   }
 
   // ═══════════════════ 履约操作 ═══════════════════

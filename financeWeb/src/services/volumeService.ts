@@ -160,6 +160,37 @@ export async function decomposeVolumeApi(volumeId: string): Promise<number> {
   return res.itemCount;
 }
 
+/** 拆分：卷内选定件拆出为新案卷（继承源卷类别/年度/期限），全部拆出时源卷自动销毁 */
+export async function splitVolumeApi(
+  volumeId: string, recordIds: string[], title?: string,
+): Promise<{ volume: Volume; moved: number; sourceDestroyed: boolean; sourceRemaining: number }> {
+  const res = await http.post<{
+    volume: VolumeDto; moved: number; sourceDestroyed: boolean; sourceRemaining: number;
+  }>(`/volumes/${volumeId}/split`, { recordIds, title });
+  return {
+    volume: dtoToVolume(res.volume),
+    moved: res.moved,
+    sourceDestroyed: res.sourceDestroyed,
+    sourceRemaining: res.sourceRemaining,
+  };
+}
+
+/** 合并：多个来源草稿卷并入目标卷（来源卷删除；类别/年度/期限须一致） */
+export async function mergeVolumesApi(
+  sourceVolumeIds: string[], targetVolumeId: string,
+): Promise<{ volume: Volume; mergedCount: number; mergedVolumes: number }> {
+  const res = await http.post<{ volume: VolumeDto; mergedCount: number; mergedVolumes: number }>(
+    `/volumes/${targetVolumeId}/merge`, { sourceVolumeIds });
+  return { volume: dtoToVolume(res.volume), mergedCount: res.mergedCount, mergedVolumes: res.mergedVolumes };
+}
+
+/** 转卷：卷内选定件移入目标草稿卷（全部移出时源卷自动销毁） */
+export async function moveItemsApi(
+  volumeId: string, recordIds: string[], targetVolumeId: string,
+): Promise<{ moved: number; sourceDestroyed: boolean; sourceRemaining: number }> {
+  return http.post(`/volumes/${volumeId}/move-items`, { recordIds, targetVolumeId });
+}
+
 export async function transferVolumeApi(volumeId: string): Promise<Volume> {
   const dto = await http.post<VolumeDto>(`/volumes/${volumeId}/transfer`);
   return dtoToVolume(dto);

@@ -10,7 +10,7 @@
  *   4. 元数据比对
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Search, FileText, FolderTree, BookOpen, X, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, ExternalLink, BookOpenCheck, Package } from 'lucide-react';
 import { useVolumeStore, toCategoryCode } from '../../stores/volumeStore';
 import { useArchiveStore } from '../../stores/archiveStore';
@@ -39,26 +39,20 @@ interface SearchResult {
   volume?: Volume;           // 关联的案卷
 }
 
-// ── 元数据比对项 ──
-interface MetaCompare {
-  field: string;
-  scanned: string;        // 纸质扫描识别结果
-  electronic: string;     // 原生电子元数据
-  match: boolean;
-}
-
-const MOCK_COMPARE_DATA: MetaCompare[] = [
-  { field: '凭证号', scanned: '记-001', electronic: '记-001', match: true },
-  { field: '金额', scanned: '¥12,500.00', electronic: '¥12,500.00', match: true },
-  { field: '日期', scanned: '2026-01-15', electronic: '2026-01-15', match: true },
-  { field: '部门', scanned: '财务部', electronic: '财务部', match: true },
-  { field: '摘要', scanned: '差旅费报销', electronic: '差旅费报销-北京出差', match: false },
-];
-
 const VolumeItemSearchPage: React.FC = () => {
-  const records = useArchiveStore((s) => s.records);
+  // 全量件（含已组卷卷内件）：关联查询要能在归档态数据中定位件↔卷↔盒（2026-08-16 贯通修复）
+  const records = useArchiveStore((s) => s.allRecords);
+  const loadAllRecords = useArchiveStore((s) => s.loadAllRecords);
+  const currentFanzongCode = useArchiveStore((s) => s.currentFanzongCode);
   const volumes = useVolumeStore((s) => s.volumes);
   const volumeItems = useVolumeStore((s) => s.volumeItems);
+  const loadVolumes = useVolumeStore((s) => s.loadVolumes);
+
+  // 挂载刷新全量件与卷列表（归档/移交后的最新归属立即可查）
+  useEffect(() => {
+    void loadAllRecords();
+    if (currentFanzongCode) void loadVolumes(currentFanzongCode);
+  }, [loadAllRecords, loadVolumes, currentFanzongCode]);
   const cart = useBorrowStore((s) => s.cart);
   const addToCart = useBorrowStore((s) => s.addToCart);
   const removeFromCart = useBorrowStore((s) => s.removeFromCart);
@@ -321,28 +315,38 @@ const VolumeItemSearchPage: React.FC = () => {
               同屏对比 · {record.voucherNo}
             </h2>
 
-            {/* 左右对比 */}
+            {/* 左右对比（2026-08-16 贯通修复：全部改真实数据，移除假页码/假签名/假比对表） */}
             <div className="grid grid-cols-2 gap-4">
-              {/* 左：纸质扫描件（模拟） */}
+              {/* 左：纸质扫描件 */}
               <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
                 <div className="px-4 py-2.5 bg-amber-50 border-b border-amber-200 flex items-center justify-between">
                   <span className="text-xs font-semibold text-amber-700 flex items-center gap-1.5">
                     <BookOpen className="w-3.5 h-3.5" />
-                    纸质扫描件（卷内页）
+                    纸质扫描件
                   </span>
-                  <span className="text-xs text-amber-500">第 12 页 / 共 48 页</span>
+                  <span className="text-xs text-amber-600">{record.carrierType === 'paper' ? '纸质数字化' : '非纸质件'}</span>
                 </div>
                 <div className="p-4 aspect-[3/4] bg-slate-100 flex items-center justify-center">
                   <div className="text-center text-slate-400">
                     <BookOpen className="w-12 h-12 mx-auto mb-2" />
-                    <span className="text-xs block">扫描件预览区域</span>
-                    <span className="text-xs text-slate-300 mt-1 block">
-                      Z001-HJ-2026-KP-D30-V001 · 第12页
-                    </span>
+                    {record.carrierType === 'paper' || record.source === 'digitized' ? (
+                      <>
+                        <span className="text-xs block">该件含扫描版式文件</span>
+                        <button
+                          type="button"
+                          onClick={() => window.open(`/api/ams/records/${record.id}/content`, '_blank')}
+                          className="mt-2 px-3 py-1.5 text-xs text-sky-600 border border-sky-200 bg-white rounded-lg hover:bg-sky-50"
+                        >
+                          打开原件预览（新窗口）
+                        </button>
+                      </>
+                    ) : (
+                      <span className="text-xs block">原生电子件，无纸质扫描副本</span>
+                    )}
                   </div>
                 </div>
                 <div className="px-4 py-2 border-t border-slate-100 text-xs text-slate-500">
-                  卷号: Z001-HJ-2026-KP-D30-V001 | 件号: #1 | 页号: 12
+                  档号: {record.archiveCode || '未赋号'} {record.volumeCode ? `· 卷号: ${record.volumeCode}` : ''}
                 </div>
               </div>
 
@@ -353,54 +357,54 @@ const VolumeItemSearchPage: React.FC = () => {
                     <FileText className="w-3.5 h-3.5" />
                     原生电子件
                   </span>
-                  <span className="flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3 text-green-500" />
-                    <span className="text-xs text-green-600">签名有效</span>
-                  </span>
+                  <span className="text-xs text-sky-600">{record.numbered ? '已赋号' : '未赋号'}</span>
                 </div>
                 <div className="p-4 aspect-[3/4] bg-slate-100 flex items-center justify-center">
                   <div className="text-center text-slate-400">
                     <FileText className="w-12 h-12 mx-auto mb-2" />
                     <span className="text-xs block">电子文件预览区域</span>
-                    <span className="text-xs text-slate-300 mt-1 block">
-                      PDF/A · 142.5 KB · 哈希匹配
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() => window.open(`/api/ams/records/${record.id}/content`, '_blank')}
+                      className="mt-2 px-3 py-1.5 text-xs text-sky-600 border border-sky-200 bg-white rounded-lg hover:bg-sky-50"
+                    >
+                      打开原件预览（新窗口）
+                    </button>
                   </div>
                 </div>
                 <div className="px-4 py-2 border-t border-slate-100 text-xs text-slate-500">
-                  件号: {record.archiveCode} | 来源: {record.source === 'digital-native' ? '原生电子' : '纸质数字化'}
+                  件号: {record.archiveCode || '—'} | 来源: {record.source === 'digital-native' ? '原生电子' : '纸质数字化'}
                 </div>
               </div>
             </div>
 
-            {/* 元数据比对 */}
+            {/* 元数据比对（电子侧为真实元数据；扫描侧逐字段 OCR 抽取能力待建设，如实标注） */}
             <div className="bg-white border border-slate-200 rounded-xl p-4">
               <h3 className="text-xs font-semibold text-slate-700 mb-3 flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-slate-500" />
                 元数据比对
+                <span className="text-[10px] font-normal text-slate-400 ml-2">扫描侧逐字段识别待 OCR 抽取能力建设；当前可打开原件人工比对</span>
               </h3>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200">
+                  <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
                     <th className="px-3 py-2 text-xs font-semibold text-slate-600 text-left w-24">字段</th>
                     <th className="px-3 py-2 text-xs font-semibold text-amber-700 text-left">纸质扫描识别</th>
-                    <th className="px-3 py-2 text-xs font-semibold text-sky-700 text-left">原生电子元数据</th>
-                    <th className="px-3 py-2 text-xs font-semibold text-slate-600 text-center w-16">匹配</th>
+                    <th className="px-3 py-2 text-xs font-semibold text-sky-700 text-left">系统元数据（真实）</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {MOCK_COMPARE_DATA.map((item, i) => (
-                    <tr key={i} className="border-b border-slate-100">
-                      <td className="px-3 py-2 text-xs text-slate-600 font-medium">{item.field}</td>
-                      <td className="px-3 py-2 text-xs text-slate-700">{item.scanned}</td>
-                      <td className="px-3 py-2 text-xs text-slate-700">{item.electronic}</td>
-                      <td className="px-3 py-2 text-center">
-                        {item.match ? (
-                          <CheckCircle2 className="w-4 h-4 text-green-500 mx-auto" />
-                        ) : (
-                          <AlertTriangle className="w-4 h-4 text-amber-500 mx-auto" />
-                        )}
-                      </td>
+                  {[
+                    { field: '凭证号', value: record.voucherNo },
+                    { field: '金额', value: record.amount ? `¥${record.amount.toLocaleString()}` : '—' },
+                    { field: '会计期间', value: `${record.year}${record.month ? '-' + record.month : ''}` },
+                    { field: '部门', value: record.department || '—' },
+                    { field: '摘要', value: record.remarks || '—' },
+                  ].map((row) => (
+                    <tr key={row.field} className="border-b border-slate-100 divide-x divide-slate-100">
+                      <td className="px-3 py-2 text-xs text-slate-600 font-medium">{row.field}</td>
+                      <td className="px-3 py-2 text-xs text-slate-400">待逐字段 OCR 抽取</td>
+                      <td className="px-3 py-2 text-xs text-slate-700">{row.value}</td>
                     </tr>
                   ))}
                 </tbody>

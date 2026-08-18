@@ -17,6 +17,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 
 import com.finance.ams.alfresco.AlfrescoClient;
+import com.finance.ams.alfresco.AlfrescoAdminClient;
 import com.finance.ams.api.BizException;
 
 /**
@@ -32,6 +33,7 @@ public class AuthService {
   private static final Duration SESSION_TTL = Duration.ofHours(12);
 
   private final AlfrescoClient alfresco;
+  private final AlfrescoAdminClient alfrescoAdmin;
   private final JdbcClient jdbc;
 
   /** ticket → 会话 */
@@ -39,8 +41,9 @@ public class AuthService {
 
   private record SessionRecord(String userId, String ticket, AuthUser user, Instant lastAccess) {}
 
-  public AuthService(AlfrescoClient alfresco, DataSource dataSource) {
+  public AuthService(AlfrescoClient alfresco, AlfrescoAdminClient alfrescoAdmin, DataSource dataSource) {
     this.alfresco = alfresco;
+    this.alfrescoAdmin = alfrescoAdmin;
     this.jdbc = JdbcClient.create(dataSource);
   }
 
@@ -82,6 +85,11 @@ public class AuthService {
       sessions.remove(ticket);
       alfresco.deleteTicket(userId, ticket);
     }
+  }
+
+  /** 为前端 Alfresco 直连换发有效 ticket（服务端 admin 凭证，自动续期） */
+  public String alfrescoTicket() {
+    return alfrescoAdmin.getAdminTicket();
   }
 
   // ── 内部 ──

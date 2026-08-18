@@ -4,12 +4,16 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
@@ -22,6 +26,7 @@ import com.finance.ams.alfresco.RepoLayout;
 import com.finance.ams.api.BizException;
 import com.finance.ams.code.CodeSerialService;
 import com.finance.ams.configcenter.ConfigService;
+import com.finance.ams.record.RecordsChangedEvent;
 
 /**
  * 卷域服务（P1-② 组卷写路径）
@@ -55,14 +60,17 @@ public class VolumeService {
   private final RepoLayout layout;
   private final CodeSerialService serials;
   private final ConfigService config;
+  private final ApplicationEventPublisher events;
   private final ObjectMapper json = new ObjectMapper();
 
   public VolumeService(AlfrescoNodeClient nodes, RepoLayout layout,
-                       CodeSerialService serials, ConfigService config) {
+                       CodeSerialService serials, ConfigService config,
+                       ApplicationEventPublisher events) {
     this.nodes = nodes;
     this.layout = layout;
     this.serials = serials;
     this.config = config;
+    this.events = events;
   }
 
   // ═══════════════════ 建卷 / 更新 / 删除 ═══════════════════
@@ -256,6 +264,7 @@ public class VolumeService {
     }
     updateProps(ticket, volumeId, Map.of("finance:volumeTotalItems", existing.size() + recordIds.size()));
     log.info("加件入卷: {} 件 → {}（插入位 {}）", recordIds.size(), volumeId, insertAt + 1);
+    events.publishEvent(RecordsChangedEvent.refresh(recordIds)); // V10 读模型同步
     return items(ticket, volumeId);
   }
 
@@ -294,9 +303,11 @@ public class VolumeService {
         throw RepoLayout.translate("空案卷销毁失败", e);
       }
       log.info("拆件后案卷为空，自动销毁: {}", volumeId);
+      events.publishEvent(RecordsChangedEvent.refreshOne(recordId)); // V10 读模型同步
       return Map.of("destroyed", true, "remaining", 0);
     }
     updateProps(ticket, volumeId, Map.of("finance:volumeTotalItems", rest.size()));
+    events.publishEvent(RecordsChangedEvent.refreshOne(recordId)); // V10 读模型同步
     return Map.of("destroyed", false, "remaining", rest.size());
   }
 
@@ -367,6 +378,7 @@ public class VolumeService {
     upd.put("finance:volumeStatus", "confirmed");
     updateProps(ticket, volumeId, upd);
 
+    events.publishEvent(RecordsChangedEvent.refreshVolume(volumeId)); // V10 读模型同步（档号/状态变化）
     BoxRef box = boxOf(ticket, volumeId);
     return toView(nodes.getNode(ticket, volumeId), fondsCode, box.id(), box.no());
   }
@@ -393,6 +405,7 @@ public class VolumeService {
     upd.put("finance:volumeStatus", "draft");
     updateProps(ticket, volumeId, upd);
     log.info("撤销确认: {}", volumeId);
+    events.publishEvent(RecordsChangedEvent.refreshVolume(volumeId)); // V10 读模型同步
     return toView(nodes.getNode(ticket, volumeId), fondsCode, "", "");
   }
 
@@ -404,8 +417,10 @@ public class VolumeService {
     Map<String, Object> fonds = layout.findFondsOf(ticket, volumeId);
     String poolId = layout.pool(ticket, str(fonds.get("id")));
     List<Map<String, Object>> records = childRecords(ticket, volumeId);
+    List<String> ids = new ArrayList<>();
     for (Map<String, Object> r : records) {
       String recordId = str(r.get("id"));
+      ids.add(recordId);
       try {
         nodes.moveNode(ticket, recordId, poolId);
       } catch (HttpClientErrorException e) {
@@ -422,7 +437,258 @@ public class VolumeService {
       throw RepoLayout.translate("删除案卷失败", e);
     }
     log.info("拆卷完成: {}（{} 件回池）", volumeId, records.size());
+    events.publishEvent(RecordsChangedEvent.refresh(ids)); // V10 读模型同步（卷已销毁）
     return records.size();
+  }
+
+  // ═══════════════════ 拆分 / 合并 / 转卷（2026-08-17 组卷操作补全） ═══════════════════
+  //
+  // 三个操作共享同一条组卷不变式：
+  //   - 仅草稿卷参与（已确认须先撤销确认，正式档号才不会被改写）；
+  //   - 类别/年度/期限必须一致（DA/T 42-2022 同卷同类同期限原则，确认组卷按卷级属性统一赋号，
+  //     混拼会导致档号与件内容不符）；
+  //   - 件在任一时刻只归属一个容器（move 语义，不丢件、不重件）；
+  //   - 移出侧件号 1..n 重排、计数回写；源卷空壳自动销毁（与拆件语义一致）。
+  // Alfresco REST 无跨调用事务，采用「先校验全部前置 → 定序执行 → 失败即时报错」，
+  // 与既有 addItems/removeItem/decompose 同级可靠性。
+
+  /**
+   * 拆分：卷内选定件拆出为新案卷（继承源卷类别/年度/期限/载体/密级）。
+   * 选定件按原卷内顺序入新卷顺排；源卷余件重排，若全部拆出则源卷自动销毁。
+   */
+  public Map<String, Object> split(String ticket, String userId, String volumeId,
+                                   List<String> recordIds, String title) {
+    Map<String, Object> src = requireVolume(ticket, volumeId);
+    requireStatus(src, "draft", "仅草稿案卷可拆分（已确认请先撤销确认）");
+
+    List<Map<String, Object>> children = childRecords(ticket, volumeId);
+    children.sort(itemNoComparator());
+    Selection sel = pickSelected(children, recordIds, "拆分明细");
+
+    // 新卷继承源卷属性，落到同一目录（/案卷库/{大类}/{年度}/）
+    Map<String, Object> fonds = layout.findFondsOf(ticket, volumeId);
+    String fondsCode = prop(fonds, "finance:code");
+    String cat = prop(src, "finance:volumeTypeCode");
+    int year = intProp(src, "finance:volumeYear") != null ? intProp(src, "finance:volumeYear") : LocalDate.now().getYear();
+    String dirId = layout.ensurePath(ticket, str(fonds.get("id")), RepoLayout.VOLUMES_ROOT, cat, String.valueOf(year));
+
+    String newTitle = notBlank(title) ? title.trim() : prop(src, "finance:title") + "（拆分）";
+    Map<String, Object> props = new LinkedHashMap<>();
+    props.put("finance:volumeCode", pendingVolumeCode(fondsCode));
+    props.put("finance:title", newTitle);
+    props.put("finance:volumeTypeCode", cat);
+    if (notBlank(prop(src, "finance:volumeArchiveType"))) props.put("finance:volumeArchiveType", prop(src, "finance:volumeArchiveType"));
+    props.put("finance:volumeYear", year);
+    if (notBlank(prop(src, "finance:volumeRetention"))) props.put("finance:volumeRetention", prop(src, "finance:volumeRetention"));
+    if (notBlank(prop(src, "finance:retentionCode"))) props.put("finance:retentionCode", prop(src, "finance:retentionCode"));
+    props.put("finance:volumeStatus", "draft");
+    props.put("finance:volumeTotalItems", sel.picked().size());
+    props.put("finance:createdDate", LocalDate.now().toString());
+    props.put("finance:createdBy", userId);
+    if (notBlank(prop(src, "finance:volumeCarrierType"))) props.put("finance:volumeCarrierType", prop(src, "finance:volumeCarrierType"));
+    if (notBlank(prop(src, "finance:volumeSecurityLevel"))) props.put("finance:volumeSecurityLevel", prop(src, "finance:volumeSecurityLevel"));
+    Map<String, Object> newVol = createWithRenameRetry(ticket, dirId, sanitizeName(newTitle), "finance:volume", props);
+    String newVolId = str(newVol.get("id"));
+
+    // 移件：按原卷内顺序入新卷顺排（件状态保持「待审核」不变）
+    for (int i = 0; i < sel.picked().size(); i++) {
+      String rid = str(sel.picked().get(i).get("id"));
+      try {
+        nodes.moveNode(ticket, rid, newVolId);
+      } catch (HttpClientErrorException e) {
+        throw RepoLayout.translate("拆分移件失败: " + rid, e);
+      }
+      updateProps(ticket, rid, Map.of("finance:volumeItemNo", i + 1));
+    }
+
+    // 源卷：余件重排 + 计数回写；全部拆出时源卷自动销毁
+    boolean sourceDestroyed = sel.rest().isEmpty();
+    if (sourceDestroyed) {
+      try {
+        nodes.deleteNode(ticket, volumeId);
+      } catch (HttpClientErrorException e) {
+        throw RepoLayout.translate("源案卷销毁失败", e);
+      }
+    } else {
+      renumber(ticket, sel.rest());
+      updateProps(ticket, volumeId, Map.of("finance:volumeTotalItems", sel.rest().size()));
+    }
+    log.info("拆分案卷: {} → 新卷 {}（拆出 {} 件，源卷余 {} 件，操作人 {}）",
+        volumeId, newVolId, sel.picked().size(), sel.rest().size(), userId);
+    events.publishEvent(RecordsChangedEvent.refresh(
+        sel.picked().stream().map(r -> str(r.get("id"))).toList())); // V10 读模型同步
+
+    Map<String, Object> out = new LinkedHashMap<>();
+    out.put("volume", toView(nodes.getNode(ticket, newVolId), fondsCode, "", ""));
+    out.put("moved", sel.picked().size());
+    out.put("sourceDestroyed", sourceDestroyed);
+    out.put("sourceRemaining", sel.rest().size());
+    return out;
+  }
+
+  /**
+   * 合并：多个来源草稿卷的件按顺序追加到目标卷尾部，来源卷合并后删除。
+   * 前置：来源/目标全部草稿且类别/年度/期限一致，目标不得同时是来源。
+   */
+  public Map<String, Object> merge(String ticket, String userId, List<String> sourceVolumeIds, String targetVolumeId) {
+    Map<String, Object> target = requireVolume(ticket, targetVolumeId);
+    requireStatus(target, "draft", "目标案卷须为草稿状态（已确认请先撤销确认）");
+    if (sourceVolumeIds == null || sourceVolumeIds.isEmpty()) {
+      throw BizException.badRequest("VALIDATION_FAILED", "合并来源案卷不能为空");
+    }
+    Set<String> srcIds = new LinkedHashSet<>(sourceVolumeIds);
+    if (srcIds.size() != sourceVolumeIds.size()) {
+      throw BizException.badRequest("VALIDATION_FAILED", "合并来源存在重复案卷");
+    }
+    if (srcIds.contains(targetVolumeId)) {
+      throw BizException.badRequest("VALIDATION_FAILED", "目标案卷不能同时作为合并来源");
+    }
+
+    // 全部前置校验（存在性/草稿态/一致性）通过后才开始移动，避免半卷合并
+    List<Map<String, Object>> sources = new ArrayList<>();
+    for (String sid : srcIds) {
+      Map<String, Object> sv = requireVolume(ticket, sid);
+      requireStatus(sv, "draft", "来源案卷「" + prop(sv, "finance:title") + "」不是草稿状态（已确认请先撤销确认）");
+      requireCompatible(target, sv, "合并");
+      sources.add(sv);
+    }
+
+    int nextNo = childRecords(ticket, targetVolumeId).size() + 1;
+    int merged = 0;
+    List<String> movedIds = new ArrayList<>();
+    for (Map<String, Object> sv : sources) {
+      String sid = str(sv.get("id"));
+      List<Map<String, Object>> recs = childRecords(ticket, sid);
+      recs.sort(itemNoComparator());
+      for (Map<String, Object> r : recs) {
+        String rid = str(r.get("id"));
+        movedIds.add(rid);
+        try {
+          nodes.moveNode(ticket, rid, targetVolumeId);
+        } catch (HttpClientErrorException e) {
+          throw RepoLayout.translate("合并移件失败: " + rid, e);
+        }
+        updateProps(ticket, rid, Map.of("finance:volumeItemNo", nextNo++));
+        merged++;
+      }
+      try {
+        nodes.deleteNode(ticket, sid);
+      } catch (HttpClientErrorException e) {
+        throw RepoLayout.translate("来源案卷删除失败: " + sid, e);
+      }
+    }
+    updateProps(ticket, targetVolumeId, Map.of("finance:volumeTotalItems", nextNo - 1));
+    log.info("合并案卷: {} 卷并入 {}（共 {} 件，操作人 {}）", sources.size(), targetVolumeId, merged, userId);
+    events.publishEvent(RecordsChangedEvent.refresh(movedIds)); // V10 读模型同步（源卷已销毁）
+
+    Map<String, Object> fonds = layout.findFondsOf(ticket, targetVolumeId);
+    BoxRef box = boxOf(ticket, targetVolumeId);
+    Map<String, Object> out = new LinkedHashMap<>();
+    out.put("volume", toView(nodes.getNode(ticket, targetVolumeId), prop(fonds, "finance:code"), box.id(), box.no()));
+    out.put("mergedCount", merged);
+    out.put("mergedVolumes", sources.size());
+    return out;
+  }
+
+  /**
+   * 转卷：源卷选定件移入目标草稿卷尾部（跨案卷迁移，不回收集池）。
+   * 源卷余件重排；全部移出时源卷自动销毁。
+   */
+  public Map<String, Object> moveItems(String ticket, String userId, String volumeId,
+                                       List<String> recordIds, String targetVolumeId) {
+    if (volumeId.equals(targetVolumeId)) {
+      throw BizException.badRequest("VALIDATION_FAILED", "源案卷与目标案卷相同，无需转卷");
+    }
+    Map<String, Object> src = requireVolume(ticket, volumeId);
+    Map<String, Object> target = requireVolume(ticket, targetVolumeId);
+    requireStatus(src, "draft", "源案卷须为草稿状态（已确认请先撤销确认）");
+    requireStatus(target, "draft", "目标案卷须为草稿状态（已确认请先撤销确认）");
+    requireCompatible(src, target, "转卷");
+
+    List<Map<String, Object>> children = childRecords(ticket, volumeId);
+    children.sort(itemNoComparator());
+    Selection sel = pickSelected(children, recordIds, "转卷明细");
+
+    int nextNo = childRecords(ticket, targetVolumeId).size() + 1;
+    for (Map<String, Object> r : sel.picked()) {
+      String rid = str(r.get("id"));
+      try {
+        nodes.moveNode(ticket, rid, targetVolumeId);
+      } catch (HttpClientErrorException e) {
+        throw RepoLayout.translate("转卷移件失败: " + rid, e);
+      }
+      updateProps(ticket, rid, Map.of("finance:volumeItemNo", nextNo++));
+    }
+
+    boolean sourceDestroyed = sel.rest().isEmpty();
+    if (sourceDestroyed) {
+      try {
+        nodes.deleteNode(ticket, volumeId);
+      } catch (HttpClientErrorException e) {
+        throw RepoLayout.translate("源案卷销毁失败", e);
+      }
+    } else {
+      renumber(ticket, sel.rest());
+      updateProps(ticket, volumeId, Map.of("finance:volumeTotalItems", sel.rest().size()));
+    }
+    log.info("转卷: {} 件 {} → {}（源卷余 {} 件，操作人 {}）",
+        sel.picked().size(), volumeId, targetVolumeId, sel.rest().size(), userId);
+    events.publishEvent(RecordsChangedEvent.refresh(
+        sel.picked().stream().map(r -> str(r.get("id"))).toList())); // V10 读模型同步
+
+    Map<String, Object> out = new LinkedHashMap<>();
+    out.put("moved", sel.picked().size());
+    out.put("sourceDestroyed", sourceDestroyed);
+    out.put("sourceRemaining", sel.rest().size());
+    return out;
+  }
+
+  /** 选中集拆分：按卷内顺序分出「选中件 / 余件」，并校验明细非空、无重复、全部属于本卷 */
+  private Selection pickSelected(List<Map<String, Object>> children, List<String> recordIds, String label) {
+    if (recordIds == null || recordIds.isEmpty()) {
+      throw BizException.badRequest("VALIDATION_FAILED", label + "不能为空");
+    }
+    Set<String> ids = new LinkedHashSet<>(recordIds);
+    if (ids.size() != recordIds.size()) {
+      throw BizException.badRequest("VALIDATION_FAILED", label + "存在重复件");
+    }
+    List<Map<String, Object>> picked = new ArrayList<>();
+    List<Map<String, Object>> rest = new ArrayList<>();
+    for (Map<String, Object> r : children) {
+      if (ids.contains(str(r.get("id")))) picked.add(r); else rest.add(r);
+    }
+    if (picked.size() != ids.size()) {
+      throw BizException.badRequest("VALIDATION_FAILED", label + "含有不属于本案卷的件");
+    }
+    return new Selection(picked, rest);
+  }
+
+  private record Selection(List<Map<String, Object>> picked, List<Map<String, Object>> rest) {}
+
+  /** 一致性校验：同大类、同年度、同保管期限才可合卷/转卷（DA/T 42-2022 组卷原则） */
+  private void requireCompatible(Map<String, Object> a, Map<String, Object> b, String op) {
+    boolean ok = Objects.equals(prop(a, "finance:volumeTypeCode"), prop(b, "finance:volumeTypeCode"))
+        && Objects.equals(intProp(a, "finance:volumeYear"), intProp(b, "finance:volumeYear"))
+        && Objects.equals(prop(a, "finance:retentionCode"), prop(b, "finance:retentionCode"));
+    if (!ok) {
+      throw new BizException(HttpStatus.CONFLICT, "VOLUME_INCOMPATIBLE",
+          op + "要求案卷类别/年度/保管期限一致：「" + prop(a, "finance:title") + "」与「" + prop(b, "finance:title") + "」不匹配");
+    }
+  }
+
+  /** 卷内件按件号顺排比较器（无件号排尾） */
+  private static Comparator<Map<String, Object>> itemNoComparator() {
+    return Comparator.comparing(r -> {
+      Integer n = intProp(r, "finance:volumeItemNo");
+      return n == null ? Integer.MAX_VALUE : n;
+    });
+  }
+
+  /** 余件按当前顺序重写件号 1..n（children 须已按期望顺序排好） */
+  private void renumber(String ticket, List<Map<String, Object>> children) {
+    for (int i = 0; i < children.size(); i++) {
+      updateProps(ticket, str(children.get(i).get("id")), Map.of("finance:volumeItemNo", i + 1));
+    }
   }
 
   // ═══════════════════ 移交归盒 / 退回 ═══════════════════
@@ -479,6 +745,7 @@ public class VolumeService {
         "finance:volumeCount", boxVolCount + 1,
         "finance:boxTotalItems", boxItemCount + totalItems));
     log.info("移交归盒: {} → 盒 {}（操作人 {}）", volumeId, prop(box, "finance:boxNo"), userId);
+    events.publishEvent(RecordsChangedEvent.refreshVolume(volumeId)); // V10 读模型同步（盒归属变化）
     return toView(nodes.getNode(ticket, volumeId), fondsCode, boxId, prop(box, "finance:boxNo"));
   }
 
@@ -515,6 +782,7 @@ public class VolumeService {
           "finance:boxTotalItems", Math.max(0, boxItemCount - totalItems)));
     }
     log.info("案卷退回工作台: {}", volumeId);
+    events.publishEvent(RecordsChangedEvent.refreshVolume(volumeId)); // V10 读模型同步（回卷库+状态回退）
     return toView(nodes.getNode(ticket, volumeId), fondsCode, "", "");
   }
 

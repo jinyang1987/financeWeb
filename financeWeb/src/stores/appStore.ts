@@ -9,15 +9,16 @@ export type MenuId =
   | 'view-finance' | 'view-project' | 'project-query'
   | 'config-workflow' | 'sys-org' | 'sys-user' | 'sys-log'
   | 'sys-unit' | 'sys-personnel' | 'sys-role'
+  | 'sys-connection' | 'sys-storage'
   | 'archive-rcv' | 'wf-control'
-  | 'my-borrow' | 'approval-center' | 'borrow-manage' | 'borrow-ledger' | 'borrow-stats' | 'search-stats'
+  | 'approval-center' | 'borrow-manage' | 'borrow-ledger' | 'borrow-stats' | 'search-stats'
   | 'digital-warehouse'
   | 'volume-workspace' | 'voucher-manager' | 'volume-dir-print' | 'voucher-upload' | 'archive-api-receive'
   | 'volume-item-search' | 'transfer-manage'
   | 'archive-code-config' | 'retention-config' | 'volume-grouping-config'
   | 'source-doc-search' | 'voucher-query' | 'fuzzy-query'
   | 'voucher-search' | 'matter-search' | 'audit-trail'
-  | 'archive-package' | 'archive-transfer'
+  | 'archive-package' | 'archive-transfer' | 'appraisal-manage'
   | 'util-view-finance' | 'util-view-project' | 'util-view-time';
 
 type SidebarGroupKey = 'query' | 'rcv' | 'arrange' | 'config' | 'preserve' | 'util' | 'disposal' | 'stats' | 'archiveSettings' | 'system';

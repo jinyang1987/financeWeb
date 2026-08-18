@@ -181,31 +181,31 @@ const MyBorrowOrders: React.FC = () => {
                   {/* 明细 */}
                   <div>
                     <div className="text-xs font-bold text-slate-600 mb-2">借阅明细（{order.items.length} 件）</div>
-                    <div className="border border-slate-100 rounded-xl overflow-hidden">
+                    <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
                       <table className="w-full">
                         <thead>
-                          <tr className="bg-slate-50 text-left">
-                            <th className="px-3 py-2 text-[10px] font-semibold text-slate-500">题名</th>
-                            <th className="px-3 py-2 text-[10px] font-semibold text-slate-500">类型</th>
-                            <th className="px-3 py-2 text-[10px] font-semibold text-slate-500">介质</th>
-                            <th className="px-3 py-2 text-[10px] font-semibold text-slate-500">密级</th>
-                            <th className="px-3 py-2 text-[10px] font-semibold text-slate-500">申请权限</th>
+                          <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
+                            <th className="px-4 py-3 text-left text-[13px] font-semibold">题名</th>
+                            <th className="px-4 py-3 text-left text-[13px] font-semibold">类型</th>
+                            <th className="px-4 py-3 text-left text-[13px] font-semibold">介质</th>
+                            <th className="px-4 py-3 text-left text-[13px] font-semibold">密级</th>
+                            <th className="px-4 py-3 text-left text-[13px] font-semibold">申请权限</th>
                           </tr>
                         </thead>
                         <tbody>
                           {order.items.map((item) => (
-                            <tr key={item.id} className="border-t border-slate-50">
-                              <td className="px-3 py-2 text-xs text-slate-700 max-w-[240px] truncate">{item.title}</td>
-                              <td className="px-3 py-2 text-xs text-slate-500">{item.archiveType}</td>
-                              <td className="px-3 py-2 text-xs text-slate-500">
+                            <tr key={item.id} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
+                              <td className="px-4 py-3 text-sm text-slate-800 max-w-[240px] truncate">{item.title}</td>
+                              <td className="px-4 py-3 text-[13px] text-slate-600">{item.archiveType}</td>
+                              <td className="px-4 py-3 text-[13px] text-slate-600">
                                 {item.mediaType === 'electronic' ? '纯电子' : item.mediaType === 'paper' ? '纯实体' : '混合'}
                               </td>
-                              <td className="px-3 py-2 text-xs">
+                              <td className="px-4 py-3 text-[13px]">
                                 <span className={item.securityLevel === '普通' ? 'text-slate-400' : 'text-amber-600 font-medium'}>
                                   {item.securityLevel}
                                 </span>
                               </td>
-                              <td className="px-3 py-2 text-xs text-slate-500">
+                              <td className="px-4 py-3 text-[13px] text-slate-600">
                                 {item.electronicPerms.map((p) => PERM_LABELS[p]).join('/') || '—'}
                                 {item.physicalMode !== 'none' && ` + ${PHYSICAL_MODE_LABELS[item.physicalMode]}`}
                               </td>

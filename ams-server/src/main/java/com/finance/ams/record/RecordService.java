@@ -7,15 +7,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 
 import com.finance.ams.alfresco.AlfrescoNodeClient;
+import com.finance.ams.alfresco.RepoLayout;
 import com.finance.ams.api.BizException;
 
 /**
@@ -42,6 +45,8 @@ public class RecordService {
   static final String PENDING_CODE_SUFFIX = "-PEND-";
 
   private final AlfrescoNodeClient nodes;
+  private final RepoLayout layout;
+  private final ApplicationEventPublisher events;
 
   /** 全宗号 → 全宗节点 id */
   private final Map<String, String> fondsCache = new ConcurrentHashMap<>();
@@ -50,8 +55,10 @@ public class RecordService {
   /** 根目录（会计档案管理）节点 id */
   private volatile String rootNodeId;
 
-  public RecordService(AlfrescoNodeClient nodes) {
+  public RecordService(AlfrescoNodeClient nodes, RepoLayout layout, ApplicationEventPublisher events) {
     this.nodes = nodes;
+    this.layout = layout;
+    this.events = events;
   }
 
   // ═══════════════════ 上传建件 ═══════════════════
@@ -134,6 +141,7 @@ public class RecordService {
       throw translate("内容写入失败，节点已回滚", e);
     }
     log.info("建件成功: {} → {}（{}，{} 字节，操作人 {}）", cmd.voucherNo(), nodeId, filename, bytes.length, userId);
+    events.publishEvent(RecordsChangedEvent.refreshOne(nodeId)); // V10 读模型同步
     return toView(entry, mimetype, bytes.length);
   }
 
@@ -166,6 +174,7 @@ public class RecordService {
     } catch (HttpClientErrorException e) {
       throw translate("删除失败", e);
     }
+    events.publishEvent(RecordsChangedEvent.removed(nodeId)); // V10 读模型同步
   }
 
   private void validate(CreateCmd cmd, String filename, byte[] bytes) {
@@ -219,49 +228,179 @@ public class RecordService {
   // ═══════════════════ 收集池列表 ═══════════════════
 
   public record PoolQuery(String fondsCode, String archiveType, Integer year, Integer month,
-                          String keyword, int skipCount, int maxItems) {}
+                          String keyword, int skipCount, int maxItems, String scope) {
+    /** 兼容旧签名（默认 scope=pool） */
+    public PoolQuery(String fondsCode, String archiveType, Integer year, Integer month,
+                     String keyword, int skipCount, int maxItems) {
+      this(fondsCode, archiveType, year, month, keyword, skipCount, maxItems, "pool");
+    }
+  }
 
   public record PoolResult(List<Map<String, Object>> items, long totalItems, int skipCount, int maxItems) {}
+
+  /** 带父级归属的条目（scope=all 时携带所在卷/盒信息） */
+  private record GatheredEntry(Map<String, Object> entry, String volumeId, String volumeCode,
+                               String boxId, String boxNo) {}
 
   /**
    * 收集池列表（未组卷件）：children API 全量拉取 + 内存过滤/分页。
    * 池量级（数百件）下内存过滤完全够用，且规避了 Solr 索引延迟导致的"上传后看不到"。
    */
-  @SuppressWarnings("unchecked")
   public PoolResult listPool(String ticket, PoolQuery q) {
+    return listPool(ticket, q, null);
+  }
+
+  /** 带行级权限过滤的池列表（2026-08-18：rowFilter 作用于视图，先过滤再分页） */
+  public PoolResult listPool(String ticket, PoolQuery q, Predicate<Map<String, Object>> rowFilter) {
     if (!notBlank(q.fondsCode())) throw BizException.badRequest("VALIDATION_FAILED", "fondsCode 不能为空");
     String fondsId = resolveFonds(ticket, q.fondsCode());
     String poolId = ensurePool(ticket, fondsId);
 
-    List<Map<String, Object>> all = new ArrayList<>();
-    int skip = 0;
-    while (all.size() < 5000) {
-      Map<String, Object> list = nodes.listChildren(ticket, poolId, skip, 500);
-      for (Map<String, Object> e : (List<Map<String, Object>>) list.get("entries")) {
-        Map<String, Object> entry = (Map<String, Object>) e.get("entry");
-        if ("finance:record".equals(entry.get("nodeType"))) all.add(entry);
-      }
-      Map<String, Object> paging = (Map<String, Object>) list.get("pagination");
-      if (!Boolean.TRUE.equals(paging.get("hasMoreItems"))) break;
-      skip += 500;
+    List<GatheredEntry> gathered = new ArrayList<>();
+    for (Map<String, Object> e : childrenOfType(ticket, poolId, "finance:record")) {
+      gathered.add(new GatheredEntry(e, "", "", "", ""));
     }
+    return filterPage(ticket, gathered, q, rowFilter);
+  }
 
+  /**
+   * 全量件列表（scope=all，2026-08-16 贯通审计 P0 修复）：
+   * 收集池件 ∪ 案卷库卷内件（草稿/已确认）∪ 盒库卷内件（已移交），
+   * 每条携带 volumeId/volumeCode/boxId/boxNo 归属信息（池件为空串）。
+   *
+   * 背景：后台档案查询/档案打包/借阅车结算需要「已组卷」件，而池列表只含未组卷件，
+   * 导致已归档件对读侧不可见（三处断链同一根因）。同样走 children 事务读，不依赖 Solr。
+   */
+  public PoolResult listAll(String ticket, PoolQuery q) {
+    return listAll(ticket, q, null);
+  }
+
+  /** 带行级权限过滤的全量件列表（2026-08-18） */
+  public PoolResult listAll(String ticket, PoolQuery q, Predicate<Map<String, Object>> rowFilter) {
+    if (!notBlank(q.fondsCode())) throw BizException.badRequest("VALIDATION_FAILED", "fondsCode 不能为空");
+    return filterPage(ticket, gather(ticket, q.fondsCode()), q, rowFilter);
+  }
+
+  /**
+   * 全量 gather（V10 读模型重建共用，2026-08-18 自 listAll 抽取）：
+   * ① 收集池 ∪ ② 案卷库卷内件 ∪ ③ 盒库卷内件，每条带卷/盒归属。
+   */
+  private List<GatheredEntry> gather(String ticket, String fondsCode) {
+    String fondsId = resolveFonds(ticket, fondsCode);
+    String poolId = ensurePool(ticket, fondsId);
+
+    List<GatheredEntry> gathered = new ArrayList<>();
+    // ① 收集池（未组卷件）
+    for (Map<String, Object> e : childrenOfType(ticket, poolId, "finance:record")) {
+      gathered.add(new GatheredEntry(e, "", "", "", ""));
+    }
+    // ② 案卷库：/{全宗}/案卷库/{CAT}/{year}/{volume}/{record}
+    String volsRoot = layout.ensureChild(ticket, fondsId, RepoLayout.VOLUMES_ROOT);
+    gatherVolumeRecords(ticket, volsRoot, "", "", gathered);
+    // ③ 盒库：/{全宗}/盒库/{CAT}/{year}/{box}/{volume}/{record}
+    String boxesRoot = layout.ensureChild(ticket, fondsId, RepoLayout.BOXES_ROOT);
+    for (Map<String, Object> catDir : childFoldersSafe(ticket, boxesRoot)) {
+      for (Map<String, Object> yearDir : childFoldersSafe(ticket, str(catDir.get("id")))) {
+        for (Map<String, Object> box : childrenOfType(ticket, str(yearDir.get("id")), "finance:archiveBox")) {
+          String boxId = str(box.get("id"));
+          String boxNo = prop(box, "finance:boxNo");
+          for (Map<String, Object> vol : childrenOfType(ticket, boxId, "finance:volume")) {
+            gatherRecordsOfVolume(ticket, vol, boxId, boxNo, gathered);
+          }
+        }
+      }
+    }
+    return gathered;
+  }
+
+  /** gather → 带归属的 RecordView 列表（V10 读模型重建投影源） */
+  public List<Map<String, Object>> gatherViews(String ticket, String fondsCode) {
+    List<Map<String, Object>> views = new ArrayList<>();
+    for (GatheredEntry g : gather(ticket, fondsCode)) {
+      Map<String, Object> view = toView(g.entry(), null, -1);
+      view.put("volumeId", g.volumeId());
+      view.put("volumeCode", g.volumeCode());
+      view.put("boxId", g.boxId());
+      view.put("boxNo", g.boxNo());
+      views.add(view);
+    }
+    return views;
+  }
+
+  /** 库内全部全宗号（V10 rebuild 遍历用；整表重扫灌缓存后取键集） */
+  @SuppressWarnings("unchecked")
+  public List<String> allFondsCodes(String ticket) {
+    String rootId = resolveRoot(ticket);
+    synchronized (fondsCache) {
+      int skip = 0;
+      while (true) {
+        Map<String, Object> list = nodes.listChildren(ticket, rootId, skip, 200);
+        for (Map<String, Object> e : (List<Map<String, Object>>) list.get("entries")) {
+          Map<String, Object> entry = (Map<String, Object>) e.get("entry");
+          if (!"finance:fonds".equals(entry.get("nodeType"))) continue;
+          String code = str(prop(entry, "finance:code"));
+          if (!code.isEmpty()) fondsCache.put(code, (String) entry.get("id"));
+        }
+        Map<String, Object> paging = (Map<String, Object>) list.get("pagination");
+        if (!Boolean.TRUE.equals(paging.get("hasMoreItems"))) break;
+        skip += 200;
+      }
+      return new ArrayList<>(fondsCache.keySet());
+    }
+  }
+
+  /** 遍历案卷库类目/年度目录树，收集每个案卷的卷内件 */
+  private void gatherVolumeRecords(String ticket, String volsRootId, String boxId, String boxNo,
+                                   List<GatheredEntry> out) {
+    for (Map<String, Object> catDir : childFoldersSafe(ticket, volsRootId)) {
+      for (Map<String, Object> yearDir : childFoldersSafe(ticket, str(catDir.get("id")))) {
+        for (Map<String, Object> vol : childrenOfType(ticket, str(yearDir.get("id")), "finance:volume")) {
+          gatherRecordsOfVolume(ticket, vol, boxId, boxNo, out);
+        }
+      }
+    }
+  }
+
+  /** 单个案卷的卷内件 → GatheredEntry（带卷/盒归属） */
+  private void gatherRecordsOfVolume(String ticket, Map<String, Object> vol, String boxId, String boxNo,
+                                     List<GatheredEntry> out) {
+    String volId = str(vol.get("id"));
+    String volCode = prop(vol, "finance:volumeCode");
+    for (Map<String, Object> r : childrenOfType(ticket, volId, "finance:record")) {
+      out.add(new GatheredEntry(r, volId, volCode, boxId, boxNo));
+    }
+  }
+
+  /** 统一过滤/排序/分页/视图映射（pool 与 all 共用）；rowFilter 为行级权限谓词（null=不过滤），先于分页应用 */
+  private PoolResult filterPage(String ticket, List<GatheredEntry> gathered, PoolQuery q,
+                                Predicate<Map<String, Object>> rowFilter) {
     String kw = q.keyword() == null ? "" : q.keyword().trim().toLowerCase();
-    List<Map<String, Object>> filtered = all.stream()
-        .filter(e -> q.archiveType() == null || q.archiveType().equals(prop(e, "finance:archiveType")))
-        .filter(e -> q.year() == null || q.year().equals(intProp(e, "finance:year")))
-        .filter(e -> q.month() == null || q.month().equals(intProp(e, "finance:month")))
-        .filter(e -> kw.isEmpty()
-            || str(e.get("name")).toLowerCase().contains(kw)
-            || str(prop(e, "finance:voucherNo")).toLowerCase().contains(kw)
-            || str(prop(e, "finance:recordRemark")).toLowerCase().contains(kw))
-        .sorted(Comparator.comparing(e -> str(e.get("createdAt")), Comparator.reverseOrder()))
+    List<GatheredEntry> filtered = gathered.stream()
+        .filter(g -> q.archiveType() == null || q.archiveType().equals(prop(g.entry(), "finance:archiveType")))
+        .filter(g -> q.year() == null || q.year().equals(intProp(g.entry(), "finance:year")))
+        .filter(g -> q.month() == null || q.month().equals(intProp(g.entry(), "finance:month")))
+        .filter(g -> kw.isEmpty()
+            || str(g.entry().get("name")).toLowerCase().contains(kw)
+            || str(prop(g.entry(), "finance:voucherNo")).toLowerCase().contains(kw)
+            || str(prop(g.entry(), "finance:recordRemark")).toLowerCase().contains(kw))
+        .sorted(Comparator.comparing(g -> str(g.entry().get("createdAt")), Comparator.reverseOrder()))
         .toList();
 
-    int from = Math.min(q.skipCount(), filtered.size());
-    int to = Math.min(from + q.maxItems(), filtered.size());
-    List<Map<String, Object>> page = filtered.subList(from, to).stream().map(e -> toView(e, null, -1)).toList();
-    return new PoolResult(page, filtered.size(), q.skipCount(), q.maxItems());
+    // 先映射视图（行级过滤需要 securityLevel/department/createdBy 视图键）
+    List<Map<String, Object>> views = filtered.stream().map(g -> {
+      Map<String, Object> view = toView(g.entry(), null, -1);
+      view.put("volumeId", g.volumeId());
+      view.put("volumeCode", g.volumeCode());
+      view.put("boxId", g.boxId());
+      view.put("boxNo", g.boxNo());
+      return view;
+    }).toList();
+    // 行级权限过滤（密级上限/部门范围/创建人），先于计数与分页
+    if (rowFilter != null) views = views.stream().filter(rowFilter).toList();
+
+    int from = Math.min(q.skipCount(), views.size());
+    int to = Math.min(from + q.maxItems(), views.size());
+    return new PoolResult(views.subList(from, to), views.size(), q.skipCount(), q.maxItems());
   }
 
   // ═══════════════════ 卷内件全量读取（P1-③ 读视图） ═══════════════════
@@ -303,6 +442,13 @@ public class RecordService {
     return all.stream().map(e -> toView(e, null, -1)).toList();
   }
 
+  /** 带行级权限过滤的卷内件读取（2026-08-18） */
+  public List<Map<String, Object>> listByParent(String ticket, String parentId,
+                                                Predicate<Map<String, Object>> rowFilter) {
+    List<Map<String, Object>> views = listByParent(ticket, parentId);
+    return rowFilter == null ? views : views.stream().filter(rowFilter).toList();
+  }
+
   /**
    * 按档案盒 id 读取盒内全部记录（盒→卷→件两级遍历）。
    * 盒的直接子节点是 finance:volume（文件夹），需逐卷再读子件。
@@ -331,6 +477,13 @@ public class RecordService {
       skip += 500;
     }
     return out;
+  }
+
+  /** 带行级权限过滤的盒内件读取（2026-08-18） */
+  public List<Map<String, Object>> listByBox(String ticket, String boxId,
+                                             Predicate<Map<String, Object>> rowFilter) {
+    List<Map<String, Object>> views = listByBox(ticket, boxId);
+    return rowFilter == null ? views : views.stream().filter(rowFilter).toList();
   }
 
     /** 批量按节点 id 读取记录（跨卷/跨盒查询场景） */
@@ -435,11 +588,54 @@ public class RecordService {
     }
   }
 
+  /** 子节点中指定类型的全部条目（分页拉全，上限 5000） */
+  @SuppressWarnings("unchecked")
+  private List<Map<String, Object>> childrenOfType(String ticket, String parentId, String nodeType) {
+    List<Map<String, Object>> out = new ArrayList<>();
+    int skip = 0;
+    while (out.size() < 5000) {
+      Map<String, Object> list = nodes.listChildren(ticket, parentId, skip, 500);
+      for (Map<String, Object> e : (List<Map<String, Object>>) list.get("entries")) {
+        Map<String, Object> entry = (Map<String, Object>) e.get("entry");
+        if (nodeType.equals(entry.get("nodeType"))) out.add(entry);
+      }
+      Map<String, Object> paging = (Map<String, Object>) list.get("pagination");
+      if (!Boolean.TRUE.equals(paging.get("hasMoreItems"))) break;
+      skip += 500;
+    }
+    return out;
+  }
+
+  /** 子目录列表（目录不存在时按空处理——从未建过卷/盒的类目） */
+  @SuppressWarnings("unchecked")
+  private List<Map<String, Object>> childFoldersSafe(String ticket, String parentId) {
+    List<Map<String, Object>> out = new ArrayList<>();
+    int skip = 0;
+    while (true) {
+      Map<String, Object> list;
+      try {
+        list = nodes.listChildren(ticket, parentId, skip, 500);
+      } catch (HttpClientErrorException.NotFound e) {
+        return out;
+      } catch (HttpClientErrorException e) {
+        throw translate("目录扫描失败", e);
+      }
+      for (Map<String, Object> e : (List<Map<String, Object>>) list.get("entries")) {
+        Map<String, Object> entry = (Map<String, Object>) e.get("entry");
+        if (Boolean.TRUE.equals(entry.get("isFolder"))) out.add(entry);
+      }
+      Map<String, Object> paging = (Map<String, Object>) list.get("pagination");
+      if (!Boolean.TRUE.equals(paging.get("hasMoreItems"))) break;
+      skip += 500;
+    }
+    return out;
+  }
+
   // ═══════════════════ 视图映射/异常翻译 ═══════════════════
 
-  /** 节点 entry → 前端 RecordView（mime/size 可由上传路径直接给出） */
+  /** 节点 entry → 前端 RecordView（mime/size 可由上传路径直接给出；静态纯函数，读模型投影共用） */
   @SuppressWarnings("unchecked")
-  Map<String, Object> toView(Map<String, Object> entry, String uploadMime, long uploadSize) {
+  static Map<String, Object> toView(Map<String, Object> entry, String uploadMime, long uploadSize) {
     Map<String, Object> view = new LinkedHashMap<>();
     view.put("nodeId", entry.get("id"));
     view.put("name", entry.get("name"));
@@ -459,6 +655,11 @@ public class RecordService {
     view.put("preparer", prop(entry, "finance:preparer"));
     view.put("voucherCategory", prop(entry, "finance:voucherCategory"));
     view.put("remarks", prop(entry, "finance:recordRemark"));
+    // V10 全文检索读模型补字段（2026-08-18）：科目/往来单位/单据号/正文（OCR 双通道回写）
+    view.put("accountSubject", prop(entry, "finance:accountSubject"));
+    view.put("counterpartyName", prop(entry, "finance:counterpartyName"));
+    view.put("documentNo", prop(entry, "finance:documentNo"));
+    view.put("ocrText", prop(entry, "finance:ocrText"));
     // v2.2 凭证扩展元数据
     view.put("voucherWord", prop(entry, "finance:voucherWord"));
     view.put("voucherDate", prop(entry, "finance:voucherDate"));
@@ -470,6 +671,8 @@ public class RecordService {
     view.put("sourceSystem", prop(entry, "finance:sourceSystem"));
     view.put("externalId", prop(entry, "finance:externalId"));
     view.put("description", prop(entry, "cm:description"));
+    // 行级权限过滤键（2026-08-18）：密级档序判定
+    view.put("securityLevel", prop(entry, "finance:securityLevel"));
     Object numbered = entry.get("properties") instanceof Map<?, ?> p2 ? p2.get("finance:numbered") : null;
     view.put("numbered", Boolean.TRUE.equals(numbered));
     view.put("createdAt", entry.get("createdAt"));
@@ -486,6 +689,11 @@ public class RecordService {
     }
     view.put("mimeType", mime);
     view.put("sizeInBytes", size < 0 ? 0 : size);
+    // 卷/盒归属（scope=all 时由 filterPage 覆盖为真实值；池件/默认路径为空串）
+    view.put("volumeId", "");
+    view.put("volumeCode", "");
+    view.put("boxId", "");
+    view.put("boxNo", "");
     return view;
   }
 

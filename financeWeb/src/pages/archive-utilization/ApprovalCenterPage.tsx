@@ -131,42 +131,42 @@ const ApprovalCenterPage: React.FC = () => {
             </div>
 
             {/* 明细 */}
-            <div className="border border-slate-100 rounded-xl overflow-hidden">
+            <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
               <table className="w-full">
                 <thead>
-                  <tr className="bg-slate-50 text-left">
-                    <th className="px-3 py-2 text-[10px] font-semibold text-slate-500">题名</th>
-                    <th className="px-3 py-2 text-[10px] font-semibold text-slate-500">介质</th>
-                    <th className="px-3 py-2 text-[10px] font-semibold text-slate-500">库存</th>
-                    <th className="px-3 py-2 text-[10px] font-semibold text-slate-500">密级</th>
-                    <th className="px-3 py-2 text-[10px] font-semibold text-slate-500">申请权限</th>
+                  <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
+                    <th className="px-4 py-3 text-left text-[13px] font-semibold">题名</th>
+                    <th className="px-4 py-3 text-left text-[13px] font-semibold">介质</th>
+                    <th className="px-4 py-3 text-left text-[13px] font-semibold">库存</th>
+                    <th className="px-4 py-3 text-left text-[13px] font-semibold">密级</th>
+                    <th className="px-4 py-3 text-left text-[13px] font-semibold">申请权限</th>
                   </tr>
                 </thead>
                 <tbody>
                   {order.items.map((item) => (
-                    <tr key={item.id} className="border-t border-slate-50">
-                      <td className="px-3 py-2 text-xs text-slate-700 max-w-[220px] truncate">
+                    <tr key={item.id} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
+                      <td className="px-4 py-3 text-sm text-slate-800 max-w-[220px] truncate">
                         <FileText className="w-3 h-3 inline mr-1 text-slate-400" />{item.title}
                       </td>
-                      <td className="px-3 py-2">
-                        <span className="flex items-center gap-1 text-xs text-slate-500">
+                      <td className="px-4 py-3">
+                        <span className="flex items-center gap-1 text-[13px] text-slate-600">
                           {item.mediaType === 'electronic' ? <Cloud className="w-3 h-3 text-sky-400" /> : <HardDrive className="w-3 h-3 text-amber-400" />}
                           {item.mediaType === 'electronic' ? '纯电子' : item.mediaType === 'paper' ? '纯实体' : '混合'}
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-xs">
+                      <td className="px-4 py-3 text-[13px]">
                         {item.mediaType === 'electronic'
                           ? <span className="text-slate-300">—</span>
                           : item.stockStatus === 'in_stock'
                             ? <span className="text-emerald-600">在库</span>
                             : <span className="text-amber-600">已借出</span>}
                       </td>
-                      <td className="px-3 py-2">
+                      <td className="px-4 py-3">
                         <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${SECURITY_COLORS[item.securityLevel]}`}>
                           {item.securityLevel}
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-xs text-slate-600">
+                      <td className="px-4 py-3 text-[13px] text-slate-600">
                         {item.electronicPerms.map((p) => PERM_LABELS[p]).join('/') || '—'}
                         {item.physicalMode !== 'none' && (
                           <span className="text-amber-700 font-medium"> + {PHYSICAL_MODE_LABELS[item.physicalMode]}</span>

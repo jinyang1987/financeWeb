@@ -106,8 +106,9 @@ export const yonyouService = {
   preview: (period: string) =>
     http.post<{ period: string; voucherCount: number }>('/yonyou/preview', { period }),
 
-  sync: (period: string, autoGroup?: boolean) =>
-    http.post<SyncBatchDetail>('/yonyou/sync', { period, autoGroup }),
+  sync: (period: string, autoGroup?: boolean, review?: boolean,
+         destination?: 'auto-archive' | 'to-volume' | 'to-check' | 'to-review') =>
+    http.post<SyncBatchDetail>('/yonyou/sync', { period, autoGroup, review, destination }),
 
   batches: (limit = 30) => http.get<SyncBatch[]>(`/yonyou/batches?limit=${limit}`),
 

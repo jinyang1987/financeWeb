@@ -8,28 +8,49 @@
 
 // ─── 基础配置 ──────────────────────────────────────────
 import { session } from './session';
+import { authService } from './authService';
 
 const BASE_URL = '/api/proxy/alfresco';
 const API_V1 = `${BASE_URL}/api/-default-/public/alfresco/versions/1`;
 
 // ─── 工具函数 ──────────────────────────────────────────
 
+/** 确保 URL 带有效 alf_ticket；缺失则从 ams-server 换发（后端 admin 凭证） */
+async function ensureTicketed(url: string): Promise<string> {
+  let t = session.withTicket(url);
+  if (!t) {
+    await refreshAlfrescoTicket();
+    t = session.withTicket(url);
+  }
+  return t;
+}
+
+/** 从 ams-server 换发有效 Alfresco ticket（ticket 缺失/过期时调用） */
+async function refreshAlfrescoTicket(): Promise<void> {
+  const ticket = await authService.alfrescoTicket();
+  const cur = session.get();
+  session.set({
+    userId: cur?.userId ?? 'admin',
+    ticket,
+    displayName: cur?.displayName ?? 'Administrator',
+  });
+}
+
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  // 有会话：alf_ticket 查询参数（ACS 26 不接受 Basic userId:ticket）；
-  // 无会话：开发期回退 Basic（见 session.ts）
-  const ticketed = session.withTicket(url);
+  // ACS 26 仅接受 alf_ticket 查询参数（不接受 Basic userId:ticket）。
+  // ticket 缺失时由 ensureTicketed 经 ams-server 换发，不再回退无效 Basic。
+  const ticketed = await ensureTicketed(url);
   const headers: Record<string, string> = {
     'Content-Type': 'application/json;charset=UTF-8',
     'Accept-Charset': 'UTF-8',
     ...((options?.headers as Record<string, string>) || {}),
   };
-  if (!ticketed) {
-    headers['Authorization'] = session.alfrescoAuthHeader();
+  let res = await fetch(ticketed, { ...options, headers });
+  // ticket 过期：换发后重试一次
+  if (res.status === 401) {
+    await refreshAlfrescoTicket();
+    res = await fetch(session.withTicket(url)!, { ...options, headers });
   }
-  const res = await fetch(ticketed ?? url, {
-    ...options,
-    headers,
-  });
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Alfresco API 错误 (${res.status}): ${text}`);

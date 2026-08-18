@@ -10,7 +10,7 @@
  * 提交前校验：黑名单 / 至少一行有权限 / 周期合法
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   ShoppingCart, Trash2, Send, Lock, AlertTriangle, Info,
 } from 'lucide-react';
@@ -25,6 +25,7 @@ import {
   type BorrowOrderItem, type ElectronicPerm, type PhysicalMode,
 } from '../../../types/borrow';
 import { computeApprovalRoute, todayStr } from '../../../utils/borrowEngine';
+import { useWorkflowConfigStore, getChainRules } from '../../../stores/workflowConfigStore';
 import type { ArchiveRecord } from '../../../types';
 import type { Volume } from '../../../types/volume';
 
@@ -52,6 +53,8 @@ const BorrowCartCheckout: React.FC<BorrowCartCheckoutProps> = ({ blacklisted, on
   const clearCart = useBorrowStore((s) => s.clearCart);
   const submitOrder = useBorrowStore((s) => s.submitOrder);
   const records = useArchiveStore((s) => s.records);
+  const allRecords = useArchiveStore((s) => s.allRecords);
+  const loadAllRecords = useArchiveStore((s) => s.loadAllRecords);
   const volumes = useVolumeStore((s) => s.volumes);
   const currentUser = useAuthStore((s) => s.currentUser);
   const triggerToast = useAppStore((s) => s.triggerToast);
@@ -68,10 +71,17 @@ const BorrowCartCheckout: React.FC<BorrowCartCheckoutProps> = ({ blacklisted, on
   });
   const [submitting, setSubmitting] = useState(false);
 
+  // 全量件优先（含已组卷卷内件的 volumeId/卷信息），池件兜底——已归档档案可正常结算（2026-08-16 贯通修复）
   const cartRecords = useMemo(() => {
-    const byId = new Map(records.map((r) => [r.id, r]));
+    const byId = new Map([...allRecords, ...records].map((r) => [r.id, r]));
     return cart.map((c) => byId.get(c.recordId)).filter(Boolean) as ArchiveRecord[];
-  }, [cart, records]);
+  }, [cart, records, allRecords]);
+
+  // 自愈：车内条目解析不出时补拉全量件（例如归档后首次进入结算）
+  useEffect(() => {
+    const known = new Set([...allRecords.map((r) => r.id), ...records.map((r) => r.id)]);
+    if (cart.some((c) => !known.has(c.recordId))) void loadAllRecords();
+  }, [cart, records, allRecords, loadAllRecords]);
 
   const volumeById = useMemo(() => new Map(volumes.map((v) => [v.id, v])), [volumes]);
 
@@ -125,8 +135,10 @@ const BorrowCartCheckout: React.FC<BorrowCartCheckoutProps> = ({ blacklisted, on
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cartRecords, drafts, startDate, endDate, blacklisted]);
 
-  // ── 预览审批链（动态路由提示） ──
+  // ── 预览审批链（动态路由提示；组链规则来自流程配置「借阅利用」，与服务端运行时同一份） ──
+  const borrowWf = useWorkflowConfigStore((s) => s.workflows.find((w) => w.id === 'wf-borrow-approval'));
   const routePreview = useMemo(() => {
+    const rules = getChainRules(borrowWf);
     const items = cartRecords.map((r) => {
       const v = volumeById.get(r.volumeId || '');
       const d = draftOf(r.id);
@@ -137,9 +149,9 @@ const BorrowCartCheckout: React.FC<BorrowCartCheckoutProps> = ({ blacklisted, on
       } as BorrowOrderItem;
     });
     if (items.length === 0) return [];
-    return computeApprovalRoute(items);
+    return computeApprovalRoute(items, rules);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cartRecords, drafts, volumeById]);
+  }, [cartRecords, drafts, volumeById, borrowWf]);
 
   const handleSubmit = async () => {
     if (!currentUser || validation.length > 0) return;

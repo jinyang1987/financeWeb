@@ -1,247 +1,324 @@
-﻿/**
+/**
  * @license SPDX-License-Identifier: Apache-2.0
  *
- * AppraisalManagePage — 期满鉴定与销毁
+ * AppraisalManagePage — 期满鉴定与销毁（2026-08-16 接真重构，启用 ams_appraisal）
  *
- * 功能：
- *   1. 保管期满预警看板（30天/90天）
- *   2. 鉴定小组会签
- *   3. 销毁清册生成
- *   4. 监销确认（永久档案锁定）
+ * 最小闭环：
+ *   1. 到期测算：实时扫描已入库案卷，按「年度+保管期限」算保管期满日
+ *      （保管期限自会计年度终了后第一年起算；永久不期满）
+ *   2. 一键登记鉴定任务（幂等）
+ *   3. 鉴定评审：续存（retained）/ 同意销毁（approved-destroy），评审意见留痕
+ *   4. 销毁执行：删除 Alfresco 卷节点（含卷内件）+ 盒计数回退 + 操作日志
  */
 
-import React, { useState, useMemo } from 'react';
-import { Trash2, AlertCircle, CheckCircle2, XCircle, Clock, FileText, Users, Shield, Download, ChevronDown, ChevronRight, Search, Lock } from 'lucide-react';
-import { useVolumeStore } from '../../stores/volumeStore';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { Trash2, AlertCircle, CheckCircle2, Clock, FileText, Shield, ChevronDown, ChevronRight, RefreshCw, ScanSearch } from 'lucide-react';
+import { useArchiveStore } from '../../stores/archiveStore';
+import { useAuthStore } from '../../stores/authStore';
+import { useAppStore } from '../../stores/appStore';
+import {
+  fetchDueVolumes, scanAppraisals, fetchAppraisals, reviewAppraisal, executeDestroy,
+  type DueVolume, type AppraisalRecord,
+} from '../../services/appraisalService';
 
-// ── 鉴定记录 ──
-interface AppraisalItem {
-  id: string;
-  volumeId: string;
-  volumeCode: string;
-  title: string;
-  archiveType: string;
-  retention: string;
-  expiryDate: string;
-  daysLeft: number;
-  status: '正常' | '即将到期' | '已到期' | '永久锁定';
-  appraisalStatus: '待鉴定' | '鉴定中' | '同意销毁' | '同意延期' | '已销毁';
-  reviewers: { name: string; role: string; opinion: string; signed: boolean }[];
-}
-
-// ── Mock 数据 ──
-const MOCK_APPRAISALS: AppraisalItem[] = [
-  { id: 'ap-1', volumeId: 'v-1', volumeCode: 'Z001-HJ-2016-KP-D10-V001', title: '2016年会计凭证-第001卷', archiveType: '会计凭证', retention: '10年', expiryDate: '2026-06-30', daysLeft: 17, status: '即将到期', appraisalStatus: '待鉴定', reviewers: [{ name: '张三', role: '财务部', opinion: '', signed: false }, { name: '李四', role: '档案部', opinion: '', signed: false }, { name: '王五', role: '审计部', opinion: '', signed: false }] },
-  { id: 'ap-2', volumeId: 'v-2', volumeCode: 'Z001-HJ-2016-QT-D10-V001', title: '2016年其他资料-第001卷', archiveType: '其他会计资料', retention: '10年', expiryDate: '2026-06-15', daysLeft: 2, status: '即将到期', appraisalStatus: '待鉴定', reviewers: [{ name: '张三', role: '财务部', opinion: '', signed: false }, { name: '李四', role: '档案部', opinion: '', signed: false }] },
-  { id: 'ap-3', volumeId: 'v-3', volumeCode: 'Z001-HJ-2016-KP-D10-V002', title: '2016年会计凭证-第002卷', archiveType: '会计凭证', retention: '10年', expiryDate: '2026-07-15', daysLeft: 32, status: '即将到期', appraisalStatus: '待鉴定', reviewers: [{ name: '张三', role: '财务部', opinion: '', signed: false }, { name: '李四', role: '档案部', opinion: '', signed: false }] },
-  { id: 'ap-4', volumeId: 'v-4', volumeCode: 'Z001-HJ-2015-FB-Y-V001', title: '2015年度财务报告-第001卷', archiveType: '财务报告', retention: '永久', expiryDate: '—', daysLeft: -1, status: '永久锁定', appraisalStatus: '待鉴定', reviewers: [{ name: '张三', role: '财务部', opinion: '', signed: false }, { name: '李四', role: '档案部', opinion: '', signed: false }] },
-  { id: 'ap-5', volumeId: 'v-5', volumeCode: 'Z001-HJ-2016-KB-D30-V001', title: '2016年会计账簿-第001卷', archiveType: '会计账簿', retention: '30年', expiryDate: '2056-06-30', daysLeft: 10950, status: '正常', appraisalStatus: '待鉴定', reviewers: [] },
-];
+const STATUS_META: Record<string, { label: string; cls: string }> = {
+  pending: { label: '待鉴定', cls: 'bg-amber-100 text-amber-700' },
+  'approved-destroy': { label: '同意销毁', cls: 'bg-red-100 text-red-700' },
+  retained: { label: '续存', cls: 'bg-emerald-100 text-emerald-700' },
+  destroyed: { label: '已销毁', cls: 'bg-slate-200 text-slate-500' },
+};
 
 const AppraisalManagePage: React.FC = () => {
-  const volumes = useVolumeStore((s) => s.volumes);
-  const [appraisals] = useState<AppraisalItem[]>(MOCK_APPRAISALS);
-  const [activeTab, setActiveTab] = useState<'expiring' | 'all'>('expiring');
-  const [selectedReview, setSelectedReview] = useState<string | null>(null);
+  const currentFanzongCode = useArchiveStore((s) => s.currentFanzongCode);
+  const currentUser = useAuthStore((s) => s.currentUser);
+  const triggerToast = useAppStore((s) => s.triggerToast);
 
-  // 过滤
-  const filteredAppraisals = useMemo(() => {
-    if (activeTab === 'expiring') return appraisals.filter((a) => a.daysLeft <= 90 && a.daysLeft >= 0);
-    return appraisals;
-  }, [appraisals, activeTab]);
+  const [dueVolumes, setDueVolumes] = useState<DueVolume[]>([]);
+  const [appraisals, setAppraisals] = useState<AppraisalRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [actioning, setActioning] = useState<string | null>(null);
+  const [reviewTarget, setReviewTarget] = useState<AppraisalRecord | null>(null);
+  const [meetingNote, setMeetingNote] = useState('');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  // 统计数据
-  const stats = useMemo(() => {
-    const expired = appraisals.filter((a) => a.daysLeft >= 0 && a.daysLeft <= 30).length;
-    const expiring = appraisals.filter((a) => a.daysLeft > 30 && a.daysLeft <= 90).length;
-    const locked = appraisals.filter((a) => a.status === '永久锁定').length;
-    return { expired, expiring, locked };
-  }, [appraisals]);
+  const reload = useCallback(async () => {
+    if (!currentFanzongCode) return;
+    setLoading(true);
+    try {
+      const [dues, aps] = await Promise.all([
+        fetchDueVolumes(currentFanzongCode),
+        fetchAppraisals(),
+      ]);
+      setDueVolumes(dues);
+      setAppraisals(aps);
+    } catch (e) {
+      triggerToast('鉴定数据加载失败：' + (e instanceof Error ? e.message : ''), 'warning');
+    } finally {
+      setLoading(false);
+    }
+  }, [currentFanzongCode, triggerToast]);
+
+  useEffect(() => { void reload(); }, [reload]);
+
+  // 未登记鉴定的到期卷
+  const unregistered = useMemo(() => dueVolumes.filter((v) => !v.appraisalStatus), [dueVolumes]);
+  const pendingList = useMemo(() => appraisals.filter((a) => a.status === 'pending'), [appraisals]);
+  const approvedList = useMemo(() => appraisals.filter((a) => a.status === 'approved-destroy'), [appraisals]);
+  const closedList = useMemo(() => appraisals.filter((a) => a.status === 'retained' || a.status === 'destroyed'), [appraisals]);
+
+  const handleScan = async () => {
+    if (!currentFanzongCode) return;
+    setActioning('scan');
+    try {
+      const r = await scanAppraisals(currentFanzongCode);
+      triggerToast(`鉴定扫描完成：到期 ${r.dueVolumes} 卷，新登记 ${r.registered} 卷`, 'success');
+      await reload();
+    } catch (e) {
+      triggerToast('扫描失败：' + (e instanceof Error ? e.message : ''), 'warning');
+    } finally {
+      setActioning(null);
+    }
+  };
+
+  const handleReview = async (decision: 'destroy' | 'retain') => {
+    if (!reviewTarget) return;
+    if (decision === 'retain' && !meetingNote.trim()) {
+      triggerToast('续存请填写评审意见（延期理由）', 'warning');
+      return;
+    }
+    setActioning(reviewTarget.id);
+    try {
+      await reviewAppraisal(reviewTarget.id, decision, meetingNote.trim());
+      triggerToast(decision === 'destroy' ? '评审完成：同意销毁（待执行）' : '评审完成：续存', 'success');
+      setReviewTarget(null);
+      setMeetingNote('');
+      await reload();
+    } catch (e) {
+      triggerToast('评审失败：' + (e instanceof Error ? e.message : ''), 'warning');
+    } finally {
+      setActioning(null);
+    }
+  };
+
+  const handleDestroy = async (a: AppraisalRecord) => {
+    if (!window.confirm(`销毁将永久删除案卷节点及其全部卷内件（不可恢复）。\n确认执行销毁？`)) return;
+    setActioning(a.id);
+    try {
+      await executeDestroy(a.id);
+      triggerToast('销毁执行完成，案卷及卷内件已删除并留痕', 'success');
+      await reload();
+      // 销毁后卷/件镜像失效，后台静默刷新
+      void useArchiveStore.getState().loadAllRecords();
+    } catch (e) {
+      triggerToast('销毁失败：' + (e instanceof Error ? e.message : ''), 'warning');
+    } finally {
+      setActioning(null);
+    }
+  };
+
+  const volTitle = (nodeId: string) => dueVolumes.find((v) => v.volumeNode === nodeId)?.title || nodeId.slice(0, 8) + '…';
 
   return (
     <div className="flex flex-col h-full bg-slate-100">
       {/* 顶栏 */}
-      <div className="flex items-center gap-3 px-6 py-3 bg-white border-b border-slate-200">
-        <Trash2 className="w-5 h-5 text-slate-600" />
+      <div className="flex items-center gap-3 px-6 py-3 bg-white border-b border-slate-200 shrink-0">
+        <Shield className="w-5 h-5 text-slate-600" />
         <h1 className="text-base font-bold text-slate-800">期满鉴定与销毁</h1>
+        <span className="text-xs text-slate-400">保管期满自动测算 → 鉴定评审 → 销毁执行留痕（永久档案不进销毁流程）</span>
         <div className="flex-1" />
+        <button type="button" onClick={() => void reload()} title="刷新"
+          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+        </button>
+        <button type="button" onClick={() => void handleScan()} disabled={actioning === 'scan'}
+          className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium text-white bg-sky-600 rounded-lg hover:bg-sky-700 disabled:opacity-50 transition-colors">
+          <ScanSearch className="w-4 h-4" />
+          {actioning === 'scan' ? '扫描中…' : `登记到期鉴定${unregistered.length > 0 ? `（${unregistered.length}）` : ''}`}
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
-        {/* 预警看板 */}
-        <div className="grid grid-cols-3 gap-4">
-          <div className="bg-white border border-red-200 rounded-xl p-4">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-red-500" />
-              <span className="text-xs text-slate-500">30天内到期</span>
+        {/* 到期预警 */}
+        <div className="bg-white border border-slate-200 rounded-xl p-4">
+          <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+            <Clock className="w-4 h-4 text-amber-500" />
+            保管期满案卷（实时测算）
+            <span className="text-xs font-normal text-slate-400">{dueVolumes.length} 卷到期 · 其中 {unregistered.length} 卷未登记鉴定</span>
+          </h3>
+          {dueVolumes.length === 0 ? (
+            <p className="text-xs text-slate-400 text-center py-3">当前全宗暂无保管期满案卷</p>
+          ) : (
+            <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
+                    <th className="px-4 py-3 text-left text-[13px] font-semibold">案卷题名</th>
+                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-44">档号</th>
+                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-14">年度</th>
+                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-16">期限</th>
+                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-24">期满日</th>
+                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-28">所在盒</th>
+                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-20">鉴定状态</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dueVolumes.map((v) => (
+                    <tr key={v.volumeNode} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
+                      <td className="px-4 py-3 text-sm text-slate-800">{v.title}</td>
+                      <td className="px-4 py-3 font-mono text-[13px] text-slate-600">{v.volumeCode || '—'}</td>
+                      <td className="px-4 py-3 font-mono text-[13px] text-slate-600">{v.year}</td>
+                      <td className="px-4 py-3 text-[13px] text-slate-600">{v.retention}</td>
+                      <td className="px-4 py-3 font-mono text-[13px] font-medium text-red-600">{v.dueDate}</td>
+                      <td className="px-4 py-3 text-[13px] text-slate-600">{v.boxNo || '—'}</td>
+                      <td className="px-4 py-3">
+                        {v.appraisalStatus
+                          ? <span className={`px-1.5 py-0.5 rounded-full font-medium ${STATUS_META[v.appraisalStatus]?.cls || 'bg-slate-100 text-slate-500'}`}>{STATUS_META[v.appraisalStatus]?.label || v.appraisalStatus}</span>
+                          : <span className="text-slate-400">未登记</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <div className="text-2xl font-bold text-red-600 mt-1">{stats.expired}</div>
-            <div className="text-xs text-slate-400 mt-1">需立即组织鉴定</div>
-          </div>
-          <div className="bg-white border border-amber-200 rounded-xl p-4">
-            <div className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-amber-500" />
-              <span className="text-xs text-slate-500">90天内到期</span>
-            </div>
-            <div className="text-2xl font-bold text-amber-600 mt-1">{stats.expiring}</div>
-            <div className="text-xs text-slate-400 mt-1">需提前准备鉴定材料</div>
-          </div>
-          <div className="bg-white border border-sky-200 rounded-xl p-4">
-            <div className="flex items-center gap-2">
-              <Lock className="w-5 h-5 text-sky-500" />
-              <span className="text-xs text-slate-500">永久锁定</span>
-            </div>
-            <div className="text-2xl font-bold text-sky-600 mt-1">{stats.locked}</div>
-            <div className="text-xs text-slate-400 mt-1">依法永久保存，不可销毁</div>
-          </div>
+          )}
         </div>
 
-        {/* 列表 + 筛选 */}
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-          <div className="px-5 py-3 border-b border-slate-200 flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setActiveTab('expiring')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg ${activeTab === 'expiring' ? 'bg-amber-100 text-amber-700' : 'text-slate-500 hover:bg-slate-100'}`}
-            >
-              即将到期
+        {/* 待鉴定任务 */}
+        <AppraisalSection
+          title={`鉴定评审中（${pendingList.length}）`}
+          icon={<FileText className="w-4 h-4 text-amber-500" />}
+          empty="暂无待鉴定任务"
+          list={pendingList}
+          expandedId={expandedId}
+          setExpandedId={setExpandedId}
+          volTitle={volTitle}
+          actions={(a) => (
+            <button type="button" onClick={() => { setReviewTarget(a); setMeetingNote(''); }}
+              className="px-2.5 py-1 text-xs font-medium text-sky-700 bg-sky-50 border border-sky-200 rounded-md hover:bg-sky-100">
+              评审
             </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('all')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg ${activeTab === 'all' ? 'bg-amber-100 text-amber-700' : 'text-slate-500 hover:bg-slate-100'}`}
-            >
-              全部案卷
+          )}
+        />
+
+        {/* 待销毁执行 */}
+        <AppraisalSection
+          title={`待销毁执行（${approvedList.length}）`}
+          icon={<Trash2 className="w-4 h-4 text-red-500" />}
+          empty="暂无待销毁案卷"
+          list={approvedList}
+          expandedId={expandedId}
+          setExpandedId={setExpandedId}
+          volTitle={volTitle}
+          actions={(a) => (
+            <button type="button" disabled={actioning === a.id} onClick={() => void handleDestroy(a)}
+              className="px-2.5 py-1 text-xs font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50">
+              执行销毁
             </button>
-          </div>
+          )}
+        />
 
-          <div className="divide-y divide-slate-100">
-            {filteredAppraisals.length === 0 ? (
-              <div className="px-5 py-6 text-center text-sm text-slate-400">暂无符合条件的案卷</div>
-            ) : (
-              filteredAppraisals.map((item) => (
-                <div key={item.id} className="px-5 py-3">
-                  <div className="flex items-start gap-3">
-                    <div className={`p-2 rounded-lg ${
-                      item.status === '永久锁定' ? 'bg-sky-50' :
-                      item.daysLeft <= 30 ? 'bg-red-50' : 'bg-amber-50'
-                    }`}>
-                      {item.status === '永久锁定' ? (
-                        <Lock className="w-4 h-4 text-sky-500" />
-                      ) : (
-                        <Clock className={`w-4 h-4 ${item.daysLeft <= 30 ? 'text-red-500' : 'text-amber-500'}`} />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-sm text-slate-800">{item.volumeCode}</span>
-                        <span className={`px-1.5 py-0.5 text-xs font-medium rounded-full ${
-                          item.status === '永久锁定' ? 'bg-sky-100 text-sky-700' :
-                          item.daysLeft <= 30 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
-                        }`}>
-                          {item.status === '永久锁定' ? (<span className="inline-flex items-center gap-0.5"><Lock className="w-3 h-3" /> 永久保存</span>) : (<span className="inline-flex items-center gap-0.5"><Clock className="w-3 h-3" /> {item.daysLeft}天</span>)}
-                        </span>
-                      </div>
-                      <div className="text-xs text-slate-500 mt-0.5">{item.title} | {item.retention} | 到期日: {item.expiryDate}</div>
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      {item.status !== '永久锁定' && item.daysLeft <= 90 && (
-                        <button
-                          type="button"
-                          onClick={() => setSelectedReview(selectedReview === item.id ? null : item.id)}
-                          className="px-3 py-1.5 text-xs font-medium text-sky-600 bg-sky-50 border border-sky-200 rounded-lg hover:bg-sky-100"
-                        >
-                          {item.appraisalStatus === '待鉴定' ? '发起鉴定' : '查看鉴定'}
-                        </button>
-                      )}
-                      {item.status === '永久锁定' && (
-                        <span className="px-3 py-1.5 text-xs text-slate-400">无需操作</span>
-                      )}
-                    </div>
-                  </div>
+        {/* 已办结 */}
+        <AppraisalSection
+          title={`已办结（${closedList.length}）`}
+          icon={<CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+          empty="暂无已办结鉴定"
+          list={closedList}
+          expandedId={expandedId}
+          setExpandedId={setExpandedId}
+          volTitle={volTitle}
+          actions={() => null}
+        />
 
-                  {/* 鉴定小组（展开） */}
-                  {selectedReview === item.id && (
-                    <div className="mt-3 ml-11 p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
-                      <h4 className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                        <Users className="w-3.5 h-3.5" />
-                        鉴定小组成员
-                      </h4>
-                      <div className="space-y-2">
-                        {item.reviewers.map((r, i) => (
-                          <div key={i} className="flex items-center gap-3 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm">
-                            <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs font-medium text-slate-600">
-                              {r.name[0]}
-                            </div>
-                            <div className="flex-1">
-                              <span className="font-medium text-slate-700">{r.name}</span>
-                              <span className="text-xs text-slate-400 ml-2">{r.role}</span>
-                            </div>
-                            <select
-                              className="px-2 py-1 text-xs border border-slate-300 rounded bg-white"
-                              value={r.opinion || ''}
-                              onChange={() => {}}
-                            >
-                              <option value="">请选择意见...</option>
-                              <option value="destroy">同意销毁</option>
-                              <option value="keep">同意保留（延期）</option>
-                              <option value="extend">延长保管期限</option>
-                            </select>
-                            <button
-                              type="button"
-                              className={`px-2.5 py-1 text-xs font-medium rounded ${
-                                r.signed ? 'bg-green-100 text-green-700' : 'bg-sky-100 text-sky-700'
-                              }`}
-                            >
-                              {r.signed ? (<span className="inline-flex items-center gap-0.5">已签署 <CheckCircle2 className="w-3 h-3" /></span>) : '签署'}
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="flex items-center gap-2 pt-1">
-                        <button
-                          type="button"
-                          className="px-4 py-1.5 text-xs font-medium text-white bg-sky-600 rounded-lg hover:bg-sky-700"
-                        >
-                          生成销毁清册
-                        </button>
-                        <button
-                          type="button"
-                          className="px-4 py-1.5 text-xs font-medium text-amber-700 bg-amber-100 rounded-lg hover:bg-amber-200"
-                        >
-                          延期保留
-                        </button>
-                        <button
-                          type="button"
-                          className="px-4 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50"
-                        >
-                          <Download className="w-3 h-3 inline mr-1" />
-                          导出清册
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* 法规提示 */}
+        {/* 合规提示 */}
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
           <div className="flex items-start gap-2 text-xs text-amber-800">
-            <Shield className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+            <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
             <div>
-              <p className="font-medium">依据 79号令 第三章 保管与销毁</p>
-              <p className="mt-0.5">永久保管的会计档案（年度财务报告、保管/销毁清册、鉴定意见书）不得销毁。期满鉴定需成立鉴定小组（≥3人），会签同意后方可执行销毁，监销人需全程监督并在销毁清册上签字确认。</p>
+              <p className="font-medium">依据《会计档案管理办法》第十七条</p>
+              <p className="mt-0.5">保管期满的会计档案，由单位档案管理机构牵头，会同会计、审计、纪检监察等机构共同鉴定。确无保存价值的方可销毁；销毁清册与鉴定意见永久留存。销毁操作将永久删除案卷节点及卷内全部件，并写入不可篡改操作日志。</p>
             </div>
           </div>
         </div>
       </div>
+
+      {/* 评审弹窗 */}
+      {reviewTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setReviewTarget(null)}>
+          <div className="w-[480px] bg-white rounded-2xl shadow-2xl p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-sm font-bold text-slate-800">鉴定评审 · {volTitle(reviewTarget.volumeNode)}</h3>
+            <p className="text-xs text-slate-500">期满日 {reviewTarget.dueDate} · 评审人 {currentUser?.name || currentUser?.account}</p>
+            <textarea
+              value={meetingNote}
+              onChange={(e) => setMeetingNote(e.target.value)}
+              rows={3}
+              placeholder="鉴定小组评审意见（续存理由/销毁依据，留痕保存）"
+              className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+            />
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setReviewTarget(null)}
+                className="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50">取消</button>
+              <button type="button" disabled={actioning === reviewTarget.id} onClick={() => void handleReview('retain')}
+                className="px-4 py-2 text-sm font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 disabled:opacity-50">
+                续存
+              </button>
+              <button type="button" disabled={actioning === reviewTarget.id} onClick={() => void handleReview('destroy')}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50">
+                同意销毁
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
+// ── 鉴定记录分组卡片 ──
+const AppraisalSection: React.FC<{
+  title: string;
+  icon: React.ReactNode;
+  empty: string;
+  list: AppraisalRecord[];
+  expandedId: string | null;
+  setExpandedId: (id: string | null) => void;
+  volTitle: (nodeId: string) => string;
+  actions: (a: AppraisalRecord) => React.ReactNode;
+}> = ({ title, icon, empty, list, expandedId, setExpandedId, volTitle, actions }) => (
+  <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+    <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-2">
+      {icon}
+      <h3 className="text-sm font-semibold text-slate-700">{title}</h3>
+    </div>
+    <div className="divide-y divide-slate-100">
+      {list.length === 0 ? (
+        <div className="px-5 py-5 text-center text-sm text-slate-400">{empty}</div>
+      ) : list.map((a) => {
+        const isExpanded = expandedId === a.id;
+        return (
+          <div key={a.id}>
+            <div className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 cursor-pointer"
+              onClick={() => setExpandedId(isExpanded ? null : a.id)}>
+              {isExpanded ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+              <span className="text-sm text-slate-700 flex-1 truncate">{volTitle(a.volumeNode)}</span>
+              <span className="text-xs text-slate-400">期满 {a.dueDate}</span>
+              <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${STATUS_META[a.status]?.cls || 'bg-slate-100 text-slate-500'}`}>
+                {STATUS_META[a.status]?.label || a.status}
+              </span>
+              {actions(a)}
+            </div>
+            {isExpanded && (
+              <div className="px-8 pb-3 bg-slate-50 text-xs text-slate-500 space-y-1">
+                <div>案卷节点：<span className="font-mono">{a.volumeNode}</span></div>
+                {a.reviewer && <div>评审人：{a.reviewer} · {a.reviewedAt?.slice(0, 19).replace('T', ' ')}</div>}
+                {a.meetingNote && <div>评审意见：{a.meetingNote}</div>}
+                {a.destroyedAt && <div>销毁时间：{a.destroyedAt.slice(0, 19).replace('T', ' ')}</div>}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  </div>
+);
+
 export default AppraisalManagePage;
-
-

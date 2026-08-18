@@ -603,30 +603,32 @@ const WatermarkConfigPage: React.FC = () => {
                 {/* 变量说明表 */}
                 <SectionTitle title="变量说明" desc="后端对接时的占位符约定" />
                 <div className="px-4 pb-2">
-                  <table className="w-full text-xs border border-slate-200 rounded-lg overflow-hidden">
-                    <thead>
-                      <tr className="bg-slate-50">
-                        <th className="text-left px-3 py-2 font-medium text-slate-600">变量</th>
-                        <th className="text-left px-3 py-2 font-medium text-slate-600">示例</th>
-                        <th className="text-left px-3 py-2 font-medium text-slate-600">来源</th>
-                      </tr>
-                    </thead>
-                    <tbody className="text-slate-500">
-                      {[
-                        ['{userName}', '张三', '登录会话'],
-                        ['{userId}', '004521', '人员管理'],
-                        ['{timestamp}', '2026-07-18 10:30:15', '服务器时间'],
-                        ['{ip}', 'IP: 192.168.1.100', '请求上下文'],
-                        ['{docStatus}', '【已作废】', '档案状态字段'],
-                      ].map(([v, ex, src]) => (
-                        <tr key={v} className="border-t border-slate-100">
-                          <td className="px-3 py-2 font-mono text-sky-700">{v}</td>
-                          <td className="px-3 py-2">{ex}</td>
-                          <td className="px-3 py-2">{src}</td>
+                  <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
+                          <th className="px-4 py-3 text-left text-[13px] font-semibold">变量</th>
+                          <th className="px-4 py-3 text-left text-[13px] font-semibold">示例</th>
+                          <th className="px-4 py-3 text-left text-[13px] font-semibold">来源</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {[
+                          ['{userName}', '张三', '登录会话'],
+                          ['{userId}', '004521', '人员管理'],
+                          ['{timestamp}', '2026-07-18 10:30:15', '服务器时间'],
+                          ['{ip}', 'IP: 192.168.1.100', '请求上下文'],
+                          ['{docStatus}', '【已作废】', '档案状态字段'],
+                        ].map(([v, ex, src]) => (
+                          <tr key={v} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
+                            <td className="px-4 py-3 font-mono text-[13px] text-sky-700">{v}</td>
+                            <td className="px-4 py-3 text-[13px] text-slate-600">{ex}</td>
+                            <td className="px-4 py-3 text-[13px] text-slate-600">{src}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}

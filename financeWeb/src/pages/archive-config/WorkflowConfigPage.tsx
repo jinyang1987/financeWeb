@@ -14,12 +14,16 @@ import React, { useMemo, useState, useEffect } from 'react';
 import {
   GitBranch, Plus, Trash2, Link2, LayoutGrid, Save, RotateCcw,
   Play, Square, Users, GitFork, ChevronRight, X, Check, Power,
-  MousePointer2, CircleDot,
+  MousePointer2, CircleDot, ArrowUp, ArrowDown, Zap, Info,
 } from 'lucide-react';
 import {
   useWorkflowConfigStore,
   WORKFLOW_CATEGORY_META,
+  APPROVER_ROLE_OPTIONS,
+  getChainRules,
+  type ApprovalChainRules,
   type BusinessWorkflow,
+  type EscalationWhen,
   type WorkflowCategory,
 } from '../../stores/workflowConfigStore';
 import { WF_NODE_TYPE_LABELS, type WfNode, type WfNodeType } from '../../types/workflow-def';
@@ -167,6 +171,138 @@ const inputCls =
   'w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 ' +
   'focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500 transition-colors';
 
+// ═══════════════════════════════════════════════════════════
+// 借阅审批组链规则编辑（仅 wf-borrow-approval，服务端运行时消费）
+// ═══════════════════════════════════════════════════════════
+
+const ESCALATION_META: Record<EscalationWhen, { label: string; hint: string }> = {
+  extended_perms: { label: '含下载 / 打印 / 实体调阅', hint: '任一明细申请下载、打印权限或实体外借时触发' },
+  sensitive: { label: '涉密（秘密 / 机密）', hint: '任一明细密级为秘密或机密时触发' },
+};
+
+const roleLabel = (key: string) => APPROVER_ROLE_OPTIONS.find((r) => r.key === key)?.label || key;
+
+const BorrowChainRulesPanel: React.FC<{ wf: BusinessWorkflow }> = ({ wf }) => {
+  const updateWorkflow = useWorkflowConfigStore((s) => s.updateWorkflow);
+  const rules = getChainRules(wf);
+
+  const save = (patch: Partial<ApprovalChainRules>) => {
+    updateWorkflow(wf.id, { chainRules: { ...rules, ...patch } });
+  };
+
+  const moveBase = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= rules.base.length) return;
+    const next = [...rules.base];
+    [next[i], next[j]] = [next[j], next[i]];
+    save({ base: next });
+  };
+
+  const addableRoles = APPROVER_ROLE_OPTIONS.filter((r) => !rules.base.includes(r.key));
+
+  return (
+    <div className="border border-emerald-200 bg-emerald-50/40 rounded-xl p-3.5 space-y-3.5">
+      <div className="flex items-center gap-1.5">
+        <Zap className="w-3.5 h-3.5 text-emerald-600" />
+        <span className="text-xs font-bold text-emerald-800">审批组链规则（运行中）</span>
+        <span className="ml-auto text-[10px] text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded-full">
+          服务端实时消费 · v{wf.version}
+        </span>
+      </div>
+
+      {/* 基础链 */}
+      <div>
+        <div className="text-[11px] font-semibold text-slate-500 mb-1.5">基础审批链（必经，按顺序）</div>
+        <div className="space-y-1">
+          {rules.base.length === 0 && (
+            <div className="text-[11px] text-slate-400 px-1">（空 — 审批链仅由升级规则与终审组成）</div>
+          )}
+          {rules.base.map((role, i) => (
+            <div key={role} className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg px-2 py-1">
+              <span className="w-4 text-[10px] font-mono text-slate-400">{i + 1}</span>
+              <span className="flex-1 text-xs font-medium text-slate-700">{roleLabel(role)}</span>
+              <button type="button" disabled={i === 0} onClick={() => moveBase(i, -1)}
+                className="p-0.5 text-slate-300 hover:text-sky-600 disabled:opacity-30"><ArrowUp className="w-3 h-3" /></button>
+              <button type="button" disabled={i === rules.base.length - 1} onClick={() => moveBase(i, 1)}
+                className="p-0.5 text-slate-300 hover:text-sky-600 disabled:opacity-30"><ArrowDown className="w-3 h-3" /></button>
+              <button type="button" onClick={() => save({ base: rules.base.filter((_, j) => j !== i) })}
+                className="p-0.5 text-slate-300 hover:text-rose-500"><X className="w-3 h-3" /></button>
+            </div>
+          ))}
+        </div>
+        {addableRoles.length > 0 && (
+          <select
+            value=""
+            onChange={(e) => { if (e.target.value) save({ base: [...rules.base, e.target.value] }); }}
+            className="mt-1.5 w-full px-2 py-1.5 text-xs border border-dashed border-slate-300 rounded-lg bg-white text-slate-500"
+          >
+            <option value="">+ 添加基础链角色…</option>
+            {addableRoles.map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
+          </select>
+        )}
+      </div>
+
+      {/* 升级规则 */}
+      <div>
+        <div className="text-[11px] font-semibold text-slate-500 mb-1.5">升级规则（满足条件时在终审前追加）</div>
+        <div className="space-y-1.5">
+          {rules.escalation.map((esc, i) => (
+            <div key={esc.when} className="bg-white border border-slate-200 rounded-lg px-2.5 py-2">
+              <div className="text-xs font-medium text-slate-700">{ESCALATION_META[esc.when]?.label}</div>
+              <div className="text-[10px] text-slate-400 mb-1.5">{ESCALATION_META[esc.when]?.hint}</div>
+              <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                追加
+                <select
+                  value={esc.appendRole}
+                  onChange={(e) => {
+                    const next = [...rules.escalation];
+                    next[i] = { ...esc, appendRole: e.target.value };
+                    save({ escalation: next });
+                  }}
+                  className="flex-1 px-2 py-1 text-xs border border-slate-300 rounded-lg bg-white"
+                >
+                  {APPROVER_ROLE_OPTIONS.map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
+                </select>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 终审 */}
+      <div className="flex items-center gap-1.5">
+        <span className="text-[11px] font-semibold text-slate-500">终审角色（必经）</span>
+        <select
+          value={rules.final}
+          onChange={(e) => save({ final: e.target.value })}
+          className="flex-1 px-2 py-1 text-xs border border-slate-300 rounded-lg bg-white"
+        >
+          {APPROVER_ROLE_OPTIONS.map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
+        </select>
+      </div>
+
+      {/* 动态审批人变量约定（对照 Activiti OperateVariablesListener 思想） */}
+      <div className="border-t border-emerald-100 pt-2.5 space-y-1">
+        <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+          <Info className="w-3 h-3" />动态审批人约定
+        </div>
+        <div className="text-[10px] text-slate-400 leading-relaxed space-y-0.5">
+          <p><span className="font-mono text-slate-500">基础链/终审</span> = 固定角色必经节点；</p>
+          <p><span className="font-mono text-slate-500">extended_perms</span> = 按申请数据动态判定（下载/打印/实体）；</p>
+          <p><span className="font-mono text-slate-500">sensitive</span> = 按档案密级动态判定（秘密/机密）；</p>
+          <p>同一角色重复出现时自动去重，保持顺序。</p>
+        </div>
+      </div>
+
+      {/* 生效语义 */}
+      <div className="text-[10px] text-emerald-700 bg-emerald-100/70 border border-emerald-200 rounded-lg px-2.5 py-1.5 leading-relaxed">
+        修改即时生效于<strong>今后发起</strong>的借阅申请（在途单据按原链执行，对应「部署」语义）；
+        停用本流程后，借阅审批回退系统默认链。
+      </div>
+    </div>
+  );
+};
+
 const WorkflowSettingsPanel: React.FC<{ wf: BusinessWorkflow }> = ({ wf }) => {
   const updateWorkflow = useWorkflowConfigStore((s) => s.updateWorkflow);
   const toggleActive = useWorkflowConfigStore((s) => s.toggleActive);
@@ -219,6 +355,9 @@ const WorkflowSettingsPanel: React.FC<{ wf: BusinessWorkflow }> = ({ wf }) => {
         <input className={inputCls} value={wf.approver}
           onChange={(e) => updateWorkflow(wf.id, { approver: e.target.value })} />
       </Field>
+
+      {/* 借阅利用流程：审批组链规则（服务端运行时消费） */}
+      {wf.id === 'wf-borrow-approval' && <BorrowChainRulesPanel wf={wf} />}
 
       <div className="border-t border-slate-100 pt-3 grid grid-cols-2 gap-2 text-center">
         <div className="bg-slate-50 rounded-lg py-2">
@@ -457,6 +596,13 @@ const WorkflowConfigPage: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
+      {/* 执行口径明示（2026-08-18：借阅审批链已接线消费本页配置） */}
+      <div className="px-4 py-2 bg-emerald-50/70 border-b border-emerald-100 text-[11px] text-emerald-800 leading-relaxed shrink-0">
+        <strong>配置即运行</strong>：借阅审批链由服务端按本页「借阅利用」流程的组链规则实时组链
+        （基础链 → 含下载/打印/实体升级 → 涉密升级 → 终审），修改对今后发起的申请生效，在途单据按原链执行；
+        借阅车「审批链预览」与服务端组链同源一致。
+        归档质检 / 大额核查 / 鉴定销毁流程暂为登记册语义（鉴定销毁由「档案处置 → 鉴定销毁」页按真实状态机执行）。
+      </div>
       {/* ── 工具栏 ── */}
       <div className="flex items-center gap-2 px-4 py-2.5 bg-white border-b border-slate-200 shrink-0">
         <div className="flex items-center gap-2 mr-1">

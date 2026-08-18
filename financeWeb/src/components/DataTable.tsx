@@ -257,9 +257,10 @@ export function DataTable<TData extends { id: string }>({
   return (
     <div className="w-full">
       <table className="w-full caption-bottom text-sm table-fixed">
-        <TableHeader className="sticky top-0 z-10 bg-white">
+        {/* sticky 表头需实色底（滚动时不透出行），灰带样式由 ui/table 原语统一 */}
+        <TableHeader className="sticky top-0 z-10 bg-slate-100">
           {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id} className="bg-white">
+            <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => {
                 const canResize = header.column.getCanResize();
                 return (

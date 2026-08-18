@@ -1,12 +1,21 @@
-﻿/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
+/**
+ *
+ * AuditLogsPanel — 系统安全审计日志（2026-08-16 接真重构）
+ *
+ * 数据源（全真）：
+ *   - 借阅全生命周期操作日志（/audit/logs，borrowStore.logs 镜像）
+ *   - 件级时间线（records[].auditLogs，上传/组卷等真实事件）
+ * 「一键核算审计链」调用 GET /audit/verify：服务端重算 ams_operation_log
+ * 哈希链（SHA-256 单向链），如实返回 通过/不可验/断链 计数。
+ *
+ * 历史说明：原 5 条写死的管理员日志与 setTimeout 假验链已移除。
  */
 
 import React, { useState, useMemo } from 'react';
-import { Search, Database, Fingerprint, ShieldCheck, RefreshCw, Calendar, Eye, ShieldAlert, ArrowDownUp } from 'lucide-react';
-import { ArchiveRecord, AuditLog } from '../types';
+import { Search, Fingerprint, ShieldCheck, RefreshCw, Calendar, ShieldAlert } from 'lucide-react';
+import { ArchiveRecord } from '../types';
 import { useBorrowStore } from '../stores/borrowStore';
+import { http } from '../services/http';
 
 interface AuditLogsPanelProps {
   records: ArchiveRecord[];
@@ -24,42 +33,40 @@ interface GenericAuditRecord {
   tamperFree: boolean;
 }
 
-export const AuditLogsPanel: React.FC<AuditLogsPanelProps> = ({ records, triggerToast }) => {
-  // Setup nice long initial audit logs matching standard Alfresco original Audit Trail format
-  const [genericLogs, setGenericLogs] = useState<GenericAuditRecord[]>([
-    { id: 'log-sys-01', time: '2026-05-30 10:52:22', user: 'admin', ip: '192.168.1.102', action: '读取物理文件原文-CA凭证', details: '用户查看了档号为 [Z001-01-01-202605-0001] 的原始数电发票XML与PDF文件，触发系统 Acl 验证通过。', hash: 'e3b0c44298fc1c149afbf4c8996fb924', tamperFree: true },
-    { id: 'log-sys-02', time: '2026-05-30 10:30:15', user: 'system_job', ip: '127.0.0.1', action: '触发全量四性轮询检测', details: '定时任务对 [2026] 年度全宗档案进行 SHA-256 完整性哈希轮询比照，核对 340 件合规，未发现篡改迹象。', hash: 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6', tamperFree: true },
-    { id: 'log-sys-03', time: '2026-05-29 09:15:30', user: 'zhangsan', ip: '192.168.2.11', action: '一键电子档案组卷装订', details: '成功将 5 月份共计 342 件符合四性要求的记账凭据及发票件数据，一键打包归类至 [2026-05月卷宗库]。', hash: '8fbcb45b123dabc342371bfe...', tamperFree: true },
-    { id: 'log-sys-04', time: '2026-05-28 16:45:02', user: 'lisi', ip: '192.168.1.112', action: '可用性专项故障修复', details: '对缺陷 OFD（缺失宋体GB2312）执行了 AI 自修复，动态嵌入标准矢量字型包以防止脱机预览变形乱码。', hash: 'cf7a8b9c0d1e2f3a4b5c6d7e8f90011b', tamperFree: true },
-    { id: 'log-sys-05', time: '2026-05-26 14:10:50', user: 'admin', ip: '10.0.8.21', action: '下载电子版式原文', details: '下载凭证 Z001-01-01-202605-0001 主件PDF文档，系统强制注入只读防伪溯源荧光水印：[jinlinrun198x]。', hash: 'b2855e3b0c44298fc1c149afbf4c8996f', tamperFree: true },
-  ]);
+interface VerifyResult {
+  total: number;
+  verified: number;
+  unverifiable: number;
+  broken: number;
+  chainIntact: boolean;
+}
 
+export const AuditLogsPanel: React.FC<AuditLogsPanelProps> = ({ records, triggerToast }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [startDate, setStartDate] = useState('2026-01-01');
   const [endDate, setEndDate] = useState('2026-12-31');
   const [isVerifying, setIsVerifying] = useState(false);
+  const [verifyResult, setVerifyResult] = useState<VerifyResult | null>(null);
 
   // 借阅全生命周期操作日志（检索/申请/审批/履约/查看/打印）
   const borrowLogs = useBorrowStore((s) => s.logs);
 
-  // Combine static admin logs + records timeline logs + borrow logs to make a vast cohesive search table
+  // 件级时间线 + 借阅操作日志合并（全真数据源）
   const allLogsJoined = useMemo(() => {
-    const list: GenericAuditRecord[] = [...genericLogs];
+    const list: GenericAuditRecord[] = [];
 
-    // Read details from current reactive records & timeline entries to make it highly stateful!
     records?.forEach(rec => {
       rec.auditLogs?.forEach(entry => {
-        // avoid duplication
         if (!list.some(item => item.id === entry.id)) {
           list.push({
             id: entry.id,
             time: entry.timestamp,
-            user: entry.operator?.split(' ')[0] || 'Unknown', // Get first name
-            ip: entry.ipAddress || '127.0.0.1',
+            user: entry.operator?.split(' ')[0] || 'Unknown',
+            ip: entry.ipAddress || '—',
             action: entry.action || 'Unknown Action',
             details: `【档号:${rec.archiveCode || 'N/A'}】` + (entry.details || ''),
-            hash: rec.components?.[0]?.hash?.substring(0, 32) || 'e3b0c44298fc1c149afbf4c80011ff22',
-            tamperFree: rec.checks?.complete ?? true // complete check determines if tampered or not
+            hash: rec.components?.[0]?.hash?.substring(0, 32) || '',
+            tamperFree: rec.checks?.complete ?? true,
           });
         }
       });
@@ -72,10 +79,10 @@ export const AuditLogsPanel: React.FC<AuditLogsPanelProps> = ({ records, trigger
           id: entry.id,
           time: entry.timestamp,
           user: entry.actorName,
-          ip: '192.168.1.100',
+          ip: '—',
           action: `借阅·${entry.action}`,
           details: `【${entry.target}】${entry.detail || ''}（${entry.actorRoleLabel}）`,
-          hash: 'e3b0c44298fc1c149afbf4c8996fb924',
+          hash: '',
           tamperFree: true,
         });
       }
@@ -83,13 +90,13 @@ export const AuditLogsPanel: React.FC<AuditLogsPanelProps> = ({ records, trigger
 
     // Sort by timestamp desc
     return list.sort((a, b) => b.time.localeCompare(a.time));
-  }, [genericLogs, records, borrowLogs]);
+  }, [records, borrowLogs]);
 
   // Filtered list
   const filteredLogs = useMemo(() => {
     return allLogsJoined.filter(log => {
       const q = searchQuery.toLowerCase().trim();
-      const matchesSearch = q === '' || 
+      const matchesSearch = q === '' ||
         log.user.toLowerCase().includes(q) ||
         log.action.toLowerCase().includes(q) ||
         log.details.toLowerCase().includes(q) ||
@@ -101,20 +108,24 @@ export const AuditLogsPanel: React.FC<AuditLogsPanelProps> = ({ records, trigger
     });
   }, [allLogsJoined, searchQuery, startDate, endDate]);
 
-  const handleVerifyChain = () => {
+  // 真实链式验真（服务端重算 SHA-256 哈希链）
+  const handleVerifyChain = async () => {
     setIsVerifying(true);
-    triggerToast('安全密码机正在轮询区块链证据链，计算SHA256哈希指纹防篡改检验...', 'info');
-
-    setTimeout(() => {
-      setIsVerifying(false);
-      // Double check if any actual records have complete flag as false
-      const containingTampers = records?.some(r => !r.checks?.complete);
-      if (containingTampers) {
-        triggerToast('审计链核算完毕：发现 1 处档案文件指纹与原始入库哈希有偏离！可用性已被重构拦截。', 'warning');
+    try {
+      const r = await http.get<VerifyResult>('/audit/verify');
+      setVerifyResult(r);
+      if (r.broken > 0) {
+        triggerToast(`审计链验真：${r.total} 条中发现 ${r.broken} 条断链（疑似篡改/删除），请立即排查！`, 'warning');
+      } else if (r.unverifiable > 0) {
+        triggerToast(`审计链完整：${r.verified} 条验真通过，${r.unverifiable} 条为精度升级前历史记录（无法重算，如实标注）`, 'info');
       } else {
-        triggerToast('安全审计核链通过！所有 100% 审计轨迹哈希与分布式密盟区块证书严格扣合，无任何篡改剪切痕迹。', 'success');
+        triggerToast(`审计链验真通过：${r.verified}/${r.total} 条哈希逐环扣合，无篡改痕迹`, 'success');
       }
-    }, 1800);
+    } catch (e) {
+      triggerToast('验真失败：' + (e instanceof Error ? e.message : ''), 'warning');
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
   return (
@@ -123,11 +134,16 @@ export const AuditLogsPanel: React.FC<AuditLogsPanelProps> = ({ records, trigger
         <div>
           <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
             <Fingerprint className="w-5 h-5 text-sky-600" />
-            <span>系统安全审计日志 (Alfresco 原生不可篡改 Audit Trail)</span>
+            <span>系统安全审计日志（哈希链防篡改）</span>
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            不可逆追溯审计日志，底层直连数据摘要防伪链，用于捕捉任何人对版式发票、电子账簿的读取、修改、导出以及自修复行为。
+            操作日志写入 ams_operation_log 时逐环计算 SHA-256 哈希链（每环含上一环哈希），「验链」按钮由服务端重算全链核对，断链即篡改信号。
           </p>
+          {verifyResult && (
+            <p className={`text-xs mt-1.5 font-medium ${verifyResult.broken > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+              最近一次验链：共 {verifyResult.total} 条 · 验真通过 {verifyResult.verified} · 历史不可验 {verifyResult.unverifiable} · 断链 {verifyResult.broken}
+            </p>
+          )}
         </div>
         
         <button
@@ -184,41 +200,41 @@ export const AuditLogsPanel: React.FC<AuditLogsPanelProps> = ({ records, trigger
       </div>
 
       {/* Main Table view */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-3xs">
+      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse font-sans" id="audit-trail-logs-table">
+          <table className="w-full border-collapse font-sans" id="audit-trail-logs-table">
             <thead>
-              <tr className="bg-slate-50/70 border-b border-slate-100 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
-                <th className="p-3 w-40">操作时间 (Time)</th>
-                <th className="p-3 w-28">操作柜员 (User)</th>
-                <th className="p-3 w-32">IP 地址 (IP)</th>
-                <th className="p-3 w-44">事件行为 (Action)</th>
-                <th className="p-3">详细安全留痕与电子发票证据链说明</th>
-                <th className="p-3 text-center w-28">不可篡改验证</th>
+              <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
+                <th className="px-4 py-3 text-left text-[13px] font-semibold w-40">操作时间 (Time)</th>
+                <th className="px-4 py-3 text-left text-[13px] font-semibold w-28">操作柜员 (User)</th>
+                <th className="px-4 py-3 text-left text-[13px] font-semibold w-32">IP 地址 (IP)</th>
+                <th className="px-4 py-3 text-left text-[13px] font-semibold w-44">事件行为 (Action)</th>
+                <th className="px-4 py-3 text-left text-[13px] font-semibold">详细安全留痕与电子发票证据链说明</th>
+                <th className="px-4 py-3 text-center text-[13px] font-semibold w-28">不可篡改验证</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-[11px] text-slate-700">
+            <tbody>
               {filteredLogs.map(log => (
-                <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="p-3 font-mono text-slate-600 font-bold">{log.time}</td>
-                  <td className="p-3 font-bold text-slate-900">{log.user}</td>
-                  <td className="p-3">
-                    <code className="font-mono text-slate-500 text-[10.5px]">
+                <tr key={log.id} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
+                  <td className="px-4 py-3 font-mono text-[13px] text-slate-600">{log.time}</td>
+                  <td className="px-4 py-3 text-sm text-slate-800">{log.user}</td>
+                  <td className="px-4 py-3">
+                    <code className="font-mono text-[13px] text-slate-600">
                       {log.ip}
                     </code>
                   </td>
-                  <td className="p-3">
+                  <td className="px-4 py-3">
                     <span className="px-2 py-0.5 bg-sky-50 text-sky-800 border border-sky-100 font-bold rounded">
                       {log.action}
                     </span>
                   </td>
-                  <td className="p-3 font-sans leading-relaxed text-slate-600" title={log.details}>
+                  <td className="px-4 py-3 text-[13px] text-slate-600 leading-relaxed" title={log.details}>
                     {log.details}
                   </td>
-                  <td className="p-3 text-center">
-                    <div className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-0.5 rounded-full font-bold text-[10px]">
-                      <ShieldCheck className="w-3 h-3 text-emerald-600 shrink-0" />
-                      <span>验签合规</span>
+                  <td className="px-4 py-3 text-center">
+                    <div className="inline-flex items-center gap-1 bg-slate-50 text-slate-600 border border-slate-200 px-2 py-0.5 rounded-full font-bold text-[10px]">
+                      <ShieldCheck className="w-3 h-3 text-slate-500 shrink-0" />
+                      <span>链上存证</span>
                     </div>
                   </td>
                 </tr>

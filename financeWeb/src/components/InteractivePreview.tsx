@@ -16,7 +16,6 @@ interface InteractivePreviewProps {
   record: ArchiveRecord;
   activeFileIndex: number;
   onActiveFileChange: (idx: number) => void;
-  onRepairUsability: (recordId: string) => void;
   /** 水印防篡改触发"强制关闭预览"时回调（由宿主关闭抽屉/弹窗） */
   onForceClose?: () => void;
 }
@@ -25,23 +24,13 @@ export const InteractivePreview: React.FC<InteractivePreviewProps> = ({
   record,
   activeFileIndex,
   onActiveFileChange,
-  onRepairUsability,
   onForceClose
 }) => {
-  const [isRepairing, setIsRepairing] = useState(false);
   const watermarkConfig = useWatermarkStore((s) => s.config);
   const activeFile: ComponentFile | undefined = record.components[activeFileIndex] || record.components[0];
 
   // 文档状态标注（需求第3节：归档中/已作废等状态叠加到水印）
   const docStatus = record.status === '待审核' ? '待审核' : record.status === '仅件数据' ? '归档中' : undefined;
-
-  const handleRepairTrigger = () => {
-    setIsRepairing(true);
-    setTimeout(() => {
-      onRepairUsability(record.id);
-      setIsRepairing(false);
-    }, 1500); // 1.5s simulated repairing latency
-  };
 
   // 下载：水印策略启用时提示后端烧录（需求第2.2节：绝不依赖前端）
   const handleDownload = () => {
@@ -273,31 +262,10 @@ export const InteractivePreview: React.FC<InteractivePreviewProps> = ({
                           </p>
                         </div>
 
-                        {/* Interactive repairing CTA */}
-                        <div className="pt-3 border-t border-rose-100">
-                          <button 
-                            type="button" 
-                            disabled={isRepairing}
-                            onClick={handleRepairTrigger}
-                            className={`w-full py-2.5 px-4 rounded-xl text-xs font-semibold shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                              isRepairing 
-                                ? 'bg-sky-100 text-sky-400' 
-                                : 'bg-sky-600 hover:bg-sky-700 text-white'
-                            }`}
-                          >
-                            {isRepairing ? (
-                              <>
-                                <RotateCw className="w-4 h-4 animate-spin" />
-                                <span>AI 自动重签名并嵌入汉字轮廓轮模组...</span>
-                              </>
-                            ) : (
-                              <>
-                                <Wrench className="w-4 h-4" />
-                                <span>一键“智能字体补充与结构重组” (AI自修复)</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
+                        {/* 真实修复能力待后端落地；当前仅提示处理路径（2026-08-16 移除假自修复按钮） */}
+                        <p className="text-[11px] text-slate-400 pt-3 border-t border-rose-100">
+                          请联系系统供应商重新导出嵌入国标字体的版式文件后重新上传；系统暂不支持在线修复。
+                        </p>
                       </div>
                     ) : (
                       // Usable standard OFD View

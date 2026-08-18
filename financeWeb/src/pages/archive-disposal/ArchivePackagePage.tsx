@@ -50,8 +50,12 @@ const typeLabel = (t: string) => {
 // 主组件
 // ═══════════════════════════════════════════════════════════
 const ArchivePackagePage: React.FC = () => {
-  const records = useArchiveStore(s => s.records);
+  // 全量件（含已组卷卷内件）：封装对象是「已组卷」档案，池口径永远为空（2026-08-16 贯通修复）
+  const allRecords = useArchiveStore(s => s.allRecords);
+  const loadAllRecords = useArchiveStore(s => s.loadAllRecords);
   const volumes = useVolumeStore(s => s.volumes);
+  const loadVolumes = useVolumeStore(s => s.loadVolumes);
+  const currentFanzongCode = useArchiveStore(s => s.currentFanzongCode);
 
   const {
     packageUnits,
@@ -74,10 +78,16 @@ const ArchivePackagePage: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState<string>('全部');
   const [showManifestId, setShowManifestId] = useState<string | null>(null);
 
-  // ── 页面加载时拉取保管库数据 ──
+  // ── 页面加载时拉取全量件与卷数据 ──
   useEffect(() => {
-    loadFromArchive(records, volumes);
-  }, []); // 仅首次加载
+    void loadAllRecords();
+    if (currentFanzongCode) void loadVolumes(currentFanzongCode);
+  }, [loadAllRecords, loadVolumes, currentFanzongCode]);
+
+  // 数据到达/变化时重建封装单元（本页无轮询，引用只在挂载加载与全宗切换时变，不会打断勾选）
+  useEffect(() => {
+    loadFromArchive(allRecords, volumes);
+  }, [allRecords, volumes, loadFromArchive]);
 
   // ── 筛选后的封装单元 ──
   const filteredUnits = useMemo(() => {
@@ -116,7 +126,11 @@ const ArchivePackagePage: React.FC = () => {
   // ── 操作 ──
   const handleToggleAll = () => toggleAllUnits(!allSelected);
 
-  const handleRefresh = () => loadFromArchive(records, volumes);
+  const handleRefresh = () => {
+    // 手动刷新：重拉全量件与卷（上方 effect 随引用变化自动重建封装单元）
+    void loadAllRecords();
+    if (currentFanzongCode) void loadVolumes(currentFanzongCode);
+  };
 
   return (
     <div className="flex flex-col h-full bg-slate-50">

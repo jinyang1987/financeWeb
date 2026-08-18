@@ -41,7 +41,6 @@ const AppLayout: React.FC<AppLayoutProps> = ({ loggedUser, onLogout }) => {
 
   // ─── Handlers for DrawerPanel & UploadModal ──────────
   const {
-    handleRepairUsability,
     handleUploadSuccess,
   } = useAppHandlers(activeRecord, triggerToast);
 
@@ -75,8 +74,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ loggedUser, onLogout }) => {
             setCurrentFanzongCode(list[0].code);
           }
         }
-        // 全宗就绪后拉取当前全宗收集池件（P1-① 真数据源）
+        // 全宗就绪后拉取当前全宗收集池件（P1-① 真数据源）与全量件视图（读侧）
         void useArchiveStore.getState().loadRecords();
+        void useArchiveStore.getState().loadAllRecords();
       } catch (e) {
         console.warn('全宗加载失败（首次可能无数据）:', e);
       } finally {
@@ -95,6 +95,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ loggedUser, onLogout }) => {
         useVolumeStore.getState().loadVolumes(currentFanzongCode),
         useArchiveBoxStore.getState().loadBoxes(currentFanzongCode),
         useSourceDocumentStore.getState().loadSourceDocs(currentFanzongCode),
+        useArchiveStore.getState().loadAllRecords(),
       ]);
       // recordCount 聚合回填全宗（P1-③）：收集池件数 + 卷内件数
       const poolCount = useArchiveStore.getState().records.length;
@@ -128,7 +129,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ loggedUser, onLogout }) => {
         </div>
       </div>
 
-      <DrawerPanel onRepairUsability={handleRepairUsability} triggerToast={triggerToast} />
+      <DrawerPanel triggerToast={triggerToast} />
 
       <UploadModal
         isOpen={isUploadOpen}

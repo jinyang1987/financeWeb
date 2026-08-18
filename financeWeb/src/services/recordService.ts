@@ -52,6 +52,16 @@ export interface RecordDto {
   sourceSystem?: string;
   externalId?: string;
   description?: string;      // cm:description（摘要）
+  // ── 卷/盒归属（scope=all 时返回；池件为空串） ──
+  volumeId?: string;
+  volumeCode?: string;
+  boxId?: string;
+  boxNo?: string;
+  // ── V10 读模型透出（2026-08-18 全文检索） ──
+  accountSubject?: string;
+  counterpartyName?: string;
+  documentNo?: string;
+  ocrText?: string;
 }
 
 export interface PoolResult {
@@ -105,6 +115,81 @@ export async function fetchPoolRecords(params: {
     if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
   });
   return http.get<PoolResult>(`/records?${qs.toString()}`);
+}
+
+/**
+ * 全量件列表（scope=all，2026-08-16 贯通修复）：
+ * 池件 ∪ 案卷库卷内件 ∪ 盒库卷内件，每条带 volumeId/volumeCode/boxId/boxNo 归属。
+ * 供档案查询/档案打包/借阅车结算/统计等读侧场景使用（工作台的池口径不变，仍走 fetchPoolRecords）。
+ */
+export async function fetchAllRecords(params: {
+  fondsCode: string;
+  archiveType?: string;
+  year?: number;
+  month?: number;
+  keyword?: string;
+}): Promise<PoolResult> {
+  const qs = new URLSearchParams({ scope: 'all', maxItems: '5000' });
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
+  });
+  return http.get<PoolResult>(`/records?${qs.toString()}`);
+}
+
+// ─── V10 全文检索读模型（2026-08-18） ───
+
+export interface SearchParams {
+  fondsCode: string;
+  q?: string;
+  archiveType?: string;
+  /** 门户快捷分类：KP 凭证 / KB 账簿 / FB 报表 / QT 其他 */
+  category?: string;
+  year?: number | string;
+  month?: number;
+  subject?: string;
+  dept?: string;
+  preparer?: string;
+  counterparty?: string;
+  documentNo?: string;
+  voucherNo?: string;
+  amountFrom?: number | string;
+  amountTo?: number | string;
+  recordStatus?: string;
+  skipCount?: number;
+  maxItems?: number;
+}
+
+/** 服务端真分页全文检索（pg_trgm 任意子串，含 ocrText 正文）——门户页态化主入口 */
+export async function searchRecords(params: SearchParams): Promise<PoolResult> {
+  const qs = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
+  });
+  return http.get<PoolResult>(`/records/search?${qs.toString()}`);
+}
+
+export interface RecordFacets {
+  years: number[];
+  types: string[];
+  subjects: string[];
+  departments: string[];
+  preparers: string[];
+}
+
+/** 分面下拉选项（带权限下推） */
+export async function fetchRecordFacets(params: {
+  fondsCode: string; archiveType?: string; year?: number | string;
+}): Promise<RecordFacets> {
+  const qs = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
+  });
+  return http.get<RecordFacets>(`/records/facets?${qs.toString()}`);
+}
+
+/** 门户首页统计（总量/已组卷凭证数，带权限下推） */
+export async function fetchRecordStats(fondsCode: string): Promise<{ total: number; archivedVouchers: number }> {
+  return http.get(`/records/stats?fondsCode=${encodeURIComponent(fondsCode)}`);
 }
 
 /** 读取文件内容（带会话头，预览/下载统一入口） */
@@ -227,6 +312,16 @@ export function dtoToRecord(dto: RecordDto): ArchiveRecord {
     sourceSystem: dto.sourceSystem || undefined,
     externalId: dto.externalId || undefined,
     summary: dto.description || undefined,
+    // 卷/盒归属（scope=all 返回；池件为空串 → undefined）
+    volumeId: dto.volumeId || undefined,
+    volumeCode: dto.volumeCode || undefined,
+    boxId: dto.boxId || undefined,
+    boxNo: dto.boxNo || undefined,
+    // V10 读模型透出（科目/往来单位/单据号，门户检索维度；ocrText 详情展示）
+    accountSubject: dto.accountSubject || undefined,
+    counterpartyName: dto.counterpartyName || undefined,
+    documentNo: dto.documentNo || undefined,
+    ocrText: dto.ocrText || undefined,
   };
 }
 

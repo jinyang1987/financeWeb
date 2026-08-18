@@ -67,10 +67,34 @@ public class YonyouClient {
   public record Conn(String gateway, String appKey, String appSecret,
                      String tenantId, String accbookCode, String fondsCode) {}
 
-  /** 读取连接配置（未配置抛业务异常，前端据此引导配置） */
+  /** 读取连接配置（未配置抛业务异常，前端据此引导配置）
+   * 优先读多数据源配置（datasource.config → yonyou-bip），兼容旧 yonyou.connection。 */
   public Conn conn() {
-    var entry = config.get(CONFIG_KEY).orElseThrow(() ->
-        BizException.badRequest("YONYOU_NOT_CONFIGURED", "用友连接未配置，请先在「连接配置」中填写网关与密钥"));
+    var entry = config.get(CONFIG_KEY).orElse(null);
+    // 多数据源配置优先
+    var ds = config.get("datasource.config");
+    if (ds.isPresent()) {
+      try {
+        var root = json.readTree(ds.get().valueJson());
+        if (root.path("sources").isArray()) {
+          for (var n : root.path("sources")) {
+            if ("yonyou-bip".equals(n.path("id").asText())) {
+              var c = n.path("config");
+              return new Conn(
+                  text(c, "gateway", "https://dbox.yonyoucloud.com/iuap-api-gateway"),
+                  text(c, "appKey", ""),
+                  text(c, "appSecret", ""),
+                  text(c, "tenantId", ""),
+                  text(c, "accbookCode", "0001"),
+                  text(c, "fondsCode", "Z001"));
+            }
+          }
+        }
+      } catch (Exception ignored) { /* 回退旧配置 */ }
+    }
+    if (entry == null) {
+      throw BizException.badRequest("YONYOU_NOT_CONFIGURED", "用友连接未配置，请在「系统管理→数据源配置」中填写网关与密钥");
+    }
     try {
       var node = json.readTree(entry.valueJson());
       return new Conn(

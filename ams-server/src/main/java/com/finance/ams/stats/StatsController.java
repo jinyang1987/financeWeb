@@ -6,30 +6,33 @@ import java.util.Map;
 
 import javax.sql.DataSource;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.web.bind.annotation.*;
 
-import com.finance.ams.api.BizException;
+import com.finance.ams.auth.AuthUser;
+import com.finance.ams.auth.PermissionService;
 
 /**
  * 统计聚合端点（P4-4）：服务端 SQL 聚合
+ * 授权（2026-08-18）：见 PermissionService（统计五页任一功能码）。
  */
 @RestController
 @RequestMapping("/stats")
 public class StatsController {
 
   private final JdbcClient jdbc;
+  private final PermissionService perm;
 
-  public StatsController(DataSource dataSource) {
+  public StatsController(DataSource dataSource, PermissionService perm) {
     this.jdbc = JdbcClient.create(dataSource);
+    this.perm = perm;
   }
 
   @GetMapping("/inventory")
   public Map<String, Object> inventory(
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket) {
-    requireAuth(userId, ticket);
+    guard(userId, ticket);
     Map<String, Object> result = new LinkedHashMap<>();
     result.put("borrowOrders", jdbc.sql("SELECT COUNT(*) FROM ams_borrow_order").query(Long.class).single());
     result.put("activeFulfillments", jdbc.sql("SELECT COUNT(*) FROM ams_fulfillment WHERE status IN ('granted','lent','pending','queued')").query(Long.class).single());
@@ -43,7 +46,7 @@ public class StatsController {
   public Map<String, Object> lifecycle(
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket) {
-    requireAuth(userId, ticket);
+    guard(userId, ticket);
     Map<String, Object> result = new LinkedHashMap<>();
     result.put("inspectionByPhase", jdbc.sql(
         "SELECT phase, all_pass, COUNT(*) AS cnt FROM ams_inspection_report GROUP BY phase, all_pass").query().listOfRows());
@@ -59,7 +62,7 @@ public class StatsController {
   public Map<String, Object> compliance(
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket) {
-    requireAuth(userId, ticket);
+    guard(userId, ticket);
     Map<String, Object> result = new LinkedHashMap<>();
     result.put("overdueFulfillments", jdbc.sql("SELECT COUNT(*) FROM ams_fulfillment WHERE status='overdue'").query(Long.class).single());
     result.put("blacklistCandidates", jdbc.sql("""
@@ -76,7 +79,7 @@ public class StatsController {
   public Map<String, Object> borrow(
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket) {
-    requireAuth(userId, ticket);
+    guard(userId, ticket);
     Map<String, Object> result = new LinkedHashMap<>();
     result.put("byStatus", jdbc.sql("SELECT status, COUNT(*) AS cnt FROM ams_borrow_order GROUP BY status").query().listOfRows());
     result.put("overdue", jdbc.sql("SELECT COUNT(*) FROM ams_fulfillment WHERE status='overdue'").query(Long.class).single());
@@ -84,10 +87,11 @@ public class StatsController {
     return result;
   }
 
-  private void requireAuth(String userId, String ticket) {
-    if (userId == null || userId.isBlank() || ticket == null || ticket.isBlank()) {
-      throw new BizException(HttpStatus.UNAUTHORIZED, "SESSION_EXPIRED", "缺少会话凭据，请重新登录");
-    }
+  /** 统计五页任一功能码即放行（页面级显隐由前端矩阵控制，服务端按组兜底） */
+  private void guard(String userId, String ticket) {
+    AuthUser me = perm.me(userId, ticket);
+    perm.requireFunction(me, "stats-cockpit", "stats-inventory", "stats-lifecycle",
+        "borrow-stats", "stats-compliance");
   }
 }
 

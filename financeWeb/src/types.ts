@@ -89,6 +89,8 @@ export interface ArchiveRecord {
   managementMode?: import('./types/managementMode').ManagementMode;
   /** 所属档案盒ID（关联 ArchiveBox.id），仅 volume-mode 使用 */
   boxId?: string;
+  /** 所属档案盒盒号（冗余显示，scope=all 列表携带） */
+  boxNo?: string;
   /** 保管库存储位置（组卷确认/移交后由库房管理员填写） */
   storageLocation?: string;
 
@@ -105,6 +107,12 @@ export interface ArchiveRecord {
   preparer?: string;
   /** 会计科目（检索维度） */
   accountSubject?: string;
+  /** 往来单位（事项检索维度，V10 读模型透出） */
+  counterpartyName?: string;
+  /** 单据号/发票号（事项检索维度，V10 读模型透出） */
+  documentNo?: string;
+  /** OCR 双通道识别正文（PDF 文本层/tesseract，详情页展示） */
+  ocrText?: string;
   /** 密级：普通/内部/秘密/机密（借阅审批路由依据） */
   securityLevel?: string;
 

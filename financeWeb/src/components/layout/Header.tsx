@@ -1,8 +1,9 @@
 ﻿﻿﻿﻿﻿﻿﻿﻿import React, { useState, useRef, useEffect } from 'react';
-import { Menu, Building, ChevronDown, Check, Repeat } from 'lucide-react';
+import { Menu, Building, ChevronDown, Check, Repeat, Search } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
 import { useArchiveStore } from '../../stores/archiveStore';
 import { useAuthStore } from '../../stores/authStore';
+import { usePortalStore } from '../../stores/portalStore';
 import { getPageTitle } from '../../config/menuConfig';
 import { MOCK_USERS, ROLE_LABELS } from '../../types/user';
 
@@ -16,6 +17,7 @@ export const Header: React.FC<HeaderProps> = ({ onLogout, fondsLoading, onFanzon
   const { activeMainMenu, setMobileSidebarOpen } = useAppStore();
   const { fanzongs, currentFanzongCode, setCurrentFanzongCode } = useArchiveStore();
   const { currentUser, switchUser } = useAuthStore();
+  const switchMode = usePortalStore((s) => s.switchMode);
 
   const [isFanzongDropdownOpen, setIsFanzongDropdownOpen] = useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
@@ -46,7 +48,7 @@ export const Header: React.FC<HeaderProps> = ({ onLogout, fondsLoading, onFanzon
 
   return (
     <header className="bg-[#F8FAFC] px-5 h-[64px] flex items-center justify-between text-slate-800 shrink-0 select-none">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 min-w-0 flex-1">
         <button
           onClick={() => setMobileSidebarOpen(true)}
           className="md:hidden p-2 hover:bg-slate-100 rounded text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
@@ -55,19 +57,33 @@ export const Header: React.FC<HeaderProps> = ({ onLogout, fondsLoading, onFanzon
           <Menu className="w-5 h-5" />
         </button>
 
-        {/* 页面标题 */}
-        <div>
-          <span className="text-[12px] font-bold text-slate-500 block tracking-wider uppercase select-none">
+        {/* 页面标题（min-w-0 + truncate：标题再长也只截断自身，不挤压右侧工具栏） */}
+        <div className="min-w-0">
+          <span className="text-[12px] font-bold text-slate-500 block tracking-wider uppercase select-none truncate">
             {pageTitle.subtitle}
           </span>
-          <h1 className="text-[15px] font-semibold tracking-tight text-slate-800">
+          <h1 className="text-[15px] font-semibold tracking-tight text-slate-800 truncate">
             {pageTitle.title}
           </h1>
         </div>
       </div>
 
-      {/* 右侧工具栏 */}
-      <div className="flex items-center gap-4 text-sm font-sans">
+      {/* 右侧工具栏（shrink-0：永不被标题挤压） */}
+      <div className="flex items-center gap-4 text-sm font-sans shrink-0">
+        {/* 进入检索门户（前台入口，置于全宗选择器左侧；与选择器同构的白色卡片式，左右对称） */}
+        <button
+          type="button"
+          onClick={() => switchMode('portal')}
+          className="flex items-center gap-2.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg hover:border-sky-300 hover:bg-sky-50/40 transition-all shadow-sm shrink-0 cursor-pointer"
+          title="进入检索门户（前台，百度式检索/在线调阅）"
+        >
+          <Search className="w-5 h-5 text-sky-600 shrink-0" />
+          <div className="flex flex-col items-start leading-tight">
+            <span className="text-[11px] text-slate-400 font-medium">前台</span>
+            <span className="text-[14px] font-semibold text-slate-700">检索门户</span>
+          </div>
+        </button>
+
         {/* 全宗选择器 */}
         <div className="relative shrink-0" ref={fanzongDropdownRef}>
           <button
@@ -220,7 +236,7 @@ export const Header: React.FC<HeaderProps> = ({ onLogout, fondsLoading, onFanzon
 
         <button
           onClick={onLogout}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all cursor-pointer"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all cursor-pointer shrink-0 whitespace-nowrap"
           title="退出登录"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

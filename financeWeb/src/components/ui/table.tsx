@@ -17,11 +17,15 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
   )
 }
 
+/** 表头：灰带 + 列间竖分隔（2026-08-18 规整化规范 v2，全应用统一） */
 function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
   return (
     <thead
       data-slot="table-header"
-      className={cn("[&_tr]:border-b", className)}
+      className={cn(
+        "[&_tr]:border-b [&_tr]:border-slate-200 [&_tr]:bg-slate-100/80 [&_tr]:divide-x [&_tr]:divide-slate-200/80",
+        className
+      )}
       {...props}
     />
   )
@@ -50,12 +54,13 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
   )
 }
 
+/** 表体行：行分隔 + 更淡的列竖线（错落有致，2026-08-18 规整化规范 v2） */
 function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   return (
     <tr
       data-slot="table-row"
       className={cn(
-        "border-b transition-colors hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted",
+        "border-b border-slate-200/60 divide-x divide-slate-100 transition-colors hover:bg-sky-50/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted",
         className
       )}
       {...props}
@@ -68,7 +73,7 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
     <th
       data-slot="table-head"
       className={cn(
-        "h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0",
+        "h-auto px-4 py-3 text-left align-middle text-[13px] font-semibold text-slate-700 whitespace-nowrap [&:has([role=checkbox])]:pr-0",
         className
       )}
       {...props}
@@ -81,7 +86,7 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
     <td
       data-slot="table-cell"
       className={cn(
-        "p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0",
+        "px-4 py-3 align-middle text-[13px] text-slate-600 whitespace-nowrap [&:has([role=checkbox])]:pr-0",
         className
       )}
       {...props}

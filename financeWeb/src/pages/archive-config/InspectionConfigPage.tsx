@@ -13,11 +13,28 @@
  * 配置项全为前端 mock，对接后端后从 API 加载/保存。
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Settings, Shield, CheckCircle2, FileText, Lock, Eye,
   Save, RotateCcw, Play, FileSpreadsheet, ChevronDown, Plus, X,
+  ListChecks, Loader2,
 } from 'lucide-react';
+import { http } from '../../services/http';
+import { useArchiveStore } from '../../stores/archiveStore';
+import {
+  fetchInspectionItems, setInspectionItemEnabled,
+  PHASE_LABELS, DIMENSION_LABELS,
+  type InspectionItem,
+} from '../../services/inspectionService';
+
+/** 持久化载荷（ams_config key=inspection.plan；与服务端 InspectionService 消费契约一致） */
+interface PlanPayload {
+  authenticity: AuthenticityConfig;
+  completeness: CompletenessConfig;
+  usability: UsabilityConfig;
+  security: SecurityConfig;
+  nodes: NodeConfig;
+}
 
 // ─── 类型定义 ───────────────────────────────────────────
 
@@ -74,7 +91,122 @@ interface NodeConfig {
   spotCheckRatio: number;
 }
 
-type TabKey = 'template' | 'authenticity' | 'completeness' | 'usability' | 'security';
+type TabKey = 'items' | 'template' | 'authenticity' | 'completeness' | 'usability' | 'security';
+
+// ─── 检测项标准库 Tab（V8：环节×四性×检测项，启用状态即检测方案） ───
+
+const DIM_ORDER = ['real', 'complete', 'usable', 'safe'] as const;
+const DIM_BADGE: Record<string, string> = {
+  real: 'bg-sky-50 text-sky-700 border-sky-200',
+  complete: 'bg-violet-50 text-violet-700 border-violet-200',
+  usable: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  safe: 'bg-rose-50 text-rose-700 border-rose-200',
+};
+
+const ItemsLibraryTab: React.FC = () => {
+  const [items, setItems] = useState<InspectionItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [toggling, setToggling] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchInspectionItems()
+      .then(setItems)
+      .catch(() => setItems([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const toggle = async (item: InspectionItem) => {
+    setToggling(item.code);
+    try {
+      const updated = await setInspectionItemEnabled(item.code, !item.enabled);
+      setItems((prev) => prev.map((it) => (it.code === item.code ? updated : it)));
+    } catch {
+      /* 失败保持原状 */
+    } finally {
+      setToggling(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-10 text-center text-slate-400 text-sm">
+        <Loader2 className="w-5 h-5 animate-spin inline mr-2" />检测项库加载中…
+      </div>
+    );
+  }
+
+  const phases = ['gd', 'yj', 'cq'] as const;
+
+  return (
+    <div className="p-5 space-y-5">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-700">标准检测项库（环节 × 四性）</h3>
+          <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+            检测引擎按「已启用」的检测项逐项执行，结果四性归并 + 问题明细落库；
+            勾选集合即本单位的检测方案（归档/移交/长期保存三个环节独立生效）。标准依据列明 DA/T·GB/T 条款。
+          </p>
+        </div>
+        <span className="text-[11px] text-slate-400 shrink-0 mt-0.5">
+          {items.filter((i) => i.enabled).length} / {items.length} 项启用
+        </span>
+      </div>
+
+      {phases.map((ph) => {
+        const phaseItems = items.filter((i) => i.phase === ph);
+        if (phaseItems.length === 0) return null;
+        return (
+          <div key={ph} className="border border-slate-200 rounded-xl overflow-hidden">
+            <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-700">{PHASE_LABELS[ph]}</span>
+              <span className="text-[10px] text-slate-400">
+                {phaseItems.filter((i) => i.enabled).length}/{phaseItems.length} 项启用
+              </span>
+            </div>
+            <div className="grid grid-cols-4 divide-x divide-slate-100">
+              {DIM_ORDER.map((dim) => (
+                <div key={dim} className="p-3 space-y-2">
+                  <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full border ${DIM_BADGE[dim]}`}>
+                    {DIMENSION_LABELS[dim]}
+                  </span>
+                  {phaseItems.filter((i) => i.dimension === dim).map((item) => (
+                    <div key={item.code}
+                      className={`flex items-start gap-2 p-2 rounded-lg border transition-colors ${
+                        item.enabled ? 'border-slate-200 bg-white' : 'border-slate-100 bg-slate-50 opacity-60'
+                      }`}>
+                      <button
+                        type="button"
+                        onClick={() => void toggle(item)}
+                        disabled={toggling === item.code}
+                        title={item.enabled ? '点击停用' : '点击启用'}
+                        className={`relative inline-flex h-4 w-7 mt-0.5 items-center rounded-full transition-colors cursor-pointer shrink-0 ${
+                          item.enabled ? 'bg-emerald-500' : 'bg-slate-300'
+                        }`}
+                      >
+                        <span className={`inline-block h-3 w-3 rounded-full bg-white shadow transition-transform ${
+                          item.enabled ? 'translate-x-[14px]' : 'translate-x-[2px]'
+                        }`} />
+                      </button>
+                      <div className="min-w-0">
+                        <div className="text-[11px] font-medium text-slate-700 leading-snug">{item.name}</div>
+                        <div className="text-[9.5px] text-slate-400 mt-0.5 font-mono">
+                          {item.code}{item.standard_ref && item.standard_ref !== '—' ? ` · ${item.standard_ref}` : ''}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {phaseItems.filter((i) => i.dimension === dim).length === 0 && (
+                    <div className="text-[10px] text-slate-300 px-1">—</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 // ─── 默认配置（电子会计档案模板） ────────────────────────
 
@@ -258,6 +390,43 @@ const InspectionConfigPage: React.FC = () => {
 
   // 保存状态
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [running, setRunning] = useState(false);
+  const [runResult, setRunResult] = useState<string>('');
+  const currentFanzongCode = useArchiveStore((s) => s.currentFanzongCode);
+
+  // ── 立即执行检测（真：对当前全宗收集池批量跑四性检测，走本页保存的方案口径） ──
+  const handleRunBatch = async () => {
+    if (!currentFanzongCode) return;
+    setRunning(true);
+    setRunResult('');
+    try {
+      const r = await http.post<{ checked: number; passed: number; failed: number; failedNames: string[] }>(
+        '/inspection/run-batch', { fondsCode: currentFanzongCode, phase: 'manual-config-page' });
+      setRunResult(`检测完成：共 ${r.checked} 件，通过 ${r.passed} 件，不通过 ${r.failed} 件`
+        + (r.failedNames.length > 0 ? `（${r.failedNames.slice(0, 3).join('；')}${r.failedNames.length > 3 ? ' 等' : ''}）` : ''));
+    } catch (e) {
+      setRunResult('检测失败：' + (e instanceof Error ? e.message : ''));
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  // ── 加载已保存方案（ams_config: inspection.plan，2026-08-16 贯通修复——原为假保存） ──
+  useEffect(() => {
+    http.get<{ key: string; value: unknown }>('/config/inspection.plan')
+      .then((view) => {
+        const v = view?.value as Partial<PlanPayload> | undefined;
+        if (!v) return;
+        if (v.authenticity) setAuthenticity({ ...DEFAULT_AUTHENTICITY, ...v.authenticity });
+        if (v.completeness) setCompleteness({ ...DEFAULT_COMPLETENESS, ...v.completeness });
+        if (v.usability) setUsability({ ...DEFAULT_USABILITY, ...v.usability });
+        if (v.security) setSecurity({ ...DEFAULT_SECURITY, ...v.security });
+        if (v.nodes) setNodes({ ...DEFAULT_NODES, ...v.nodes });
+      })
+      .catch(() => { /* 404 = 尚未保存过，用默认值 */ });
+  }, []);
 
   // —— 标签增删辅助 ——
   const addTag = (list: string[], setList: (v: string[]) => void, max: number, newTag: string) => {
@@ -270,10 +439,20 @@ const InspectionConfigPage: React.FC = () => {
     setList(list.filter((t) => t !== tag));
   };
 
-  // —— 保存 ——
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  // —— 保存（真持久化：PUT /config/inspection.plan，服务端检测引擎读取执行） ——
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveError('');
+    try {
+      const payload: PlanPayload = { authenticity, completeness, usability, security, nodes };
+      await http.put('/config/inspection.plan', { value: payload });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : '保存失败');
+    } finally {
+      setSaving(false);
+    }
   };
 
   // —— 恢复默认 ——
@@ -293,6 +472,7 @@ const InspectionConfigPage: React.FC = () => {
 
   // Tab 配置
   const tabs: { key: TabKey; label: string; icon: React.ReactNode }[] = [
+    { key: 'items', label: '检测项库', icon: <ListChecks className="w-4 h-4" /> },
     { key: 'template', label: '方案模板', icon: <FileSpreadsheet className="w-4 h-4" /> },
     { key: 'authenticity', label: '真实性', icon: <Shield className="w-4 h-4" /> },
     { key: 'completeness', label: '完整性', icon: <CheckCircle2 className="w-4 h-4" /> },
@@ -311,7 +491,17 @@ const InspectionConfigPage: React.FC = () => {
           <h2 className="text-lg font-bold text-slate-800">四性检测配置</h2>
           {saved && (
             <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full animate-in fade-in">
-              配置已保存
+              配置已保存（服务端检测引擎即时生效）
+            </span>
+          )}
+          {saveError && (
+            <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded-full">
+              保存失败：{saveError}
+            </span>
+          )}
+          {runResult && (
+            <span className="text-xs font-medium text-sky-700 bg-sky-50 px-2 py-0.5 rounded-full">
+              {runResult}
             </span>
           )}
         </div>
@@ -349,6 +539,9 @@ const InspectionConfigPage: React.FC = () => {
       {/* Tab 内容 */}
       <div className="px-6 py-4">
         <div className="bg-white rounded-xl border border-slate-200">
+
+          {/* ======================== 检测项库 ======================== */}
+          {activeTab === 'items' && <ItemsLibraryTab />}
 
           {/* ======================== 模板 ======================== */}
           {activeTab === 'template' && (
@@ -765,18 +958,21 @@ const InspectionConfigPage: React.FC = () => {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-sky-700 bg-sky-50 border border-sky-200 rounded-lg hover:bg-sky-100 transition-colors cursor-pointer"
+              onClick={() => void handleRunBatch()}
+              disabled={running}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-sky-700 bg-sky-50 border border-sky-200 rounded-lg hover:bg-sky-100 transition-colors cursor-pointer disabled:opacity-50"
             >
-              <Play className="w-4 h-4" />
-              立即执行检测
+              <Play className={`w-4 h-4 ${running ? 'animate-spin' : ''}`} />
+              {running ? '检测中…' : '立即执行检测'}
             </button>
             <button
               type="button"
-              onClick={handleSave}
-              className="flex items-center gap-1.5 px-5 py-2 text-sm font-bold text-white bg-sky-600 rounded-lg hover:bg-sky-700 transition-colors cursor-pointer shadow-sm"
+              onClick={() => void handleSave()}
+              disabled={saving}
+              className="flex items-center gap-1.5 px-5 py-2 text-sm font-bold text-white bg-sky-600 rounded-lg hover:bg-sky-700 transition-colors cursor-pointer shadow-sm disabled:opacity-50"
             >
               <Save className="w-4 h-4" />
-              保存配置
+              {saving ? '保存中…' : '保存配置'}
             </button>
           </div>
         </div>

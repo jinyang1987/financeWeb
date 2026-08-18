@@ -4,11 +4,14 @@
  * VolumeWorkspacePage — 组卷工作台
  *
  * 核心功能：
- *   1. 查看未组卷条目 + 搜索
+ *   1. 查看未组卷条目 + 搜索 + 凭证号连续性检测
  *   2. 智能推荐分组
- *   3. 手动创建/管理案卷
- *   4. 拖拽/按钮添加条目到案卷
- *   5. 确认组卷（赋卷号）
+ *   3. 勾选直接组卷（建卷+加入一步）/ 加入已有草稿卷 / 指定位置插入
+ *   4. 卷内管理：勾选件上移/下移排序、移出回池（2026-08-17）
+ *   5. 卷级操作：拆卷（整卷打散回池）、拆分（勾选件出新卷）、
+ *      合并（他卷并入本卷）、转卷（勾选件移入他卷）—— 全部草稿卷限定，
+ *      合并/转卷强制同类别/年度/期限（2026-08-17 对齐组卷业务概念）
+ *   6. 确认组卷（四性检测 + 赋卷号）/ 撤销确认 / 移交归盒
  */
 
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
@@ -17,12 +20,12 @@ import {
   Search, Lightbulb, FileText, Printer, Archive, AlertCircle,
   Loader2, CheckCircle2, Trash2, Upload, Shield, Send, Clock,
   RefreshCw, Trash, Link2, Eye, AlertTriangle, Paperclip,
+  ArrowUp, ArrowDown, FolderOutput, Split, Merge, Ungroup, ListChecks,
 } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
 import { useArchiveStore } from '../../stores/archiveStore';
 import { useSourceDocumentStore } from '../../stores/sourceDocumentStore';
 import { useVolumeStore, validateVoucherContinuity, inferTypeCode, inferRetentionCode, toCategoryCode } from '../../stores/volumeStore';
-import { useArchiveCodeConfigStore } from '../../stores/archiveCodeConfigStore';
 import { useMetadataDisplayStore } from '../../stores/metadataDisplayStore';
 import { getVoucherColumns, getVoucherDefaultColumns } from '../../config/metadataColumnMaps/voucherColumns';
 import {
@@ -38,6 +41,8 @@ import type { ArchiveRecord } from '../../types';
 import VoucherUploadModal from './VoucherUploadModal';
 import VolumePrintModal from './VolumePrintModal';
 import { deleteRecord } from '../../services/recordService';
+import { openPushService } from '../../services/openPushService';
+import { runVolumeInspection, type InspectionIssue } from '../../services/inspectionService';
 
 // ── 类型辅助 ──
 const ARCHIVE_TYPES = ['全部', '记账凭证', '会计账簿', '财务报告', '其他会计资料'] as const;
@@ -50,6 +55,9 @@ const ARCHIVE_TYPE_CATEGORY_NAMES: Record<string, string> = {
   QT: '其他会计资料',
 };
 const RETENTION_TYPES = ['全部', '30年', '永久', '10年'] as const;
+
+/** 空选择集（避免每渲染新建 Set 的引用抖动） */
+const EMPTY_SEL: Set<string> = new Set();
 
 // ── 工具函数 ──
 const formatAmount = (n: number) =>
@@ -379,6 +387,8 @@ interface VolumeCardProps {
   onUnconfirm: (volumeId: string) => void;
   onInsertAtPosition: (position: number) => void;
   checks: VolumeChecks;
+  /** 四性检测问题明细（最近一次 run-volume 的未通过项） */
+  issues: InspectionIssue[];
   /** 左侧选中件数，用于显示"加入当前案卷"按钮 */
   selectedCount: number;
   /** 将左侧选中件加入指定案卷 */
@@ -387,6 +397,12 @@ interface VolumeCardProps {
   attachmentCountMap: Map<string, number>;
   /** 查看凭证详情 */
   onViewDetail: (recordId: string) => void;
+  /** ── 卷内件勾选（2026-08-17 拆分/合并/转卷/重排） ── */
+  /** 本卡被选中的 recordId 集（选择域在其他卷时为空集） */
+  itemSelIds: Set<string>;
+  onToggleItemSelect: (recordId: string) => void;
+  /** 打开「合并案卷」弹窗（本卷为目标） */
+  onMerge: () => void;
 }
 
 const CHECK_LABELS: Record<string, string> = {
@@ -399,7 +415,8 @@ const CHECK_LABELS: Record<string, string> = {
 const VolumeCard: React.FC<VolumeCardProps> = ({
   volume, items, recordMap, isActive,
   onSelect, onRemoveItem, onConfirm, onDelete, onRunChecks, onTransfer, onPrint,
-  onUpdateTitle, onDecompose, onUnconfirm, onInsertAtPosition, checks, selectedCount, onAddSelectedToVolume, attachmentCountMap, onViewDetail,
+  onUpdateTitle, onDecompose, onUnconfirm, onInsertAtPosition, checks, issues, selectedCount, onAddSelectedToVolume, attachmentCountMap, onViewDetail,
+  itemSelIds, onToggleItemSelect, onMerge,
 }) => {
   const [expanded, setExpanded] = useState(true);
   const [confirming, setConfirming] = useState(false);
@@ -484,13 +501,6 @@ const VolumeCard: React.FC<VolumeCardProps> = ({
         <span className={`px-1.5 py-0.5 text-[11px] font-medium rounded-full border shrink-0 ${statusColors[volume.status] || ''}`}>
           {statusLabels[volume.status] || volume.status}
         </span>
-
-        {volume.status === 'draft' && (
-          <button type="button" onClick={(e) => { e.stopPropagation(); onDecompose(volume.id); }}
-            className="p-0.5 text-slate-400 hover:text-red-500 rounded shrink-0" title="拆卷">
-            <Trash2 className="w-3 h-3" />
-          </button>
-        )}
       </div>
 
       {/* 展开内容 */}
@@ -530,11 +540,25 @@ const VolumeCard: React.FC<VolumeCardProps> = ({
             ) : (
               items.map((item) => {
                 const rec = recordMap.get(item.recordId);
+                const checked = itemSelIds.has(item.recordId);
                 return (
                   <div
                     key={item.id}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-white transition-colors text-sm group/item"
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors text-sm group/item ${
+                      checked ? 'bg-sky-100/70 hover:bg-sky-100' : 'hover:bg-white'
+                    }`}
                   >
+                    {/* ★ 勾选（草稿卷）：拆分/转卷/排序/移出的选择入口 */}
+                    {volume.status === 'draft' && (
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => onToggleItemSelect(item.recordId)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="rounded border-slate-300 shrink-0 cursor-pointer"
+                        title="勾选后可拆分/转卷/排序/移出"
+                      />
+                    )}
                     {/* ★ 插入按钮（悬浮显示）—— 在此位置之前插入 */}
                     {volume.status === 'draft' && (
                       <button
@@ -632,34 +656,82 @@ const VolumeCard: React.FC<VolumeCardProps> = ({
                   运行四性检测
                 </button>
               )}
+              {/* ★ 检测问题明细（真实现：run-volume 未通过项） */}
+              {issues.length > 0 && !checksRunning && (
+                <div className="space-y-1 max-h-24 overflow-y-auto">
+                  {issues.slice(0, 5).map((iss, i) => (
+                    <div key={i} className="flex items-start gap-1.5 text-[10px] text-red-600 bg-red-50 border border-red-100 rounded px-2 py-1">
+                      <AlertCircle className="w-3 h-3 shrink-0 mt-px" />
+                      <span className="min-w-0"><strong>{iss.name}</strong>：{iss.note}</span>
+                    </div>
+                  ))}
+                  {issues.length > 5 && (
+                    <div className="text-[10px] text-slate-400 px-1">…共 {issues.length} 项问题，处理后可重新运行检测</div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
           {/* 操作按钮 */}
           {volume.status === 'draft' && (
-            <div className="flex items-center gap-2 pt-1">
-              <button
-                type="button"
-                onClick={handleConfirm}
-                disabled={items.length === 0 || !allChecksPassed || confirming}
-                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-sky-600 rounded-lg hover:bg-sky-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
-              >
-                {confirming ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  <CheckCircle2 className="w-3 h-3" />
+            <div className="space-y-1.5 pt-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={handleConfirm}
+                  disabled={items.length === 0 || !allChecksPassed || confirming}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-sky-600 rounded-lg hover:bg-sky-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+                >
+                  {confirming ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="w-3 h-3" />
+                  )}
+                  确认组卷{items.length > 0 ? ` (${items.length}件)` : ''}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onPrint(volume.id)}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-400 rounded-lg hover:bg-slate-50"
+                >
+                  <Printer className="w-3 h-3" />
+                  目录预览
+                </button>
+                <div className="flex-1" />
+                {/* 卷级操作：合并（他卷并入本卷）/ 拆卷（整卷打散回池） */}
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onMerge(); }}
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:border-sky-300 hover:text-sky-700 transition-colors"
+                  title="将其他同类别/年度/期限的草稿案卷并入本卷（来源卷合并后删除）"
+                >
+                  <Merge className="w-3 h-3" />
+                  合并
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onDecompose(volume.id); }}
+                  disabled={items.length === 0}
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
+                  title="拆卷：卷内全部件回到待组卷池，案卷删除"
+                >
+                  <Ungroup className="w-3 h-3" />
+                  拆卷
+                </button>
+                {items.length === 0 && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onDelete(volume.id); }}
+                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
+                    title="删除空案卷"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    删除空卷
+                  </button>
                 )}
-                确认组卷{items.length > 0 ? ` (${items.length}件)` : ''}
-              </button>
-              <button
-                type="button"
-                onClick={() => onPrint(volume.id)}
-                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-400 rounded-lg hover:bg-slate-50"
-              >
-                <Printer className="w-3 h-3" />
-                目录预览
-              </button>
-              {!allChecksPassed && (
+              </div>
+              {!allChecksPassed && items.length > 0 && (
                 <span className="text-[10px] text-amber-600 inline-flex items-center gap-0.5"><AlertTriangle className="w-3 h-3" /> 需先通过四性检测</span>
               )}
             </div>
@@ -786,6 +858,302 @@ const RecommendPanel: React.FC<RecommendPanelProps> = ({ recommendations, onAcce
   );
 };
 
+// ── 子组件：操作弹窗外壳（与拆卷确认弹窗同风格） ──
+const OpModal: React.FC<{
+  title: string;
+  subtitle?: string;
+  icon: React.ReactNode;
+  iconBg?: string;
+  onClose: () => void;
+  children: React.ReactNode;
+  footer: React.ReactNode;
+}> = ({ title, subtitle, icon, iconBg = 'bg-sky-100', onClose, children, footer }) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
+    <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-sm" />
+    <div
+      className="relative bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 animate-in zoom-in-95 max-h-[85vh] flex flex-col"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="flex items-center gap-3 mb-4 shrink-0">
+        <div className={`w-10 h-10 rounded-full ${iconBg} flex items-center justify-center shrink-0`}>{icon}</div>
+        <div className="min-w-0">
+          <h3 className="text-base font-bold text-slate-800">{title}</h3>
+          {subtitle && <p className="text-xs text-slate-500 mt-0.5 truncate" title={subtitle}>{subtitle}</p>}
+        </div>
+      </div>
+      <div className="min-h-0 overflow-y-auto">{children}</div>
+      <div className="flex items-center gap-3 justify-end mt-6 shrink-0">{footer}</div>
+    </div>
+  </div>
+);
+
+// ── 子组件：悬浮选择工具栏按钮（深色 pill 内） ──
+const PillBtn: React.FC<{
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  title?: string;
+  danger?: boolean;
+}> = ({ icon, label, onClick, disabled, title, danger }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    disabled={disabled}
+    title={title}
+    className={`flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded-full transition-colors whitespace-nowrap disabled:opacity-35 disabled:hover:bg-transparent ${
+      danger ? 'text-amber-300 hover:bg-amber-400/20' : 'text-slate-100 hover:bg-white/10'
+    }`}
+  >
+    {icon}{label}
+  </button>
+);
+
+/** 拆分为新案卷：选中件 → 新卷（继承源卷类别/年度/期限） */
+const SplitVolumeModal: React.FC<{
+  source: Volume;
+  sourceCount: number;
+  selectedCount: number;
+  onCancel: () => void;
+  onSubmit: (title: string) => Promise<void>;
+}> = ({ source, sourceCount, selectedCount, onCancel, onSubmit }) => {
+  const [title, setTitle] = useState(`${source.title || '案卷'}（拆分）`);
+  const [busy, setBusy] = useState(false);
+  const allSelected = selectedCount >= sourceCount;
+
+  const submit = async () => {
+    setBusy(true);
+    try {
+      await onSubmit(title.trim());
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <OpModal
+      title="拆分为新案卷"
+      subtitle={`来源：${source.title || source.volumeCode || '未命名案卷'}`}
+      icon={<Split className="w-5 h-5 text-sky-600" />}
+      onClose={onCancel}
+      footer={
+        <>
+          <button type="button" onClick={onCancel}
+            className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors">
+            取消
+          </button>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={busy || !title.trim()}
+            className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-xl hover:bg-sky-700 disabled:opacity-50 transition-colors shadow-sm"
+          >
+            {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            确认拆分（{selectedCount} 件）
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <label className="block">
+          <span className="text-xs font-medium text-slate-600">新案卷题名</span>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="mt-1 w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-300"
+            autoFocus
+          />
+        </label>
+        <div className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1 leading-relaxed">
+          <p>· 新案卷继承本卷类别 / 年度 / 保管期限，仍为草稿状态，确认组卷时统一赋号。</p>
+          <p>· 选中 {selectedCount} 件按原顺序移入新卷，本卷其余 {sourceCount - selectedCount} 件保持原顺序。</p>
+          {allSelected && (
+            <p className="text-amber-700 font-medium">· 已勾选全部件：拆分后本卷为空，将自动销毁（如需整卷改名请直接编辑题名）。</p>
+          )}
+        </div>
+      </div>
+    </OpModal>
+  );
+};
+
+/** 转卷：选中件移入其他草稿案卷 */
+const MoveItemsModal: React.FC<{
+  source: Volume;
+  selectedCount: number;
+  compatible: Volume[];
+  incompatible: Volume[];
+  itemsCountOf: (volumeId: string) => number;
+  onCancel: () => void;
+  onSubmit: (targetVolumeId: string) => Promise<void>;
+}> = ({ source, selectedCount, compatible, incompatible, itemsCountOf, onCancel, onSubmit }) => {
+  const [targetId, setTargetId] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const submit = async () => {
+    if (!targetId) return;
+    setBusy(true);
+    try {
+      await onSubmit(targetId);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <OpModal
+      title="转卷（移入其他案卷）"
+      subtitle={`从「${source.title || source.volumeCode || '未命名案卷'}」移出 ${selectedCount} 件`}
+      icon={<FolderOutput className="w-5 h-5 text-sky-600" />}
+      onClose={onCancel}
+      footer={
+        <>
+          <button type="button" onClick={onCancel}
+            className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors">
+            取消
+          </button>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={busy || !targetId}
+            className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-xl hover:bg-sky-700 disabled:opacity-50 transition-colors shadow-sm"
+          >
+            {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            确认转卷（{selectedCount} 件）
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-2">
+        <p className="text-xs text-slate-500">目标案卷（仅同类别 / 年度 / 保管期限的草稿卷可转入）：</p>
+        <div className="space-y-1.5 max-h-64 overflow-y-auto">
+          {compatible.length === 0 && (
+            <div className="px-3 py-4 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-lg">
+              暂无可转入的草稿案卷（类别/年度/期限须与本卷一致）
+            </div>
+          )}
+          {compatible.map((v) => (
+            <label
+              key={v.id}
+              className={`flex items-center gap-2.5 p-2.5 border rounded-xl cursor-pointer transition-colors ${
+                targetId === v.id ? 'border-sky-300 bg-sky-50/70' : 'border-slate-200 hover:border-slate-300'
+              }`}
+            >
+              <input type="radio" name="move-target" checked={targetId === v.id} onChange={() => setTargetId(v.id)} />
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-semibold text-slate-700 truncate">{v.title || v.volumeCode || '未命名案卷'}</div>
+                <div className="text-[10px] text-slate-400">{v.year} 年 · {itemsCountOf(v.id)} 件 · 转入后追加至尾部</div>
+              </div>
+            </label>
+          ))}
+          {incompatible.length > 0 && (
+            <div className="pt-1">
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider px-1 pb-1">不可转入（类别/年度/期限不一致）</p>
+              {incompatible.map((v) => (
+                <div key={v.id} className="flex items-center gap-2.5 p-2 border border-slate-100 rounded-xl opacity-50">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs text-slate-500 truncate">{v.title || v.volumeCode || '未命名案卷'}</div>
+                    <div className="text-[10px] text-slate-400">{v.year} 年 · {itemsCountOf(v.id)} 件 · {v.retention || v.retentionCode || '期限未设'}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </OpModal>
+  );
+};
+
+/** 合并案卷：将其他草稿卷并入本卷 */
+const MergeVolumesModal: React.FC<{
+  target: Volume;
+  targetCount: number;
+  candidates: Volume[];
+  itemsCountOf: (volumeId: string) => number;
+  onCancel: () => void;
+  onSubmit: (sourceVolumeIds: string[]) => Promise<void>;
+}> = ({ target, targetCount, candidates, itemsCountOf, onCancel, onSubmit }) => {
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [busy, setBusy] = useState(false);
+
+  const toggle = (id: string) => {
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const pickedCount = candidates.filter((v) => picked.has(v.id)).reduce((s, v) => s + itemsCountOf(v.id), 0);
+
+  const submit = async () => {
+    if (picked.size === 0) return;
+    setBusy(true);
+    try {
+      await onSubmit(Array.from(picked));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <OpModal
+      title="合并案卷"
+      subtitle={`并入目标：${target.title || target.volumeCode || '未命名案卷'}（现有 ${targetCount} 件）`}
+      icon={<Merge className="w-5 h-5 text-sky-600" />}
+      onClose={onCancel}
+      footer={
+        <>
+          <button type="button" onClick={onCancel}
+            className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors">
+            取消
+          </button>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={busy || picked.size === 0}
+            className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-xl hover:bg-sky-700 disabled:opacity-50 transition-colors shadow-sm"
+          >
+            {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            确认合并（{picked.size} 卷 / {pickedCount} 件）
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-2">
+        <p className="text-xs text-slate-500">选择要并入本卷的案卷（其卷内件按顺序追加到本卷尾部）：</p>
+        <div className="space-y-1.5 max-h-64 overflow-y-auto">
+          {candidates.length === 0 && (
+            <div className="px-3 py-4 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-lg">
+              暂无其他同类别 / 年度 / 保管期限的草稿案卷可合并
+            </div>
+          )}
+          {candidates.map((v) => (
+            <label
+              key={v.id}
+              className={`flex items-center gap-2.5 p-2.5 border rounded-xl cursor-pointer transition-colors ${
+                picked.has(v.id) ? 'border-sky-300 bg-sky-50/70' : 'border-slate-200 hover:border-slate-300'
+              }`}
+            >
+              <input type="checkbox" checked={picked.has(v.id)} onChange={() => toggle(v.id)} />
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-semibold text-slate-700 truncate">{v.title || v.volumeCode || '未命名案卷'}</div>
+                <div className="text-[10px] text-slate-400">{v.year} 年 · {itemsCountOf(v.id)} 件</div>
+              </div>
+            </label>
+          ))}
+        </div>
+        {picked.size > 0 && (
+          <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+            合并后来源 {picked.size} 卷将被删除，本卷共 {targetCount + pickedCount} 件；合并顺序 = 列表勾选顺序，可拆分/转卷再调整。
+          </div>
+        )}
+      </div>
+    </OpModal>
+  );
+};
+
 // ── 主组件 ──
 const VolumeWorkspacePage: React.FC = () => {
   // ── Stores ──
@@ -816,6 +1184,16 @@ const VolumeWorkspacePage: React.FC = () => {
   }, [metaStore.initContext, voucherFieldIds, voucherDefaultIds]);
 
   // 案卷数据由 AppLayout 按全宗全局加载（loadVolumes），本页直接消费 store 镜像
+
+  // ── 核对闸门（2026-08-16 贯通修复） ──
+  // 推送/抓取去向为「送核对」的件虽已入池（服务端统一建件），但核对通过前不得组卷。
+  // 从收集台账拉取 pending 件 nodeId 集合，待组卷池排除之并给出提示。
+  const [pendingCheckIds, setPendingCheckIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    openPushService.collectPendingCheck()
+      .then((list) => setPendingCheckIds(new Set(list.map((c) => c.recordNodeId))))
+      .catch(() => setPendingCheckIds(new Set()));
+  }, [records]); // 池变化（核对通过/新采集入池）时同步重拉台账
 
   // ★ 将 columnDef 转为 DataTableColumn（接入排序 + 列缩放 + table-fixed）
   const tableColumns = useMemo((): DataTableColumn<ArchiveRecord>[] => {
@@ -855,6 +1233,10 @@ const VolumeWorkspacePage: React.FC = () => {
     acceptRecommendation,
     acceptAllRecommendations,
     setVolumes,
+    reorderItems,
+    splitVolume,
+    mergeVolumes,
+    moveItemsToVolume,
   } = useVolumeStore();
 
   // ── 本地状态 ──
@@ -869,6 +1251,34 @@ const VolumeWorkspacePage: React.FC = () => {
   const [volumeChecks, setVolumeChecks] = useState<Record<string, VolumeChecks>>({});
   const [detailRecord, setDetailRecord] = useState<ArchiveRecord | null>(null);
 
+  // ── ★ 卷内件选择域（拆分/转卷/排序/移出；单域：跨卷勾选自动重置，2026-08-17） ──
+  const [itemSel, setItemSel] = useState<{ volumeId: string; ids: Set<string> } | null>(null);
+  // 弹窗目标：拆分（源卷）/ 转卷（源卷）/ 合并（目标卷）
+  const [splitTarget, setSplitTarget] = useState<string | null>(null);
+  const [moveTarget, setMoveTarget] = useState<string | null>(null);
+  const [mergeTarget, setMergeTarget] = useState<string | null>(null);
+
+  /** 案卷规格一致性（同大类/年度/期限才可合并/转卷，与服务端 requireCompatible 对齐） */
+  const sameVolumeSpec = useCallback((a: Volume, b: Volume) => (
+    toCategoryCode(a.archiveTypeCode, a.archiveType) === toCategoryCode(b.archiveTypeCode, b.archiveType)
+    && String(a.year) === String(b.year)
+    && (a.retentionCode || inferRetentionCode(a.retention)) === (b.retentionCode || inferRetentionCode(b.retention))
+  ), []);
+
+  // ── ★ 卷内件选择域信息（悬浮工具栏用：单选索引/卷内总数/卷名） ──
+  const selInfo = useMemo(() => {
+    if (!itemSel) return { idx: -1, total: 0, recordId: null as string | null, volumeTitle: '' };
+    const items = volumeItems[itemSel.volumeId] || [];
+    const idx = itemSel.ids.size === 1 ? items.findIndex((it) => itemSel.ids.has(it.recordId)) : -1;
+    const vol = volumes.find((v) => v.id === itemSel.volumeId);
+    return {
+      idx,
+      total: items.length,
+      recordId: idx >= 0 ? items[idx].recordId : null,
+      volumeTitle: vol?.title || vol?.volumeCode || '案卷',
+    };
+  }, [itemSel, volumeItems, volumes]);
+
   // ★ 查看凭证详情（从未分配池或案卷卡片中点击）
   const handleViewDetail = useCallback((r: { id: string }) => {
     const full = records.find((rec) => rec.id === r.id);
@@ -882,6 +1292,7 @@ const VolumeWorkspacePage: React.FC = () => {
 
   // ── 计算未组卷记录 ──
   // 双重过滤：volumeItems 中的 + 已有 volumeId 的记录（mock数据预分配）
+  // + 核对闸门：收集台账待核对件核对通过前不入待组卷池（2026-08-16 贯通修复）
   const unassignedRecords = useMemo(() => {
     const volumeRecordIds = new Set<string>();
     for (const items of Object.values(volumeItems)) {
@@ -889,8 +1300,17 @@ const VolumeWorkspacePage: React.FC = () => {
         volumeRecordIds.add(item.recordId);
       }
     }
-    return records.filter((r) => !volumeRecordIds.has(r.id) && !r.volumeId);
-  }, [records, volumeItems]);
+    return records.filter((r) => !volumeRecordIds.has(r.id) && !r.volumeId && !pendingCheckIds.has(r.id));
+  }, [records, volumeItems, pendingCheckIds]);
+
+  // 被核对闸门拦下的件数（提示条展示）
+  const gatedCount = useMemo(() => {
+    const volumeRecordIds = new Set<string>();
+    for (const items of Object.values(volumeItems)) {
+      for (const item of items) volumeRecordIds.add(item.recordId);
+    }
+    return records.filter((r) => !volumeRecordIds.has(r.id) && !r.volumeId && pendingCheckIds.has(r.id)).length;
+  }, [records, volumeItems, pendingCheckIds]);
 
   // 应用筛选 + ★ 按凭证号排序（会计实操：组卷唯一排序依据）
   const filteredUnassigned = useMemo(() => {
@@ -977,6 +1397,7 @@ const VolumeWorkspacePage: React.FC = () => {
         await addItemsToVolume(volumeId, Array.from(selectedIds));
         setSelectedIds(new Set());
         useArchiveStore.getState().loadRecords();
+        void useArchiveStore.getState().loadAllRecords(); // 同步刷新全量件视图（2026-08-16 贯通修复）
         showToast(`已添加 ${selectedIds.size} 件到案卷`);
       } catch (e: any) {
         showToast(e.message || '加件失败', 'info');
@@ -1004,6 +1425,7 @@ const VolumeWorkspacePage: React.FC = () => {
       setActiveVolumeId(volume.id);
       setSelectedIds(new Set());
       useArchiveStore.getState().loadRecords();
+        void useArchiveStore.getState().loadAllRecords(); // 同步刷新全量件视图（2026-08-16 贯通修复）
       showToast(`已创建案卷并加入 ${selectedIds.size} 件`);
     } catch (e: any) {
       showToast(e.message || '组卷失败', 'info');
@@ -1022,6 +1444,7 @@ const VolumeWorkspacePage: React.FC = () => {
       await addItemsToVolume(volumeId, Array.from(selectedIds));
       setSelectedIds(new Set());
       useArchiveStore.getState().loadRecords();
+        void useArchiveStore.getState().loadAllRecords(); // 同步刷新全量件视图（2026-08-16 贯通修复）
       showToast(`已添加 ${selectedIds.size} 件到「${vol.title || vol.volumeCode || '案卷'}」`);
     } catch (e: any) {
       showToast(e.message || '加件失败', 'info');
@@ -1036,6 +1459,7 @@ const VolumeWorkspacePage: React.FC = () => {
           try {
             await removeItemFromVolume(vid, recordId);
             useArchiveStore.getState().loadRecords();
+        void useArchiveStore.getState().loadAllRecords(); // 同步刷新全量件视图（2026-08-16 贯通修复）
             showToast('已移出案卷', 'info');
           } catch (e: any) {
             showToast(e.message || '移出失败', 'info');
@@ -1053,6 +1477,7 @@ const VolumeWorkspacePage: React.FC = () => {
         const result = await confirmVolume(volumeId);
         // 收集池镜像刷新（件已随卷固化，pool 视图不再含已组卷件）
         useArchiveStore.getState().loadRecords();
+        void useArchiveStore.getState().loadAllRecords(); // 同步刷新全量件视图（2026-08-16 贯通修复）
         showToast(result.volume.volumeCode ? `组卷完成！卷号: ${result.volume.volumeCode}` : '组卷完成！（按配置未赋档号）');
       } catch (e: any) {
         showToast(e.message || '组卷失败', 'info');
@@ -1074,6 +1499,7 @@ const VolumeWorkspacePage: React.FC = () => {
     try {
       const count = await useVolumeStore.getState().decomposeVolume(decomposeTarget);
       useArchiveStore.getState().loadRecords();
+        void useArchiveStore.getState().loadAllRecords(); // 同步刷新全量件视图（2026-08-16 贯通修复）
       showToast(`已拆除案卷，${count} 条记录回到待组卷池`, 'info');
     } catch (e: any) {
       showToast(e.message || '拆卷失败', 'info');
@@ -1087,6 +1513,7 @@ const VolumeWorkspacePage: React.FC = () => {
       try {
         await useVolumeStore.getState().unconfirmVolume(volumeId);
         useArchiveStore.getState().loadRecords();
+        void useArchiveStore.getState().loadAllRecords(); // 同步刷新全量件视图（2026-08-16 贯通修复）
         showToast('已撤销确认，案卷恢复为草稿状态', 'info');
       } catch (e: any) {
         showToast(e.message || '撤销确认失败', 'info');
@@ -1111,12 +1538,127 @@ const VolumeWorkspacePage: React.FC = () => {
         await useVolumeStore.getState().insertItemIntoVolume(activeVolumeId, recordId, position);
         setSelectedIds(new Set());
         useArchiveStore.getState().loadRecords();
+        void useArchiveStore.getState().loadAllRecords(); // 同步刷新全量件视图（2026-08-16 贯通修复）
         showToast(`已在位置 #${position} 插入凭证`);
       } catch (e: any) {
         showToast(e.message || '插入失败', 'info');
       }
     },
     [activeVolumeId, selectedIds]
+  );
+
+  // ── ★ 卷内件勾选（单选择域：切换案卷自动重置，避免跨卷误操作） ──
+  const handleToggleItemSelect = useCallback((volumeId: string, recordId: string) => {
+    setItemSel((prev) => {
+      if (!prev || prev.volumeId !== volumeId) return { volumeId, ids: new Set([recordId]) };
+      const next = new Set(prev.ids);
+      if (next.has(recordId)) next.delete(recordId);
+      else next.add(recordId);
+      return next.size === 0 ? null : { volumeId, ids: next };
+    });
+  }, []);
+
+  // ── ★ 全选本卷（悬浮工具栏「全选」） ──
+  const handleSelectAllInSelVolume = useCallback(() => {
+    if (!itemSel) return;
+    const items = volumeItems[itemSel.volumeId] || [];
+    setItemSel({ volumeId: itemSel.volumeId, ids: new Set(items.map((it) => it.recordId)) });
+  }, [itemSel, volumeItems]);
+
+  // ── ★ 卷内排序：选中件上移/下移一位（调 reorder 端点整体重排） ──
+  const handleMoveItemOrder = useCallback(
+    async (volumeId: string, recordId: string, dir: -1 | 1) => {
+      const items = volumeItems[volumeId] || [];
+      const idx = items.findIndex((it) => it.recordId === recordId);
+      const swap = idx + dir;
+      if (idx < 0 || swap < 0 || swap >= items.length) return;
+      const ordered = items.map((it) => it.id);
+      [ordered[idx], ordered[swap]] = [ordered[swap], ordered[idx]];
+      try {
+        await reorderItems(volumeId, ordered);
+        showToast('已调整卷内顺序');
+      } catch (e: any) {
+        showToast(e.message || '排序失败', 'info');
+      }
+    },
+    [volumeItems, reorderItems]
+  );
+
+  // ── ★ 批量移出回待组卷池（逐件独立成败；最后一件移出时服务端自动销毁空卷） ──
+  const handleBatchRemoveItems = useCallback(
+    async (volumeId: string, recordIds: string[]) => {
+      let ok = 0;
+      let fail = 0;
+      for (const rid of recordIds) {
+        try {
+          await removeItemFromVolume(volumeId, rid);
+          ok++;
+        } catch {
+          fail++;
+        }
+      }
+      setItemSel(null);
+      useArchiveStore.getState().loadRecords();
+      void useArchiveStore.getState().loadAllRecords();
+      showToast(
+        fail === 0 ? `已移出 ${ok} 件回待组卷池` : `已移出 ${ok} 件，${fail} 件失败`,
+        fail === 0 ? 'success' : 'info'
+      );
+    },
+    [removeItemFromVolume]
+  );
+
+  // ── ★ 拆分为新案卷（选中件 → 新卷，继承源卷属性） ──
+  const handleSplitSubmit = useCallback(
+    async (title: string) => {
+      if (!itemSel) return;
+      const { volumeId, ids } = itemSel;
+      try {
+        const newVol = await splitVolume(volumeId, Array.from(ids), title);
+        setSplitTarget(null);
+        setItemSel(null);
+        setActiveVolumeId(newVol.id);
+        showToast(`已拆出新案卷「${newVol.title || '未命名'}」（${ids.size} 件）`);
+      } catch (e: any) {
+        showToast(e.message || '拆分失败', 'info');
+      }
+    },
+    [itemSel, splitVolume]
+  );
+
+  // ── ★ 转卷（选中件移入其他草稿卷，不回收集池） ──
+  const handleMoveSubmit = useCallback(
+    async (targetVolumeId: string) => {
+      if (!itemSel) return;
+      const { volumeId, ids } = itemSel;
+      const tv = volumes.find((v) => v.id === targetVolumeId);
+      try {
+        const { moved, sourceDestroyed } = await moveItemsToVolume(volumeId, Array.from(ids), targetVolumeId);
+        setMoveTarget(null);
+        setItemSel(null);
+        showToast(
+          `已转卷 ${moved} 件至「${tv?.title || tv?.volumeCode || '目标案卷'}」${sourceDestroyed ? '，源卷已空自动销毁' : ''}`
+        );
+      } catch (e: any) {
+        showToast(e.message || '转卷失败', 'info');
+      }
+    },
+    [itemSel, moveItemsToVolume, volumes]
+  );
+
+  // ── ★ 合并案卷（来源卷并入目标卷，来源卷删除） ──
+  const handleMergeSubmit = useCallback(
+    async (sourceIds: string[]) => {
+      if (!mergeTarget) return;
+      try {
+        const { volume, mergedCount, mergedVolumes } = await mergeVolumes(sourceIds, mergeTarget);
+        setMergeTarget(null);
+        showToast(`已合并 ${mergedVolumes} 卷（${mergedCount} 件）至「${volume.title || volume.volumeCode || '目标案卷'}」`);
+      } catch (e: any) {
+        showToast(e.message || '合并失败', 'info');
+      }
+    },
+    [mergeTarget, mergeVolumes]
   );
 
   const handleRecommend = useCallback(() => {
@@ -1131,6 +1673,7 @@ const VolumeWorkspacePage: React.FC = () => {
         if (id) {
           setActiveVolumeId(id);
           useArchiveStore.getState().loadRecords();
+        void useArchiveStore.getState().loadAllRecords(); // 同步刷新全量件视图（2026-08-16 贯通修复）
           showToast('已接受推荐并创建案卷');
         }
       } catch (e: any) {
@@ -1202,39 +1745,40 @@ const VolumeWorkspacePage: React.FC = () => {
     showToast(`已为 ${targetRecord.voucherNo} 补传 ${newDocs.length} 份附件`);
   }, [records, setRecords, volumes, activeVolumeId, volumeItems]);
 
-  // ── 四性检测 ──
-  const handleRunChecks = useCallback((volumeId: string) => {
-    // 初始化为 running
+  // ── 四性检测（真实现：/inspection/run-volume，2026-08-18 替换 setTimeout 假检测） ──
+  const [volumeIssues, setVolumeIssues] = useState<Record<string, InspectionIssue[]>>({});
+
+  const handleRunChecks = useCallback(async (volumeId: string) => {
     setVolumeChecks((prev) => ({
       ...prev,
       [volumeId]: { real: 'running', complete: 'running', usable: 'running', safe: 'running' },
     }));
-
-    // 模拟异步检测：逐个完成
-    setTimeout(() => {
+    try {
+      const r = await runVolumeInspection(volumeId);
       setVolumeChecks((prev) => ({
         ...prev,
-        [volumeId]: { ...prev[volumeId], real: 'passed' as CheckStatus },
+        [volumeId]: {
+          real: r.real ? 'passed' : 'failed',
+          complete: r.complete ? 'passed' : 'failed',
+          usable: r.usable ? 'passed' : 'failed',
+          safe: r.safe ? 'passed' : 'failed',
+        },
       }));
-    }, 800);
-    setTimeout(() => {
+      setVolumeIssues((prev) => ({ ...prev, [volumeId]: r.issues || [] }));
+      showToast(
+        r.allPass
+          ? `四性检测通过（${r.itemCount} 件）`
+          : `四性检测未通过：${(r.issues || []).length} 项问题（展开案卷查看明细）`,
+        r.allPass ? 'success' : 'info'
+      );
+    } catch (e: any) {
       setVolumeChecks((prev) => ({
         ...prev,
-        [volumeId]: { ...prev[volumeId], complete: 'passed' as CheckStatus },
+        [volumeId]: { real: 'failed', complete: 'failed', usable: 'failed', safe: 'failed' },
       }));
-    }, 1200);
-    setTimeout(() => {
-      setVolumeChecks((prev) => ({
-        ...prev,
-        [volumeId]: { ...prev[volumeId], usable: 'passed' as CheckStatus },
-      }));
-    }, 1600);
-    setTimeout(() => {
-      setVolumeChecks((prev) => ({
-        ...prev,
-        [volumeId]: { ...prev[volumeId], safe: 'passed' as CheckStatus },
-      }));
-    }, 2000);
+      setVolumeIssues((prev) => ({ ...prev, [volumeId]: [] }));
+      showToast(e.message || '四性检测执行失败', 'info');
+    }
   }, []);
 
   // ── 移交至档案保管（服务端自动分类归盒） ──
@@ -1249,6 +1793,7 @@ const VolumeWorkspacePage: React.FC = () => {
       // 移交（服务端自动按 archiveTypeCode 归入对应分类盒）
       await volumeStore.transferVolume(volumeId);
       useArchiveStore.getState().loadRecords();
+        void useArchiveStore.getState().loadAllRecords(); // 同步刷新全量件视图（2026-08-16 贯通修复）
       const transferred = useVolumeStore.getState().volumes.find(v => v.id === volumeId);
       showToast(`已移交 1 卷（${typeName}）至档案保管${transferred?.boxNo ? ` · ${transferred.boxNo}` : ''}`);
     } catch (e: any) {
@@ -1378,6 +1923,20 @@ const VolumeWorkspacePage: React.FC = () => {
         {/* 左侧：待分配条目池（min-h-0：grid 子项默认 min-height:auto 会被内容撑高，
             导致整行超高、底部推荐面板/分页栏被容器裁剪——2026-08-08 修复） */}
         <div className="border-r border-slate-200 bg-white flex flex-col overflow-hidden min-h-0">
+          {/* 核对闸门提示（有待核对件被拦截时显示） */}
+          {gatedCount > 0 && (
+            <div className="mx-3 mt-3 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2 text-xs text-amber-800 shrink-0">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+              <span>{gatedCount} 件来自推送/抓取的档案尚未核对通过，已按核对闸门规则暂不进入待组卷池。</span>
+              <button
+                type="button"
+                onClick={() => useAppStore.getState().setActiveMainMenu('voucher-manager')}
+                className="ml-auto px-2 py-0.5 text-amber-700 border border-amber-300 rounded-md hover:bg-amber-100 font-medium"
+              >
+                去核对工作台
+              </button>
+            </div>
+          )}
           <UnassignedPool
             records={pagedUnassigned}
             selectedIds={selectedIds}
@@ -1405,6 +1964,7 @@ const VolumeWorkspacePage: React.FC = () => {
                 if (ids.length > 0) {
                   setActiveVolumeId(ids[0]);
                   useArchiveStore.getState().loadRecords();
+        void useArchiveStore.getState().loadAllRecords(); // 同步刷新全量件视图（2026-08-16 贯通修复）
                   showToast(`已接受全部 ${ids.length} 组推荐`);
                 }
               } catch (e: any) {
@@ -1431,16 +1991,17 @@ const VolumeWorkspacePage: React.FC = () => {
 
         {/* 右侧：案卷列表（min-h-0 同上防撑高；自身 overflow-y-auto 滚动） */}
         <div className="flex-1 bg-slate-50 flex flex-col overflow-y-auto min-h-0">
-          <div className="px-5 py-3 border-b border-slate-200 bg-white">
-            <h3 className="text-sm font-semibold text-slate-700">
-              案卷列表
-              <span className="ml-2 text-xs font-normal text-slate-400">
-                {volumes.length > 0 ? `共 ${volumes.length} 卷` : '暂无案卷'}
-              </span>
-            </h3>
+          <div className="px-5 py-3 border-b border-slate-200 bg-white flex items-center gap-2 shrink-0">
+            <h3 className="text-sm font-semibold text-slate-700">案卷列表</h3>
+            <span className="text-xs text-slate-400">
+              {volumes.length > 0
+                ? `共 ${volumes.length} 卷 · 草稿 ${draftVolumes.length} · 已确认 ${nonDraftVolumes.length}`
+                : '暂无案卷'}
+            </span>
+            {/* ★ 2026-08-18：移除「新建案卷」空卷入口——会计实操不建空卷，组卷统一走左侧勾选→组卷 / 智能推荐 */}
           </div>
 
-          <div className="flex-1 space-y-3 p-4">
+          <div className={`flex-1 space-y-3 p-4 ${itemSel ? 'pb-20' : ''}`}>
             {/* 草稿案卷 */}
             {draftVolumes.length > 0 && (
               <div className="space-y-2">
@@ -1472,10 +2033,14 @@ const VolumeWorkspacePage: React.FC = () => {
                     onUnconfirm={handleUnconfirm}
                     onInsertAtPosition={handleInsertAtPosition}
                     checks={getChecks(v.id)}
+                    issues={volumeIssues[v.id] || []}
                     selectedCount={selectedIds.size}
                     onAddSelectedToVolume={handleAddSelectedToActiveVolume}
                     attachmentCountMap={attachmentCountMap}
                     onViewDetail={(recordId) => handleViewDetail({ id: recordId })}
+                    itemSelIds={itemSel?.volumeId === v.id ? itemSel.ids : EMPTY_SEL}
+                    onToggleItemSelect={(rid) => handleToggleItemSelect(v.id, rid)}
+                    onMerge={() => setMergeTarget(v.id)}
                   />
                 ))}
               </div>
@@ -1509,10 +2074,14 @@ const VolumeWorkspacePage: React.FC = () => {
                     onUnconfirm={handleUnconfirm}
                     onInsertAtPosition={() => {}}
                     checks={getChecks(v.id)}
+                    issues={volumeIssues[v.id] || []}
                     selectedCount={0}
                     onAddSelectedToVolume={() => {}}
                     attachmentCountMap={attachmentCountMap}
                     onViewDetail={(recordId) => handleViewDetail({ id: recordId })}
+                    itemSelIds={EMPTY_SEL}
+                    onToggleItemSelect={() => {}}
+                    onMerge={() => {}}
                   />
                 ))}
               </div>
@@ -1523,10 +2092,71 @@ const VolumeWorkspacePage: React.FC = () => {
               <div className="flex flex-col items-center justify-center h-48 text-slate-400">
                 <Archive className="w-10 h-10 mb-2" />
                 <span className="text-sm">暂无案卷</span>
-                <span className="text-xs mt-1">点击上方"新建案卷"或使用"智能推荐"开始组卷</span>
+                <span className="text-xs mt-1">在左侧勾选凭证后点击"组卷"，或使用"智能推荐"开始组卷</span>
               </div>
             )}
           </div>
+
+          {/* ★ 卷内件选择工具栏（悬浮底置 pill：选择域为面板级单域，不再挤在卡片内折行） */}
+          {itemSel && (
+            <div className="sticky bottom-3 z-20 flex justify-center pointer-events-none mt-2 shrink-0">
+              <div className="pointer-events-auto flex items-center gap-0.5 pl-3 pr-1.5 py-1.5 bg-slate-800 text-white rounded-full shadow-2xl animate-in slide-in-from-bottom-3 fade-in duration-200 max-w-full">
+                <span className="text-[11px] font-medium text-slate-300 whitespace-nowrap mr-1 truncate max-w-[140px]" title={selInfo.volumeTitle}>
+                  「{selInfo.volumeTitle}」已选 {itemSel.ids.size} 件
+                </span>
+                <PillBtn
+                  icon={<ListChecks className="w-3.5 h-3.5" />}
+                  label="全选"
+                  onClick={handleSelectAllInSelVolume}
+                  disabled={itemSel.ids.size === selInfo.total}
+                  title="选中本卷全部件"
+                />
+                <span className="w-px h-4 bg-white/15 mx-1 shrink-0" />
+                <PillBtn
+                  icon={<ArrowUp className="w-3.5 h-3.5" />}
+                  label="上移"
+                  disabled={selInfo.idx <= 0}
+                  onClick={() => selInfo.recordId && handleMoveItemOrder(itemSel.volumeId, selInfo.recordId, -1)}
+                  title="选中一件时可上移"
+                />
+                <PillBtn
+                  icon={<ArrowDown className="w-3.5 h-3.5" />}
+                  label="下移"
+                  disabled={selInfo.idx < 0 || selInfo.idx >= selInfo.total - 1}
+                  onClick={() => selInfo.recordId && handleMoveItemOrder(itemSel.volumeId, selInfo.recordId, 1)}
+                  title="选中一件时可下移"
+                />
+                <span className="w-px h-4 bg-white/15 mx-1 shrink-0" />
+                <PillBtn
+                  icon={<FolderOutput className="w-3.5 h-3.5" />}
+                  label="转卷"
+                  onClick={() => setMoveTarget(itemSel.volumeId)}
+                  title="选中件移入其他草稿案卷（不回收集池）"
+                />
+                <PillBtn
+                  icon={<Split className="w-3.5 h-3.5" />}
+                  label="拆分"
+                  onClick={() => setSplitTarget(itemSel.volumeId)}
+                  title="选中件拆出为新案卷（继承本卷类别/年度/期限）"
+                />
+                <PillBtn
+                  icon={<X className="w-3.5 h-3.5" />}
+                  label="移出回池"
+                  danger
+                  onClick={() => handleBatchRemoveItems(itemSel.volumeId, Array.from(itemSel.ids))}
+                  title="选中件移回本卷外，回到左侧待组卷池"
+                />
+                <button
+                  type="button"
+                  onClick={() => setItemSel(null)}
+                  title="清空勾选"
+                  className="ml-1 p-1.5 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -1598,6 +2228,55 @@ const VolumeWorkspacePage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* ★ 拆分为新案卷弹窗（针对卷内勾选件） */}
+      {splitTarget && itemSel && itemSel.volumeId === splitTarget && (() => {
+        const src = volumes.find((v) => v.id === splitTarget);
+        if (!src) return null;
+        return (
+          <SplitVolumeModal
+            source={src}
+            sourceCount={(volumeItems[splitTarget] || []).length}
+            selectedCount={itemSel.ids.size}
+            onCancel={() => setSplitTarget(null)}
+            onSubmit={handleSplitSubmit}
+          />
+        );
+      })()}
+
+      {/* ★ 转卷弹窗（卷内勾选件移入其他草稿卷） */}
+      {moveTarget && itemSel && itemSel.volumeId === moveTarget && (() => {
+        const src = volumes.find((v) => v.id === moveTarget);
+        if (!src) return null;
+        const others = draftVolumes.filter((v) => v.id !== src.id);
+        return (
+          <MoveItemsModal
+            source={src}
+            selectedCount={itemSel.ids.size}
+            compatible={others.filter((v) => sameVolumeSpec(v, src))}
+            incompatible={others.filter((v) => !sameVolumeSpec(v, src))}
+            itemsCountOf={(vid) => (volumeItems[vid] || []).length}
+            onCancel={() => setMoveTarget(null)}
+            onSubmit={handleMoveSubmit}
+          />
+        );
+      })()}
+
+      {/* ★ 合并案卷弹窗（其他草稿卷并入目标卷） */}
+      {mergeTarget && (() => {
+        const target = volumes.find((v) => v.id === mergeTarget);
+        if (!target) return null;
+        return (
+          <MergeVolumesModal
+            target={target}
+            targetCount={(volumeItems[mergeTarget] || []).length}
+            candidates={draftVolumes.filter((v) => v.id !== target.id && sameVolumeSpec(v, target))}
+            itemsCountOf={(vid) => (volumeItems[vid] || []).length}
+            onCancel={() => setMergeTarget(null)}
+            onSubmit={handleMergeSubmit}
+          />
+        );
+      })()}
     </>
   );
 };

@@ -64,25 +64,25 @@ const InventoryStatsPage: React.FC = () => {
               </div>
             </div>
             {/* 明细表 */}
-            <div className="mt-4 border border-slate-100 rounded-xl overflow-hidden">
+            <div className="mt-4 bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
               <table className="w-full">
                 <thead>
-                  <tr className="bg-slate-50 text-left">
-                    <th className="px-3 py-2 text-[10px] font-semibold text-slate-500">类型</th>
-                    <th className="px-3 py-2 text-[10px] font-semibold text-slate-500 text-right">件数</th>
-                    <th className="px-3 py-2 text-[10px] font-semibold text-slate-500 text-right">卷数</th>
-                    <th className="px-3 py-2 text-[10px] font-semibold text-slate-500 text-right">页数</th>
-                    <th className="px-3 py-2 text-[10px] font-semibold text-slate-500 text-right">容量</th>
+                  <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
+                    <th className="px-4 py-3 text-left text-[13px] font-semibold">类型</th>
+                    <th className="px-4 py-3 text-right text-[13px] font-semibold">件数</th>
+                    <th className="px-4 py-3 text-right text-[13px] font-semibold">卷数</th>
+                    <th className="px-4 py-3 text-right text-[13px] font-semibold">页数</th>
+                    <th className="px-4 py-3 text-right text-[13px] font-semibold">容量</th>
                   </tr>
                 </thead>
                 <tbody>
                   {inv.byType.map((t) => (
-                    <tr key={t.code} className="border-t border-slate-50">
-                      <td className="px-3 py-2 text-xs font-medium text-slate-700">{t.label}</td>
-                      <td className="px-3 py-2 text-xs text-right font-mono text-slate-600">{t.records}</td>
-                      <td className="px-3 py-2 text-xs text-right font-mono text-slate-600">{t.volumes}</td>
-                      <td className="px-3 py-2 text-xs text-right font-mono text-slate-600">{t.pages.toLocaleString()}</td>
-                      <td className="px-3 py-2 text-xs text-right font-mono text-slate-600">{formatCapacity(t.capacityKB)}</td>
+                    <tr key={t.code} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
+                      <td className="px-4 py-3 text-sm font-medium text-slate-800">{t.label}</td>
+                      <td className="px-4 py-3 text-right font-mono text-[13px] text-slate-600">{t.records}</td>
+                      <td className="px-4 py-3 text-right font-mono text-[13px] text-slate-600">{t.volumes}</td>
+                      <td className="px-4 py-3 text-right font-mono text-[13px] text-slate-600">{t.pages.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right font-mono text-[13px] text-slate-600">{formatCapacity(t.capacityKB)}</td>
                     </tr>
                   ))}
                 </tbody>

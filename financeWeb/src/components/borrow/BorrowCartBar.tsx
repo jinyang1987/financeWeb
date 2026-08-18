@@ -4,38 +4,46 @@
  * BorrowCartBar — 全局借阅车浮条（PRD 1.2）
  *
  * 检索页右下角悬浮：显示车内件数，点击展开抽屉预览，
- * 「去结算」跳转 我的借阅 → 借阅车 Tab 统一发起申请。
+ * 「去结算」切换检索门户 → 我的借阅（购物车非空自动落「借阅车」Tab）统一发起申请。
  */
 
-import React, { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useMemo, useState, useEffect } from 'react';
 import { ShoppingCart, X, Trash2, ArrowRight, FileText } from 'lucide-react';
 import { useBorrowStore } from '../../stores/borrowStore';
 import { useArchiveStore } from '../../stores/archiveStore';
 import { useAppStore } from '../../stores/appStore';
+import { usePortalStore } from '../../stores/portalStore';
 import ArchiveStatusTags from './ArchiveStatusTags';
 
 export const BorrowCartBar: React.FC = () => {
-  const navigate = useNavigate();
   const cart = useBorrowStore((s) => s.cart);
   const removeFromCart = useBorrowStore((s) => s.removeFromCart);
   const clearCart = useBorrowStore((s) => s.clearCart);
   const records = useArchiveStore((s) => s.records);
-  const setActiveMainMenu = useAppStore((s) => s.setActiveMainMenu);
+  const allRecords = useArchiveStore((s) => s.allRecords);
+  const loadAllRecords = useArchiveStore((s) => s.loadAllRecords);
   const triggerToast = useAppStore((s) => s.triggerToast);
   const [open, setOpen] = useState(false);
 
+  // 自愈：车内存在池+全量都解析不出的条目时（如归档后首次打开），补拉全量件
+  useEffect(() => {
+    const known = new Set([...allRecords.map((r) => r.id), ...records.map((r) => r.id)]);
+    if (cart.some((c) => !known.has(c.recordId))) void loadAllRecords();
+  }, [cart, records, allRecords, loadAllRecords]);
+
+  // 全量件优先（含已组卷卷内件归属信息），池件兜底——已归档档案加车后不再丢失（2026-08-16 贯通修复）
   const cartRecords = useMemo(() => {
-    const byId = new Map(records.map((r) => [r.id, r]));
+    const byId = new Map([...allRecords, ...records].map((r) => [r.id, r]));
     return cart.map((c) => byId.get(c.recordId)).filter(Boolean) as typeof records;
-  }, [cart, records]);
+  }, [cart, records, allRecords]);
 
   if (cart.length === 0) return null;
 
   const goCheckout = () => {
     setOpen(false);
-    setActiveMainMenu('my-borrow');
-    navigate('/my-borrow?tab=cart');
+    // 「我的借阅」归检索门户（前台）：切到门户并打开我的借阅（购物车非空自动落「借阅车」Tab）
+    usePortalStore.getState().switchMode('portal');
+    usePortalStore.getState().setPortalTab('my-borrow');
   };
 
   return (

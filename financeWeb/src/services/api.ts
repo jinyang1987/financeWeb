@@ -1,21 +1,18 @@
 /**
  * API Service Layer
  *
- * 数据路由层：根据配置决定使用 Mock 数据还是真实 Alfresco API。
- * 所有组织实体（单位/部门）使用 Alfresco Groups 表示。
+ * 组织/人员域：全部走真实 Alfresco API（Groups 表示单位/部门，People 表示人员）。
+ * 2026-08-16 贯通审计清理：删除演示期 mock 分支（fetchRecords/fetchFanzongs/
+ * fetchCategoryTree/fetchFanzongCategories/mockPersonnel/mockUnits 等死代码）——
+ * 件域真数据源为 recordService（/records），全宗为 fondsService（Alfresco 节点），
+ * 分类/门类配置经配置中心 /config。
  */
-
-import type { ArchiveRecord, CategoryNode, Fonds, CategoryConfigItem, MetadataProperty } from '../types';
-import { initialCategoryTree, initialRecords } from '../data';
 
 // 导入 Alfresco 服务
 import {
   PeopleService, GroupService,
   personToPersonnel,
 } from './alfresco';
-
-// ─── 运行模式配置 ──────────────────────────────────────
-const USE_REAL_API = true;
 
 // ─── 组织根节点 shortName ─────────────────────────────
 const ORG_ROOT = 'org_root';
@@ -193,7 +190,6 @@ export async function deleteDepartment(fullName: string): Promise<void> {
 
 /** 获取人员列表 */
 export async function fetchPersonnel(): Promise<PersonnelItem[]> {
-  if (!USE_REAL_API) return mockPersonnel;
   const people = await PeopleService.list();
   return people.map(personToPersonnel);
 }
@@ -225,93 +221,3 @@ export async function updatePersonnel(id: string, data: {
 export async function deletePersonnel(id: string): Promise<void> {
   await PeopleService.delete(id);
 }
-
-// ─── 以下为 Mock 数据和现有业务接口 ─────────────────────
-
-// Simulate network delay
-const delay = (ms = 200) => new Promise((r) => setTimeout(r, ms));
-
-// ─── Records ──────────────────────────────────────────
-export async function fetchRecords(): Promise<ArchiveRecord[]> {
-  await delay();
-  return initialRecords;
-}
-
-// ─── Category Tree ────────────────────────────────────
-export async function fetchCategoryTree(): Promise<CategoryNode[]> {
-  await delay();
-  return initialCategoryTree;
-}
-
-// ─── Fonds (全宗) ──────────────────────────────────────
-const defaultFanzongs: Fonds[] = [
-  { id: 'fz-1', name: '第一全宗（华北集团总部）', code: 'Z001', status: 'active', recordCount: 4, address: '北京市朝阳区国贸大厦A座5层', syncSource: '内置主数据库', companyId: 'org-1' },
-  { id: 'fz-2', name: '第二全宗（南方智造分公司）', code: 'Z002', status: 'active', recordCount: 1, address: '深圳市南山区创智航天大厦12层', syncSource: '金蝶云同步链路', companyId: 'org-2' },
-  { id: 'fz-3', name: '第三全宗（海外业务事业群）', code: 'Z003', status: 'custodial', recordCount: 0, address: '新加坡滨海路Marina Centre', syncSource: 'SAP Integration Broker', companyId: 'org-1', custodianCode: 'Z001' },
-];
-
-export async function fetchFanzongs(): Promise<Fonds[]> {
-  await delay();
-  return defaultFanzongs;
-}
-
-// ─── Category Config (分类配置) ────────────────────────
-const defaultFanzongCategories: Record<string, CategoryConfigItem[]> = {
-  Z001: [
-    {
-      id: 'cat-vd-1',
-      name: '记账凭证门类',
-      alfrescoType: 'archive:voucher',
-      creator: 'admin (系统宿主)',
-      createTime: '2026-05-12',
-      properties: [
-        { id: 'p1', key: 'voucherNo', label: '凭证字号', dataType: 'string', isRequired: true, ocrEnabled: true, gbStandardCode: 'GB/T 18894-A.1.1', description: '财务凭证的核心识别号码' },
-        { id: 'p2', key: 'amount', label: '合计金额', dataType: 'decimal', isRequired: true, ocrEnabled: true, gbStandardCode: 'GB/T 18894-A.1.3', description: '报销凭证的借贷轧平人民币总金额' },
-      ],
-    },
-    {
-      id: 'cat-re-1',
-      name: '财务报告门类',
-      alfrescoType: 'archive:report',
-      creator: 'admin (系统宿主)',
-      createTime: '2026-05-15',
-      properties: [
-        { id: 'p11', key: 'reportName', label: '报告名称', dataType: 'string', isRequired: true, ocrEnabled: false, gbStandardCode: 'GB/T 18894-B.1.1', description: '例如"2025年度董事会审计财务报告"' },
-      ],
-    },
-  ],
-  Z002: [
-    {
-      id: 'cat-vd-2',
-      name: '南方分公司出纳凭单',
-      alfrescoType: 'archive:sz_payment',
-      creator: 'sz_manager (分公司审计员)',
-      createTime: '2026-05-20',
-      properties: [
-        { id: 'p21', key: 'paymentNo', label: '出纳付款编号', dataType: 'string', isRequired: true, ocrEnabled: true, gbStandardCode: 'GB/T 18894-SZ.1', description: '南方智造分公司付款台账索引号' },
-      ],
-    },
-  ],
-  Z003: [],
-};
-
-export async function fetchFanzongCategories(): Promise<Record<string, CategoryConfigItem[]>> {
-  await delay();
-  return defaultFanzongCategories;
-}
-
-// ─── Mock 数据（回退方案）───────────────────────────────
-
-const mockUnits: UnitItem[] = [
-  { id: 'comp_hq', fullName: 'GROUP_comp_hq', name: '总部集团', code: 'HQ' },
-  { id: 'comp_south', fullName: 'GROUP_comp_south', name: '南方分公司', code: 'SOUTH' },
-];
-
-const mockPersonnel: PersonnelItem[] = [
-  { id: 'zhangs', account: 'zhangs', name: '张三', email: 'zhangs@company.com', enabled: true, org: '行政办公室', position: '主任', userType: '管理员' },
-  { id: 'lisi', account: 'lisi', name: '李四', email: 'lisi@company.com', enabled: true, org: '会计核算科', position: '会计主管', userType: '财务人员' },
-  { id: 'wangw', account: 'wangw', name: '王五', email: 'wangw@company.com', enabled: true, org: '人力资源科', position: 'HR专员', userType: '普通用户' },
-  { id: 'zhaoli', account: 'zhaoli', name: '赵六', email: 'zhaoli@company.com', enabled: true, org: '信息技术部', position: '系统管理员', userType: '系统管理员' },
-  { id: 'sunq', account: 'sunq', name: '孙七', email: 'sunq@company.com', enabled: false, org: '档案管理中心', position: '档案管理员', userType: '档案管理员' },
-  { id: 'zhoub', account: 'zhoub', name: '周八', email: 'zhoub@company.com', enabled: true, org: '预算管理科', position: '预算专员', userType: '财务人员' },
-];

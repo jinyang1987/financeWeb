@@ -1,7 +1,12 @@
 ﻿/**
  * @license SPDX-License-Identifier: Apache-2.0
  *
- * VoucherManagerPage — 核对工作台
+ * VoucherManagerPage — 核对工作台（2026-08-16 合并审核职能）
+ *
+ * 组卷前唯一关口，三个状态 Tab：
+ *   ① 待核对 —— 凭证号连续性核对 + 补传附件 + 收集池待核对（抓取/推送 to-check 去向）
+ *   ② 待审核 —— 审核库（抓取/推送 to-review 去向），审核通过/驳回（原「审核工作台」职能）
+ *   ③ 已处理 —— 审核通过/驳回的历史记录
  *
  * 会计实操流程：
  *   1. 会计核算系统生成记账凭证（自带凭证号：记-001、记-002 ...）
@@ -20,7 +25,11 @@ import {
   Search, CheckCircle2, AlertCircle, FileSpreadsheet,
   Send, Filter, ChevronDown, ChevronRight,
   Paperclip, Upload, FileText, X, FolderOpen, Eye, Archive,
+  Inbox, Loader2, ShieldCheck,
 } from 'lucide-react';
+import ReviewPanel from '../../components/archive-arrange/ReviewPanel';
+import { openPushService, type CollectItem } from '../../services/openPushService';
+import { uploadSourceDoc } from '../../services/sourceDocumentService';
 import { useArchiveStore } from '../../stores/archiveStore';
 import { useSourceDocumentStore } from '../../stores/sourceDocumentStore';
 import { useVolumeStore } from '../../stores/volumeStore';
@@ -57,9 +66,9 @@ const ACCEPT_TYPES = '.pdf,.tif,.tiff,.jpg,.jpeg,.png,.ofd,.xml';
 // ═══════════════════════════════════════════════════════════
 const VoucherManagerPage: React.FC = () => {
   const records = useArchiveStore((s) => s.records);
-  const setRecords = useArchiveStore((s) => s.setRecords);
+  const allRecords = useArchiveStore((s) => s.allRecords);
+  const currentFanzongCode = useArchiveStore((s) => s.currentFanzongCode);
   const sourceDocs = useSourceDocumentStore((s) => s.documents);
-  const setSourceDocs = useSourceDocumentStore((s) => s.setDocuments);
   const setActiveMainMenu = useAppStore((s) => s.setActiveMainMenu);
   const volumes = useVolumeStore((s) => s.volumes);
 
@@ -78,6 +87,42 @@ const VoucherManagerPage: React.FC = () => {
   const showToast = (msg: string, type: 'success' | 'info' | 'warning' = 'success') => {
     setToast({ message: msg, type });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  // ── ★ 主 Tab：待核对 / 待审核 / 已处理（2026-08-16 合并原审核工作台） ──
+  const [pageTab, setPageTab] = useState<'check' | 'review' | 'done'>('check');
+
+  // ── ★ 收集池待核对（ams_collect_item destination=to-check & pending） ──
+  const [collectPending, setCollectPending] = useState<CollectItem[]>([]);
+  const [collectLoading, setCollectLoading] = useState(false);
+  const [passActioning, setPassActioning] = useState<number | null>(null);
+
+  const loadCollectPending = useCallback(() => {
+    setCollectLoading(true);
+    openPushService.collectPendingCheck()
+      .then(setCollectPending)
+      .catch(() => setCollectPending([]))
+      .finally(() => setCollectLoading(false));
+  }, []);
+
+  useEffect(() => { loadCollectPending(); }, [loadCollectPending]);
+
+  const handleCollectPass = async (c: CollectItem, to: 'volume' | 'review') => {
+    setPassActioning(c.id);
+    try {
+      await openPushService.collectPass(c.id, to);
+      showToast(to === 'volume'
+        ? `${c.voucherNo || '该记录'} 核对通过，已送组卷工作台待组卷池`
+        : `${c.voucherNo || '该记录'} 核对通过，已转待审核`);
+      loadCollectPending();
+      // 核对通过后件状态可能变化（送审核），刷新件域镜像（2026-08-16 贯通修复）
+      void useArchiveStore.getState().loadRecords();
+      void useArchiveStore.getState().loadAllRecords();
+    } catch (e) {
+      showToast('操作失败：' + (e instanceof Error ? e.message : ''), 'warning');
+    } finally {
+      setPassActioning(null);
+    }
   };
 
   // ── 案卷状态映射（已归档 Tab 展示所属案卷信息） ──
@@ -166,67 +211,60 @@ const VoucherManagerPage: React.FC = () => {
     monthVouchers.some((v) => v.id === sd.parentRecordId)
   ).length;
 
-  // ── 上传附件（创建 SourceDocument） ──
+  // ── 上传附件（真持久化：POST /source-docs/by-record/{id}，2026-08-16 贯通修复） ──
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadTargetId, setUploadTargetId] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const handleUploadClick = (recordId: string) => {
     setUploadTargetId(recordId);
     fileInputRef.current?.click();
   };
 
-  const handleFilesSelected = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFilesSelected = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) { setUploadTargetId(null); return; }
-    const targetRecord = records.find((r) => r.id === uploadTargetId);
+    const targetRecord = records.find((r) => r.id === uploadTargetId) || allRecords.find((r) => r.id === uploadTargetId);
     if (!targetRecord) { setUploadTargetId(null); return; }
 
-    const existingAttachments = attachmentsByRecordId.get(uploadTargetId) || [];
-    const nextSeq = existingAttachments.length + 1;
-
-    const newDocs: SourceDocument[] = Array.from(files).map((f, i) => ({
-      id: `sd-upload-${Date.now()}-${i}`,
-      documentNo: `SCAN-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(nextSeq + i).padStart(3, '0')}`,
-      docTypeCode: 'generic-invoice',
-      docTypeName: f.name.match(/\.pdf$/i) ? '扫描件(PDF)' : '扫描件(图片)',
-      transactionDate: `${targetRecord.year}-${targetRecord.month}-15`,
-      amountLower: targetRecord.amount,
-      amountUpper: '',
-      counterpartyName: targetRecord.department,
-      summary: targetRecord.remarks || '扫描上传',
-      preparer: '档案管理员',
-      reviewer: '',
-      attachmentCount: 0,
-      businessCategory: '费用',
-      parentVoucherNo: targetRecord.voucherNo,
-      attachmentSequence: nextSeq + i,
-      parentRecordId: targetRecord.id,
-      carrierType: 'paper' as const,
-      source: 'digitized' as const,
-      files: [{ name: f.name, type: f.type || 'application/octet-stream', size: `${(f.size / 1024).toFixed(1)} KB`, contentType: 'pdf' as const, hash: `hash-${Date.now()}`, signatureVerified: false }],
-      extFields: {},
-      checks: { real: true, complete: true, usable: true, safe: true },
-      remarks: `${targetRecord.voucherNo} 补传附件 #${nextSeq + i}`,
-      createdAt: new Date().toISOString(),
-    }));
-
-    // 追加到 sourceDocumentStore
-    setSourceDocs([...sourceDocs, ...newDocs]);
-
-    // 更新凭证的 sourceDocumentIds
-    const updatedRecords = records.map((r) => {
-      if (r.id === uploadTargetId) {
-        const existing = r.sourceDocumentIds || [];
-        return { ...r, sourceDocumentIds: [...existing, ...newDocs.map((d) => d.id)] };
+    const existingAttachments = attachmentsByRecordId.get(targetRecord.id) || [];
+    let nextSeq = existingAttachments.length + 1;
+    setUploading(true);
+    let okCount = 0;
+    try {
+      for (const f of Array.from(files)) {
+        try {
+          await uploadSourceDoc(targetRecord.id, f, {
+            documentNo: `SCAN-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(nextSeq).padStart(3, '0')}`,
+            docTypeCode: 'generic-invoice',
+            docTypeName: f.name.match(/\.pdf$/i) ? '扫描件(PDF)' : '扫描件(图片)',
+            transactionDate: `${targetRecord.year}-${targetRecord.month || '01'}-15`,
+            amountLower: targetRecord.amount,
+            counterpartyName: targetRecord.department,
+            summary: targetRecord.remarks || '扫描上传',
+            businessCategory: '费用',
+            parentVoucherNo: targetRecord.voucherNo,
+            attachmentSequence: nextSeq,
+          });
+          okCount++;
+          nextSeq++;
+        } catch (err) {
+          showToast(`附件 ${f.name} 上传失败：${err instanceof Error ? err.message : '未知错误'}`, 'warning');
+        }
       }
-      return r;
-    });
-    setRecords(updatedRecords);
-
-    showToast(`已为 ${targetRecord.voucherNo} 上传 ${newDocs.length} 份附件`);
-    setUploadTargetId(null);
-    e.target.value = '';
-  }, [uploadTargetId, records, sourceDocs, attachmentsByRecordId, setRecords, setSourceDocs]);
+      if (okCount > 0) {
+        // 以服务端为准重拉附件列表（含 parentRecordId 关联），刷新即不丢
+        if (currentFanzongCode) {
+          await useSourceDocumentStore.getState().loadSourceDocs(currentFanzongCode);
+        }
+        showToast(`已为 ${targetRecord.voucherNo} 上传 ${okCount} 份附件`);
+      }
+    } finally {
+      setUploading(false);
+      setUploadTargetId(null);
+      e.target.value = '';
+    }
+  }, [uploadTargetId, records, allRecords, attachmentsByRecordId, currentFanzongCode]);
 
   // ── 推送到组卷工作台 ──
   const handlePushToWorkspace = () => {
@@ -307,56 +345,39 @@ const VoucherManagerPage: React.FC = () => {
         </div>
       )}
 
-      {/* ★ 顶部：筛选 + 统计 + 操作按钮 */}
+      {/* ★ 顶部：标题 + 三大状态 Tab（核对/审核/已处理） */}
       <div className="flex items-center gap-4 px-6 py-3 bg-white border-b border-slate-200 shrink-0 flex-wrap">
         <FolderOpen className="w-5 h-5 text-slate-500" />
         <h1 className="text-base font-bold text-slate-800">核对工作台</h1>
 
-        <select value={year} onChange={(e) => { setYear(e.target.value); setSelectedIds(new Set()); }}
-          className="px-3 py-1.5 text-sm border border-slate-400 rounded-lg bg-white ml-4">
-          <option value="2026">2026年</option>
-          <option value="2025">2025年</option>
-        </select>
-
-        <select value={month} onChange={(e) => { setMonth(e.target.value); setSelectedIds(new Set()); }}
-          className="px-3 py-1.5 text-sm border border-slate-400 rounded-lg bg-white">
-          <option value="">全部月份</option>
-          {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map((m) => (
-            <option key={m} value={m}>{parseInt(m)}月</option>
+        {/* ★ 主 Tab：待核对 / 待审核 / 已处理（原「审核工作台」已并入） */}
+        <div className="flex items-center bg-slate-100 rounded-lg p-0.5">
+          {([
+            { key: 'check' as const, label: '待核对', count: pendingCount + collectPending.length },
+            { key: 'review' as const, label: '待审核', count: null },
+            { key: 'done' as const, label: '已处理', count: null },
+          ]).map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setPageTab(t.key)}
+              className={`px-3.5 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+                pageTab === t.key
+                  ? t.key === 'check' ? 'bg-white text-slate-800 shadow-sm' : 'bg-white text-sky-700 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+              title={t.key === 'check' ? '凭证核对 + 收集池待核对（抓取/推送 to-check 去向）'
+                : t.key === 'review' ? '审核库：抓取/推送 to-review 去向的数据，通过后组卷'
+                : '审核通过/驳回的历史记录'}
+            >
+              {t.label}{t.count != null ? ` (${t.count})` : ''}
+            </button>
           ))}
-        </select>
-
-        {/* ★ 状态 Tab：待组卷 / 已归档（归档数据可查可见） */}
-        <div className="flex items-center bg-slate-100 rounded-lg p-0.5 ml-2">
-          <button
-            type="button"
-            onClick={() => { setStatusTab('pending'); setSelectedIds(new Set()); }}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer ${
-              statusTab === 'pending' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            待组卷 ({pendingCount})
-          </button>
-          <button
-            type="button"
-            onClick={() => { setStatusTab('archived'); setSelectedIds(new Set()); }}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer ${
-              statusTab === 'archived' ? 'bg-white text-sky-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            已归档 ({archivedCount})
-          </button>
         </div>
-
-        <span className="text-sm text-slate-400">|</span>
-        <span className="text-sm text-slate-500">
-          记账凭证 <strong className="text-sky-600">{voucherCount}</strong> 张 &nbsp;
-          原始凭证附件 <strong className="text-purple-600">{totalAttachments}</strong> 份
-        </span>
 
         <div className="flex-1" />
 
-        {statusTab === 'pending' && (
+        {pageTab === 'check' && statusTab === 'pending' && (
           <button onClick={handlePushToWorkspace}
             className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium text-white bg-sky-600 rounded-lg hover:bg-sky-700 transition-colors">
             <Send className="w-4 h-4" />
@@ -364,6 +385,111 @@ const VoucherManagerPage: React.FC = () => {
           </button>
         )}
       </div>
+
+      {/* ★ 待核对 Tab：筛选行（年/月 + 待组卷/已归档 + 统计） */}
+      {pageTab === 'check' && (
+        <div className="flex items-center gap-4 px-6 py-2.5 bg-white border-b border-slate-200 shrink-0 flex-wrap">
+          <select value={year} onChange={(e) => { setYear(e.target.value); setSelectedIds(new Set()); }}
+            className="px-3 py-1.5 text-sm border border-slate-400 rounded-lg bg-white">
+            <option value="2026">2026年</option>
+            <option value="2025">2025年</option>
+          </select>
+
+          <select value={month} onChange={(e) => { setMonth(e.target.value); setSelectedIds(new Set()); }}
+            className="px-3 py-1.5 text-sm border border-slate-400 rounded-lg bg-white">
+            <option value="">全部月份</option>
+            {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map((m) => (
+              <option key={m} value={m}>{parseInt(m)}月</option>
+            ))}
+          </select>
+
+          {/* 子 Tab：待组卷 / 已归档（归档数据可查可见） */}
+          <div className="flex items-center bg-slate-100 rounded-lg p-0.5">
+            <button
+              type="button"
+              onClick={() => { setStatusTab('pending'); setSelectedIds(new Set()); }}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+                statusTab === 'pending' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              待组卷 ({pendingCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => { setStatusTab('archived'); setSelectedIds(new Set()); }}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+                statusTab === 'archived' ? 'bg-white text-sky-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              已归档 ({archivedCount})
+            </button>
+          </div>
+
+          <span className="text-sm text-slate-400">|</span>
+          <span className="text-sm text-slate-500">
+            记账凭证 <strong className="text-sky-600">{voucherCount}</strong> 张 &nbsp;
+            原始凭证附件 <strong className="text-purple-600">{totalAttachments}</strong> 份
+            {collectPending.length > 0 && (
+              <>&nbsp;· 收集池待核对 <strong className="text-amber-600">{collectPending.length}</strong> 条</>
+            )}
+          </span>
+        </div>
+      )}
+
+      {/* ★ 待审核 / 已处理 Tab：审核面板（原审核工作台职能） */}
+      {pageTab === 'review' && <ReviewPanel mode="pending" />}
+      {pageTab === 'done' && <ReviewPanel mode="processed" />}
+
+      {/* ★ 待核对 Tab 主体 */}
+      {pageTab === 'check' && (<>
+      {/* ★ 收集池待核对（抓取/推送「送核对工作台」去向的数据） */}
+      {statusTab === 'pending' && collectPending.length > 0 && (
+        <div className="mx-6 mt-3 bg-amber-50/70 border border-amber-200 rounded-xl overflow-hidden shrink-0">
+          <div className="px-4 py-2 border-b border-amber-100 flex items-center gap-2">
+            <Inbox className="w-4 h-4 text-amber-600" />
+            <span className="text-xs font-semibold text-amber-800">收集池待核对（来自抓取/推送）</span>
+            <span className="text-[11px] text-amber-600">{collectPending.length} 条 · 核对通过后选择流转方向</span>
+            {collectLoading && <Loader2 className="w-3 h-3 animate-spin text-amber-500" />}
+          </div>
+          <div className="divide-y divide-amber-100/70 max-h-52 overflow-y-auto">
+            {collectPending.map((c) => (
+              <div key={c.id} className="px-4 py-2 flex items-center gap-3 text-xs bg-white/60">
+                <span className={`px-1.5 py-0.5 rounded-full border font-medium shrink-0 ${
+                  c.category === 'voucher' ? 'bg-sky-50 text-sky-700 border-sky-200'
+                  : c.category === 'ledger' ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : c.category === 'report' ? 'bg-violet-50 text-violet-700 border-violet-200'
+                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                }`}>
+                  {c.category === 'voucher' ? '凭证' : c.category === 'ledger' ? '账簿' : c.category === 'report' ? '报表' : '其他'}
+                </span>
+                <span className="font-mono font-semibold text-slate-700 shrink-0">{c.voucherNo || '—'}</span>
+                <span className="text-slate-500 truncate">{c.archiveType || ''}</span>
+                <span className="text-slate-400 font-mono truncate">批次 {c.batchNo || '—'}</span>
+                <span className="text-slate-400 shrink-0">{c.sourceType === 'yonyou-pull' ? '用友抓取' : c.sourceType === 'simulate' ? '模拟推送' : '接口推送'}</span>
+                <div className="flex-1" />
+                <button
+                  type="button" disabled={passActioning === c.id}
+                  onClick={() => handleCollectPass(c, 'volume')}
+                  className="flex items-center gap-1 px-2 py-1 font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md hover:bg-emerald-100 disabled:opacity-50"
+                  title="核对通过，进入组卷工作台待组卷池"
+                >
+                  {passActioning === c.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+                  通过·送组卷
+                </button>
+                <button
+                  type="button" disabled={passActioning === c.id}
+                  onClick={() => handleCollectPass(c, 'review')}
+                  className="flex items-center gap-1 px-2 py-1 font-medium text-sky-700 bg-sky-50 border border-sky-200 rounded-md hover:bg-sky-100 disabled:opacity-50"
+                  title="核对通过，转待审核（审核通过后再组卷）"
+                >
+                  <ShieldCheck className="w-3 h-3" />
+                  通过·送审核
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ★ 连续性状态条（仅待组卷 Tab + 选定具体月份时展示） */}
       {statusTab === 'pending' && monthVouchers.length > 0 && month && month !== '' && (
@@ -551,6 +677,7 @@ const VoucherManagerPage: React.FC = () => {
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
       />
+      </>)}
 
       {/* ★ 详情侧边面板（点击"详情"按钮弹出） */}
       {detailRecord && (

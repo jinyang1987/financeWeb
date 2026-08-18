@@ -143,6 +143,12 @@ export async function rejectOrder(id: string, comment?: string): Promise<BorrowO
   return dtoToBorrowOrder(dto);
 }
 
+/** 申请人本人撤销（仅审批中；服务端按会话校验身份，防他人代撤） */
+export async function cancelOrderByApplicant(id: string): Promise<BorrowOrder> {
+  const dto = await http.post<OrderDto>(`/borrow/orders/${id}/cancel`);
+  return dtoToBorrowOrder(dto);
+}
+
 export async function terminateOrder(id: string): Promise<BorrowOrder> {
   const dto = await http.post<OrderDto>(`/borrow/orders/${id}/terminate`);
   return dtoToBorrowOrder(dto);

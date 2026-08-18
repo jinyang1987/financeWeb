@@ -19,7 +19,6 @@ import PageRouter from '../../components/PageRouter';
 import FinanceViewPage from '../../pages/archive-arrange/FinanceViewPage';
 import ProjectViewPage from '../../pages/archive-arrange/ProjectViewPage';
 import { FanzongManager } from '../FanzongManager';
-import MyBorrowPage from '../../pages/archive-utilization/my-borrow/MyBorrowPage';
 import ApprovalCenterPage from '../../pages/archive-utilization/ApprovalCenterPage';
 import BorrowManagePage from '../../pages/archive-utilization/BorrowManagePage';
 import BorrowLedgerPage from '../../pages/archive-utilization/BorrowLedgerPage';
@@ -37,12 +36,14 @@ import ArchiveCodeConfigPage from '../../pages/archive-config/ArchiveCodeConfigP
 import RetentionConfigPage from '../../pages/archive-config/RetentionConfigPage';
 import ApiReceivePage from '../../pages/archive-rcv/ApiReceivePage';
 import OpenApiReceivePage from '../../pages/archive-rcv/OpenApiReceivePage';
+import ConnectionConfigPage from '../../pages/system/ConnectionConfigPage';
 import SourceDocumentSearchPage from '../../pages/archive-preserve/SourceDocumentSearchPage';
 import VoucherSearchPage from '../../pages/archive-query/VoucherSearchPage';
 import MatterSearchPage from '../../pages/archive-query/MatterSearchPage';
 import AuditTrailPage from '../../pages/archive-query/AuditTrailPage';
 import ArchivePackagePage from '../../pages/archive-disposal/ArchivePackagePage';
 import ArchiveTransferPage from '../../pages/archive-disposal/ArchiveTransferPage';
+import AppraisalManagePage from '../../pages/archive-utilization/AppraisalManagePage';
 import WatermarkConfigPage from '../../pages/archive-config/WatermarkConfigPage';
 import WorkflowConfigPage from '../../pages/archive-config/WorkflowConfigPage';
 
@@ -76,7 +77,6 @@ const ContentArea: React.FC = () => {
     selectedRecordIds,
     isUploadOpen,
     setIsUploadOpen,
-    isCheckingBatch,
     selectedNode,
     setSelectedNode,
     searchQuery,
@@ -93,15 +93,7 @@ const ContentArea: React.FC = () => {
   // ─── 从 useAppHandlers 获取事件处理函数 ────────────────
   const {
     handleOpenDrawer,
-    handleCloseDrawer,
-    handleRunFourPropertiesCheck,
-    handleAutoGroup,
-    handleRepairUsability,
     handleDeleteRecord,
-    handleBatchClean,
-    handleCleanOne,
-    handleSegmentInsert,
-    handleUploadSuccess,
     toggleSelectAllFn,
   } = useAppHandlers(activeRecord, triggerToast);
 
@@ -142,6 +134,7 @@ const ContentArea: React.FC = () => {
     'sys-personnel',
     'sys-role',
     'sys-log',
+    'sys-storage',
     'digital-warehouse',
   ];
 
@@ -207,10 +200,6 @@ const ContentArea: React.FC = () => {
     return <MatterSearchPage />;
   }
 
-  if (activeMainMenu === 'my-borrow') {
-    return <MyBorrowPage />;
-  }
-
   if (activeMainMenu === 'approval-center') {
     return <ApprovalCenterPage />;
   }
@@ -251,6 +240,10 @@ const ContentArea: React.FC = () => {
     return <VoucherManagerPage />;
   }
 
+  if (activeMainMenu === 'sys-connection') {
+    return <ConnectionConfigPage />;
+  }
+
   if (activeMainMenu === 'volume-item-search') {
     return <VolumeItemSearchPage />;
   }
@@ -269,6 +262,10 @@ const ContentArea: React.FC = () => {
 
   if (activeMainMenu === 'archive-transfer') {
     return <ArchiveTransferPage />;
+  }
+
+  if (activeMainMenu === 'appraisal-manage') {
+    return <AppraisalManagePage />;
   }
 
   if (activeMainMenu === 'archive-code-config') {

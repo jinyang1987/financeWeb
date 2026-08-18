@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import com.finance.ams.api.BizException;
 import com.finance.ams.auth.AuthService;
 import com.finance.ams.auth.AuthUser;
+import com.finance.ams.auth.PermissionService;
 
 /**
  * 借阅域端点（P2-1/2/3）
@@ -19,7 +20,8 @@ import com.finance.ams.auth.AuthUser;
  *   GET  /borrow/orders/{id}               详情
  *   POST /borrow/orders/{id}/approve       审批通过
  *   POST /borrow/orders/{id}/reject        审批驳回
- *   POST /borrow/orders/{id}/terminate     中止
+ *   POST /borrow/orders/{id}/cancel        申请人本人撤销（仅审批中）
+ *   POST /borrow/orders/{id}/terminate     管理员中止
  *   POST /borrow/fulfillments/{id}/checkout  实体出库
  *   POST /borrow/fulfillments/{id}/return    归还核销
  *   GET  /borrow/availability/{volumeId}   库存查询
@@ -32,10 +34,12 @@ public class BorrowController {
 
   private final BorrowService service;
   private final AuthService authService;
+  private final PermissionService perm;
 
-  public BorrowController(BorrowService service, AuthService authService) {
+  public BorrowController(BorrowService service, AuthService authService, PermissionService perm) {
     this.service = service;
     this.authService = authService;
+    this.perm = perm;
   }
 
   @PostMapping("/orders")
@@ -47,6 +51,8 @@ public class BorrowController {
     // 安全：申请人姓名/工号/部门一律以服务端会话（Alfresco ticket 校验）为准，
     // 忽略请求体里任意填写的 applicantName/EmpNo/Dept，防止冒名申请。
     AuthUser me = authService.me(userId, ticket);
+    // 借阅操作权（QX 第 4 位）：无 borrow 权的角色（如审计员）不得发起
+    perm.requireOperation(me, PermissionService.Op.borrow);
     return service.submitOrder(me.account(), me.name(), me.empNo(), me.dept(), body);
   }
 
@@ -58,6 +64,13 @@ public class BorrowController {
       @RequestParam(required = false) String pendingForRole,
       @RequestParam(required = false) String status) {
     requireAuth(userId, ticket);
+    // 待办按角色取数：必须真实持有该角色（防越权窥探他角待办；admin 豁免）
+    if (pendingForRole != null && !pendingForRole.isBlank()) {
+      AuthUser me = authService.me(userId, ticket);
+      if (!me.roles().contains("admin") && !me.roles().contains(pendingForRole)) {
+        throw new BizException(HttpStatus.FORBIDDEN, "FORBIDDEN", "不持有角色 " + pendingForRole + "，无法查询其待办");
+      }
+    }
     return service.listOrders(mine, pendingForRole, status);
   }
 
@@ -76,9 +89,9 @@ public class BorrowController {
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
       @PathVariable String id, @RequestBody(required = false) Map<String, String> body) {
     requireAuth(userId, ticket);
-    // 审批：部门经理 / 财务总监 / HRVP / 档案管理员 均可按审批链执行
-    requireAnyRole(userId, ticket, "dept_manager", "cfo", "hrvp", "archivist", "archive_director");
-    return service.approve(id, userId, body != null ? body.get("comment") : null);
+    // 审批步骤角色在服务端按当前步骤严格校验（2026-08-18 越级审批修复，admin 不豁免）
+    AuthUser me = currentUser(userId, ticket);
+    return service.approve(id, me, body != null ? body.get("comment") : null);
   }
 
   @PostMapping("/orders/{id}/reject")
@@ -87,8 +100,19 @@ public class BorrowController {
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
       @PathVariable String id, @RequestBody(required = false) Map<String, String> body) {
     requireAuth(userId, ticket);
-    requireAnyRole(userId, ticket, "dept_manager", "cfo", "hrvp", "archivist", "archive_director");
-    return service.reject(id, userId, body != null ? body.get("comment") : null);
+    AuthUser me = currentUser(userId, ticket);
+    return service.reject(id, me, body != null ? body.get("comment") : null);
+  }
+
+  @PostMapping("/orders/{id}/cancel")
+  public Map<String, Object> cancel(
+      @RequestHeader(value = "X-User-Id", required = false) String userId,
+      @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
+      @PathVariable String id) {
+    requireAuth(userId, ticket);
+    // 申请人本人撤销（仅审批中）；服务端按会话校验身份，防他人代撤
+    AuthUser me = currentUser(userId, ticket);
+    return service.cancelOrder(id, me.id());
   }
 
   @PostMapping("/orders/{id}/terminate")
@@ -136,6 +160,13 @@ public class BorrowController {
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
       @PathVariable String userId2) {
     requireAuth(userId, ticket);
+    // 黑名单查询：本人或档案管理岗（防批量探查他人逾期信用）
+    AuthUser me = currentUser(userId, ticket);
+    if (!me.id().equals(userId2) && !me.account().equals(userId2)
+        && !me.roles().contains("archivist") && !me.roles().contains("archive_director")
+        && !me.roles().contains("admin")) {
+      throw new BizException(HttpStatus.FORBIDDEN, "FORBIDDEN", "仅本人或档案管理岗可查询黑名单");
+    }
     return Map.of("userId", userId2, "blacklisted", service.isBlacklisted(userId2));
   }
 
@@ -144,6 +175,7 @@ public class BorrowController {
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket) {
     requireAuth(userId, ticket);
+    requireAnyRole(userId, ticket, "archivist", "archive_director", "admin");
     return service.dailyCheck();
   }
 

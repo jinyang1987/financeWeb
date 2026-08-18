@@ -31,15 +31,6 @@ export default defineConfig(() => {
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api\/ams/, '/api'),
         },
-        // 后端业务 API 代理（目录配置等，P0-9 迁入 ams-server 后退役）
-        '/api/directory-config': {
-          target: 'http://localhost:3001',
-          changeOrigin: true,
-        },
-        '/api/health': {
-          target: 'http://localhost:3001',
-          changeOrigin: true,
-        },
       },
     },
   };

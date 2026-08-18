@@ -115,16 +115,16 @@ const BorrowLedgerPage: React.FC = () => {
       {/* 台账表格 */}
       <div className="flex-1 overflow-auto min-h-0">
         <table className="w-full text-sm">
-          <thead className="sticky top-0 z-10 bg-slate-100 text-left">
-            <tr className="border-b border-slate-200">
-              <th className="px-4 py-2.5 w-8"></th>
-              <th className="px-4 py-2.5 text-xs font-semibold text-slate-600">借阅单号</th>
-              <th className="px-4 py-2.5 text-xs font-semibold text-slate-600">借阅人</th>
-              <th className="px-4 py-2.5 text-xs font-semibold text-slate-600">事由</th>
-              <th className="px-4 py-2.5 text-xs font-semibold text-slate-600">档案数</th>
-              <th className="px-4 py-2.5 text-xs font-semibold text-slate-600">审批链</th>
-              <th className="px-4 py-2.5 text-xs font-semibold text-slate-600">借阅周期</th>
-              <th className="px-4 py-2.5 text-xs font-semibold text-slate-600">状态</th>
+          <thead className="sticky top-0 z-10 bg-slate-100">
+            <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
+              <th className="px-4 py-3 w-8"></th>
+              <th className="px-4 py-3 text-left text-[13px] font-semibold">借阅单号</th>
+              <th className="px-4 py-3 text-left text-[13px] font-semibold">借阅人</th>
+              <th className="px-4 py-3 text-left text-[13px] font-semibold">事由</th>
+              <th className="px-4 py-3 text-left text-[13px] font-semibold">档案数</th>
+              <th className="px-4 py-3 text-left text-[13px] font-semibold">审批链</th>
+              <th className="px-4 py-3 text-left text-[13px] font-semibold">借阅周期</th>
+              <th className="px-4 py-3 text-left text-[13px] font-semibold">状态</th>
             </tr>
           </thead>
           <tbody>
@@ -134,17 +134,17 @@ const BorrowLedgerPage: React.FC = () => {
                 <React.Fragment key={o.id}>
                   <tr
                     onClick={() => setExpandedId(expanded ? null : o.id)}
-                    className="border-b border-slate-100 hover:bg-sky-50/40 transition-colors cursor-pointer"
+                    className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors cursor-pointer"
                   >
                     <td className="px-4 py-3 text-slate-400">
                       {expanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs font-bold text-slate-800">{o.orderNo}</td>
-                    <td className="px-4 py-3 text-xs text-slate-700">{o.applicantName}<span className="text-slate-400 ml-1">{o.applicantDept}</span></td>
-                    <td className="px-4 py-3 text-xs text-slate-600">{o.reasonType}</td>
-                    <td className="px-4 py-3 text-xs text-slate-600">{o.items.length} 件</td>
-                    <td className="px-4 py-3 text-[11px] text-slate-400 max-w-[180px] truncate" title={approverChain(o)}>{approverChain(o) || '—'}</td>
-                    <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">{o.startDate} ~ {o.endDate}</td>
+                    <td className="px-4 py-3 font-mono text-[13px] font-bold text-slate-800">{o.orderNo}</td>
+                    <td className="px-4 py-3 text-sm text-slate-800">{o.applicantName}<span className="text-slate-400 ml-1">{o.applicantDept}</span></td>
+                    <td className="px-4 py-3 text-[13px] text-slate-600">{o.reasonType}</td>
+                    <td className="px-4 py-3 text-[13px] text-slate-600">{o.items.length} 件</td>
+                    <td className="px-4 py-3 text-[13px] text-slate-600 max-w-[180px] truncate" title={approverChain(o)}>{approverChain(o) || '—'}</td>
+                    <td className="px-4 py-3 font-mono text-[13px] text-slate-600 whitespace-nowrap">{o.startDate} ~ {o.endDate}</td>
                     <td className="px-4 py-3">
                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[o.status]}`}>
                         {ORDER_STATUS_LABELS[o.status]}
@@ -152,7 +152,7 @@ const BorrowLedgerPage: React.FC = () => {
                     </td>
                   </tr>
                   {expanded && (
-                    <tr className="bg-slate-50/70 border-b border-slate-100">
+                    <tr className="bg-slate-50/70 border-b border-slate-200/60">
                       <td></td>
                       <td colSpan={7} className="px-4 py-3">
                         <div className="space-y-1.5">

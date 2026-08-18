@@ -6,7 +6,7 @@
 import { create } from 'zustand';
 import { ArchiveRecord, CategoryNode, Fonds, CategoryConfigItem } from '../types';
 import { initialCategoryTree } from '../data';
-import { fetchPoolRecords, dtoToRecord } from '../services/recordService';
+import { fetchPoolRecords, fetchAllRecords, dtoToRecord } from '../services/recordService';
 import type { CarrierType, ManagementMode } from '../types/managementMode';
 
 // 大类编码 → 记录 archiveType 字段映射（全部类型，含子件）
@@ -41,6 +41,12 @@ interface ArchiveState {
   recordsLoading: boolean;
   /** 从 ams-server 收集池加载当前全宗的件（未组卷） */
   loadRecords: () => Promise<void>;
+
+  /** 全量件（池 ∪ 案卷库卷内件 ∪ 盒库卷内件，带卷/盒归属）——读侧口径（2026-08-16 贯通修复） */
+  allRecords: ArchiveRecord[];
+  allRecordsLoading: boolean;
+  /** 加载全量件：档案查询/档案打包/借阅车结算/统计/门户使用；工作台池口径请用 records */
+  loadAllRecords: () => Promise<void>;
 
   // Category tree
   treeData: CategoryNode[];
@@ -134,6 +140,23 @@ export const useArchiveStore = create<ArchiveState>((set, get) => ({
     }
   },
 
+  // ── 全量件视图（读侧：查询/打包/借阅车/统计/门户） ──
+  allRecords: [],
+  allRecordsLoading: false,
+  loadAllRecords: async () => {
+    const { currentFanzongCode } = get();
+    if (!currentFanzongCode) return;
+    set({ allRecordsLoading: true });
+    try {
+      const result = await fetchAllRecords({ fondsCode: currentFanzongCode });
+      set({ allRecords: result.items.map(dtoToRecord) });
+    } catch (e) {
+      console.warn('全量件加载失败（离线/未登录时保持空表）:', e);
+    } finally {
+      set({ allRecordsLoading: false });
+    }
+  },
+
   // Category tree
   treeData: initialCategoryTree,
   setTreeData: (treeData) => set({ treeData }),
@@ -161,8 +184,9 @@ export const useArchiveStore = create<ArchiveState>((set, get) => ({
   setCurrentFanzongCode: (currentFanzongCode) => {
     set({ currentFanzongCode });
     get().updateFilteredRecords();
-    // 全宗切换 → 重拉该全宗收集池（P1-①）
+    // 全宗切换 → 重拉该全宗收集池（P1-①）与全量件视图（读侧口径）
     void get().loadRecords();
+    void get().loadAllRecords();
   },
 
   // Archive type filter

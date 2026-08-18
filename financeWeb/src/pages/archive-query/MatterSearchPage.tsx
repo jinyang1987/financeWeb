@@ -8,7 +8,7 @@
  * 找到事项后可一键将所属凭证加入借阅车。
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   ZoomIn, Search, DollarSign, Users, Receipt, Building2,
   BookOpenCheck, CheckCircle2, FileText,
@@ -29,7 +29,10 @@ const BUSINESS_TYPE_OPTIONS = ['全部类型', '采购', '销售', '费用', '�
 
 const MatterSearchPage: React.FC = () => {
   const documents = useSourceDocumentStore((s) => s.documents);
-  const records = useArchiveStore((s) => s.records);
+  // 全量件（含已组卷卷内件）：原始凭证的所属记账凭证可能已归档，池口径会查不到（2026-08-16 贯通修复）
+  const records = useArchiveStore((s) => s.allRecords);
+  const loadAllRecords = useArchiveStore((s) => s.loadAllRecords);
+  useEffect(() => { void loadAllRecords(); }, [loadAllRecords]);
   const cart = useBorrowStore((s) => s.cart);
   const addToCart = useBorrowStore((s) => s.addToCart);
   const removeFromCart = useBorrowStore((s) => s.removeFromCart);
@@ -184,15 +187,15 @@ const MatterSearchPage: React.FC = () => {
       <div className="flex-1 overflow-auto min-h-0">
         <table className="w-full text-sm">
           <thead className="sticky top-0 z-10 bg-slate-100 text-left">
-            <tr className="border-b border-slate-200">
-              <th className="px-5 py-2.5 text-xs font-semibold text-slate-600">单据编号</th>
-              <th className="px-5 py-2.5 text-xs font-semibold text-slate-600">类型</th>
-              <th className="px-5 py-2.5 text-xs font-semibold text-slate-600">业务日期</th>
-              <th className="px-5 py-2.5 text-xs font-semibold text-slate-600">往来单位</th>
-              <th className="px-5 py-2.5 text-xs font-semibold text-slate-600 text-right">金额</th>
-              <th className="px-5 py-2.5 text-xs font-semibold text-slate-600">摘要</th>
-              <th className="px-5 py-2.5 text-xs font-semibold text-slate-600">所属凭证 / 状态</th>
-              <th className="px-5 py-2.5 text-xs font-semibold text-slate-600 text-center">操作</th>
+            <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
+              <th className="px-4 py-3 text-[13px] font-semibold">单据编号</th>
+              <th className="px-4 py-3 text-[13px] font-semibold">类型</th>
+              <th className="px-4 py-3 text-[13px] font-semibold">业务日期</th>
+              <th className="px-4 py-3 text-[13px] font-semibold">往来单位</th>
+              <th className="px-4 py-3 text-[13px] font-semibold text-right">金额</th>
+              <th className="px-4 py-3 text-[13px] font-semibold">摘要</th>
+              <th className="px-4 py-3 text-[13px] font-semibold">所属凭证 / 状态</th>
+              <th className="px-4 py-3 text-[13px] font-semibold text-center">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -200,23 +203,23 @@ const MatterSearchPage: React.FC = () => {
               const parent = parentRecordOf(doc);
               const inCart = !!parent && cartIds.has(parent.id);
               return (
-                <tr key={doc.id} className="border-b border-slate-100 hover:bg-sky-50/50 transition-colors">
-                  <td className="px-5 py-3 font-mono text-xs font-bold text-slate-800 whitespace-nowrap">{doc.documentNo}</td>
-                  <td className="px-5 py-3 text-xs text-slate-700 whitespace-nowrap">
+                <tr key={doc.id} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
+                  <td className="px-4 py-3 font-mono text-[13px] font-bold text-slate-800 whitespace-nowrap">{doc.documentNo}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px]">{doc.docTypeName}</span>
                   </td>
-                  <td className="px-5 py-3 text-xs text-slate-500 whitespace-nowrap">{doc.transactionDate}</td>
-                  <td className="px-5 py-3 text-xs text-slate-700 max-w-[160px] truncate" title={doc.counterpartyName}>
+                  <td className="px-4 py-3 font-mono text-[13px] text-slate-600 whitespace-nowrap">{doc.transactionDate}</td>
+                  <td className="px-4 py-3 text-[13px] text-slate-600 max-w-[160px] truncate" title={doc.counterpartyName}>
                     <Building2 className="w-3 h-3 inline mr-1 text-slate-400" />{doc.counterpartyName}
                   </td>
-                  <td className="px-5 py-3 text-xs font-mono font-medium text-slate-800 text-right whitespace-nowrap">
+                  <td className="px-4 py-3 font-mono text-[13px] font-medium text-slate-800 text-right whitespace-nowrap">
                     ¥{doc.amountLower.toLocaleString('zh-CN', { minimumFractionDigits: 2 })}
                   </td>
-                  <td className="px-5 py-3 text-xs text-slate-600 max-w-[180px] truncate" title={doc.summary}>{doc.summary}</td>
-                  <td className="px-5 py-3">
+                  <td className="px-4 py-3 text-sm text-slate-800 max-w-[180px] truncate" title={doc.summary}>{doc.summary}</td>
+                  <td className="px-4 py-3">
                     {parent ? (
                       <div className="space-y-1">
-                        <span className="flex items-center gap-1 text-xs font-mono text-slate-700">
+                        <span className="flex items-center gap-1 text-[13px] font-mono text-slate-700">
                           <FileText className="w-3 h-3 text-slate-400" />{parent.voucherNo}
                         </span>
                         <ArchiveStatusTags record={parent} />
@@ -225,7 +228,7 @@ const MatterSearchPage: React.FC = () => {
                       <span className="text-[10px] text-slate-400">未归档</span>
                     )}
                   </td>
-                  <td className="px-5 py-3">
+                  <td className="px-4 py-3">
                     <div className="flex items-center justify-center">
                       {parent && (
                         <button

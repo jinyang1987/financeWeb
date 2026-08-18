@@ -63,6 +63,16 @@ public class AlfrescoClient {
         .toList();
   }
 
+  /** 人员列表（人员管理页用；演示规模 maxItems=500 一页拉全） */
+  @SuppressWarnings("unchecked")
+  public List<Map<String, Object>> listPeople(String ticket) {
+    String url = withTicket(baseUrl + apiV1 + "/people?maxItems=500", ticket);
+    ResponseEntity<Map> res = http.getForEntity(url, Map.class);
+    Map<String, Object> list = (Map<String, Object>) res.getBody().get("list");
+    List<Map<String, Object>> entries = (List<Map<String, Object>>) list.get("entries");
+    return entries.stream().map(e -> (Map<String, Object>) e.get("entry")).toList();
+  }
+
   /** 注销 ticket（尽力而为） */
   public void deleteTicket(String userId, String ticket) {
     try {

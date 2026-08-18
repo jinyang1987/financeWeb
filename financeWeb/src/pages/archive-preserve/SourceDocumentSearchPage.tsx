@@ -10,7 +10,7 @@
  * - 详情抽屉：9公共字段 + 类型扩展字段 + 所属记账凭证追溯
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Search, X, ChevronRight, ChevronDown, FileText, Filter, ArrowUpDown,
   Building2, Calendar, DollarSign, Tag, Package, User, Hash, FileSpreadsheet,
@@ -191,11 +191,11 @@ const ResultsTable: React.FC<{
 
   const SortHeader: React.FC<{ field: typeof sortField; label: string }> = ({ field, label }) => (
     <th
-      className="px-3 py-2 text-left cursor-pointer hover:bg-slate-50 select-none"
+      className="px-4 py-3 text-left text-[13px] font-semibold cursor-pointer hover:bg-slate-200/50 select-none"
       onClick={() => toggleSort(field)}
     >
       <div className="flex items-center gap-1">
-        <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">{label}</span>
+        <span>{label}</span>
         <ArrowUpDown className={`w-3 h-3 ${sortField === field ? 'text-sky-500' : 'text-slate-300'}`} />
       </div>
     </th>
@@ -204,32 +204,20 @@ const ResultsTable: React.FC<{
   return (
     <div className="flex-1 overflow-auto">
       <table className="w-full">
-        <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
-          <tr>
-            <th className="px-3 py-2 w-8"></th>
+        <thead className="bg-slate-100 border-b border-slate-200 sticky top-0">
+          <tr className="bg-slate-100/80 text-slate-700 divide-x divide-slate-200/80">
+            <th className="px-4 py-3 w-8"></th>
             <SortHeader field="transactionDate" label="业务日期" />
-            <th className="px-3 py-2 text-left">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">单据编号</span>
-            </th>
-            <th className="px-3 py-2 text-left">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">凭证类型</span>
-            </th>
+            <th className="px-4 py-3 text-left text-[13px] font-semibold">单据编号</th>
+            <th className="px-4 py-3 text-left text-[13px] font-semibold">凭证类型</th>
             <SortHeader field="amountLower" label="金额" />
-            <th className="px-3 py-2 text-left">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">对方单位</span>
-            </th>
-            <th className="px-3 py-2 text-left hidden xl:table-cell">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">业务分类</span>
-            </th>
-            <th className="px-3 py-2 text-left hidden xl:table-cell">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">载体</span>
-            </th>
-            <th className="px-3 py-2 text-center w-16">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">四性</span>
-            </th>
+            <th className="px-4 py-3 text-left text-[13px] font-semibold">对方单位</th>
+            <th className="px-4 py-3 text-left text-[13px] font-semibold hidden xl:table-cell">业务分类</th>
+            <th className="px-4 py-3 text-left text-[13px] font-semibold hidden xl:table-cell">载体</th>
+            <th className="px-4 py-3 text-center text-[13px] font-semibold w-16">四性</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100">
+        <tbody>
           {sorted.length === 0 ? (
             <tr>
               <td colSpan={9} className="px-4 py-12 text-center text-sm text-slate-400">
@@ -240,35 +228,35 @@ const ResultsTable: React.FC<{
             sorted.map((doc) => (
               <tr
                 key={doc.id}
-                className="hover:bg-sky-50/50 cursor-pointer transition-colors group"
+                className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 cursor-pointer transition-colors group"
                 onClick={() => onRowClick(doc)}
               >
-                <td className="px-3 py-2.5">
+                <td className="px-4 py-3">
                   <div className="flex justify-center">
                     <CheckStatusIcon checks={doc.checks} />
                   </div>
                 </td>
-                <td className="px-3 py-2.5">
-                  <span className="text-xs text-slate-600 whitespace-nowrap">{doc.transactionDate}</span>
+                <td className="px-4 py-3">
+                  <span className="font-mono text-[13px] text-slate-600 whitespace-nowrap">{doc.transactionDate}</span>
                 </td>
-                <td className="px-3 py-2.5">
-                  <span className="text-xs font-medium text-slate-800 font-mono">{doc.documentNo}</span>
+                <td className="px-4 py-3">
+                  <span className="font-mono text-[13px] font-medium text-slate-800">{doc.documentNo}</span>
                 </td>
-                <td className="px-3 py-2.5">
-                  <span className="text-xs text-slate-600">{doc.docTypeName}</span>
+                <td className="px-4 py-3">
+                  <span className="text-[13px] text-slate-600">{doc.docTypeName}</span>
                 </td>
-                <td className="px-3 py-2.5">
-                  <span className={`text-xs font-mono font-medium ${doc.amountLower < 0 ? 'text-red-600' : 'text-slate-800'}`}>
+                <td className="px-4 py-3">
+                  <span className={`font-mono text-[13px] font-medium ${doc.amountLower < 0 ? 'text-red-600' : 'text-slate-800'}`}>
                     ¥{fmt(Math.abs(doc.amountLower))}
                   </span>
                 </td>
-                <td className="px-3 py-2.5">
-                  <span className="text-xs text-slate-600 truncate max-w-[160px] block">{doc.counterpartyName}</span>
+                <td className="px-4 py-3">
+                  <span className="text-[13px] text-slate-600 truncate max-w-[160px] block">{doc.counterpartyName}</span>
                 </td>
-                <td className="px-3 py-2.5 hidden xl:table-cell">
+                <td className="px-4 py-3 hidden xl:table-cell">
                   <span className="text-[11px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{doc.businessCategory}</span>
                 </td>
-                <td className="px-3 py-2.5 hidden xl:table-cell">
+                <td className="px-4 py-3 hidden xl:table-cell">
                   <span className={`text-[11px] px-1.5 py-0.5 rounded ${
                     doc.carrierType === 'electronic'
                       ? 'bg-sky-50 text-sky-600'
@@ -277,7 +265,7 @@ const ResultsTable: React.FC<{
                     {doc.carrierType === 'electronic' ? '电子' : '纸质'}
                   </span>
                 </td>
-                <td className="px-3 py-2.5 text-center">
+                <td className="px-4 py-3 text-center">
                   <CheckStatusIcon checks={doc.checks} />
                 </td>
               </tr>
@@ -297,7 +285,8 @@ const SourceDocDrawer: React.FC<{
   onClose: () => void;
 }> = ({ doc, onClose }) => {
   const parentRecord = useArchiveStore(s =>
-    doc ? s.records.find(r => r.id === doc.parentRecordId) : null
+    // 全量件查找：所属记账凭证可能已组卷归档，池口径会找不到（2026-08-16 贯通修复）
+    doc ? s.allRecords.find(r => r.id === doc.parentRecordId) : null
   );
 
   const extDefs = useMemo(() =>
@@ -507,6 +496,14 @@ const CheckBadge: React.FC<{ label: string; passed: boolean }> = ({ label, passe
 // ═══════════════════════════════════════════════════════════════════
 const SourceDocumentSearchPage: React.FC = () => {
   const store = useSourceDocumentStore();
+
+  // 挂载刷新：原始凭证附件 + 全量件（父件信息联动显示），不依赖其他页面先行加载
+  const currentFanzongCode = useArchiveStore((s) => s.currentFanzongCode);
+  useEffect(() => {
+    if (!currentFanzongCode) return;
+    void useSourceDocumentStore.getState().loadSourceDocs(currentFanzongCode);
+    void useArchiveStore.getState().loadAllRecords();
+  }, [currentFanzongCode]);
 
   const [showFilters, setShowFilters] = useState(false);
 

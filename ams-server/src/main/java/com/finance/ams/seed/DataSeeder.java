@@ -44,16 +44,19 @@ public class DataSeeder implements ApplicationRunner {
   // ── 演示账号（与前端 MOCK_USERS 对齐） ──
   private record SeedUser(String account, String name, String dept, String deptGroup,
                           String position, List<String> roles, String empNo,
-                          String supervisor, String avatarColor) {}
+                          String supervisor, String avatarColor, int clearance) {}
 
   private static final List<SeedUser> USERS = List.of(
-      new SeedUser("zhangwei", "张伟", "财务部", "dept_finance", "会计", List.of("EMPLOYEE"), "004521", "wangqiang", "bg-blue-600"),
-      new SeedUser("lina", "李娜", "财务部", "dept_finance", "出纳", List.of("EMPLOYEE"), "004522", "wangqiang", "bg-sky-600"),
-      new SeedUser("wangqiang", "王强", "财务部", "dept_finance", "财务部经理", List.of("DEPT_MANAGER"), "003108", "zhaogang", "bg-indigo-600"),
-      new SeedUser("chenjing", "陈静", "档案部", "dept_archive", "档案管理员", List.of("ARCHIVIST"), "002017", "liumin", "bg-emerald-600"),
-      new SeedUser("liumin", "刘敏", "档案部", "dept_archive", "档案主管", List.of("ARCHIVE_DIRECTOR", "ARCHIVIST"), "001566", null, "bg-teal-600"),
-      new SeedUser("zhaogang", "赵刚", "财务部", "dept_finance", "财务总监", List.of("CFO"), "000902", null, "bg-violet-600"),
-      new SeedUser("sunli", "孙丽", "人力资源部", "dept_hr", "HR副总裁", List.of("HRVP"), "000715", null, "bg-rose-600")
+      new SeedUser("zhangwei", "张伟", "财务部", "dept_finance", "会计", List.of("EMPLOYEE"), "004521", "wangqiang", "bg-blue-600", 1),
+      new SeedUser("lina", "李娜", "财务部", "dept_finance", "出纳", List.of("EMPLOYEE"), "004522", "wangqiang", "bg-sky-600", 1),
+      new SeedUser("wangqiang", "王强", "财务部", "dept_finance", "财务部经理", List.of("DEPT_MANAGER"), "003108", "zhaogang", "bg-indigo-600", 2),
+      new SeedUser("chenjing", "陈静", "档案部", "dept_archive", "档案管理员", List.of("ARCHIVIST"), "002017", "liumin", "bg-emerald-600", 3),
+      new SeedUser("liumin", "刘敏", "档案部", "dept_archive", "档案主管", List.of("ARCHIVE_DIRECTOR", "ARCHIVIST"), "001566", null, "bg-teal-600", 3),
+      new SeedUser("zhaogang", "赵刚", "财务部", "dept_finance", "财务总监", List.of("CFO"), "000902", null, "bg-violet-600", 3),
+      new SeedUser("sunli", "孙丽", "人力资源部", "dept_hr", "HR副总裁", List.of("HRVP"), "000715", null, "bg-rose-600", 3),
+      // 三员分立（2026-08-18 硬分立）：安全保密员管人员/档案密级，安全审计员独占审计日志
+      new SeedUser("qianfang", "钱芳", "信息安全部", "dept_infosec", "安全保密员", List.of("SECURITY_OFFICER"), "000612", null, "bg-amber-600", 3),
+      new SeedUser("shenji", "沈骥", "审计部", "dept_audit", "安全审计员", List.of("SECURITY_AUDITOR"), "000530", null, "bg-cyan-700", 3)
   );
 
   private static final String DEMO_PASSWORD = "123456";
@@ -136,6 +139,8 @@ public class DataSeeder implements ApplicationRunner {
     ensureOrg("dept_finance", "财务部", "comp_HQ");
     ensureOrg("dept_archive", "档案部", "comp_HQ");
     ensureOrg("dept_hr", "人力资源部", "comp_HQ");
+    ensureOrg("dept_infosec", "信息安全部", "comp_HQ");
+    ensureOrg("dept_audit", "审计部", "comp_HQ");
   }
 
   private void ensureOrg(String shortName, String displayName, String parent) {
@@ -162,7 +167,8 @@ public class DataSeeder implements ApplicationRunner {
 
   /** 角色组（根组，id 自动补 GROUP_ 前缀 → GROUP_ROLE_XXX） */
   private void seedRoleGroups() {
-    List.of("EMPLOYEE", "DEPT_MANAGER", "ARCHIVIST", "ARCHIVE_DIRECTOR", "CFO", "HRVP")
+    List.of("EMPLOYEE", "DEPT_MANAGER", "ARCHIVIST", "ARCHIVE_DIRECTOR", "CFO", "HRVP",
+            "SECURITY_OFFICER", "SECURITY_AUDITOR")
         .forEach(role -> {
           String fullName = "GROUP_ROLE_" + role;
           if (!admin.groupExists(fullName)) {
@@ -217,9 +223,10 @@ public class DataSeeder implements ApplicationRunner {
   }
 
   private void upsertUserExt(SeedUser u) {
+    // 密级仅建档时写入；运行期由安全保密员在人员管理页调整，seed 不覆盖（幂等铁律）
     jdbc.sql("""
-        INSERT INTO ams_user_ext (user_id, emp_no, position, dept_path, supervisor_id, avatar_color)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO ams_user_ext (user_id, emp_no, position, dept_path, supervisor_id, avatar_color, security_clearance)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT (user_id) DO UPDATE SET
           emp_no = EXCLUDED.emp_no,
           position = EXCLUDED.position,
@@ -228,15 +235,15 @@ public class DataSeeder implements ApplicationRunner {
           avatar_color = EXCLUDED.avatar_color,
           updated_at = now()
         """)
-        .params(u.account(), u.empNo(), u.position(), u.dept(), u.supervisor(), u.avatarColor())
+        .params(u.account(), u.empNo(), u.position(), u.dept(), u.supervisor(), u.avatarColor(), u.clearance())
         .update();
   }
 
   /** 内置 admin 账号的扩展字段 */
   private void seedAdminExt() {
     jdbc.sql("""
-        INSERT INTO ams_user_ext (user_id, emp_no, position, dept_path, supervisor_id, avatar_color)
-        VALUES ('admin', '000001', '系统管理员', '信息中心', NULL, 'bg-slate-700')
+        INSERT INTO ams_user_ext (user_id, emp_no, position, dept_path, supervisor_id, avatar_color, security_clearance)
+        VALUES ('admin', '000001', '系统管理员', '信息中心', NULL, 'bg-slate-700', 3)
         ON CONFLICT (user_id) DO NOTHING
         """).update();
   }

@@ -28,6 +28,7 @@ import {
   createVolumeApi, updateVolumeApi, deleteVolumeApi,
   addItemsApi, removeItemApi, reorderItemsApi,
   confirmVolumeApi, unconfirmVolumeApi, decomposeVolumeApi,
+  splitVolumeApi, mergeVolumesApi, moveItemsApi,
   transferVolumeApi, returnVolumeApi,
 } from '../services/volumeService';
 import { fetchVolumeRecords } from '../services/recordService';
@@ -292,6 +293,14 @@ interface VolumeState {
   /** 拆除草稿案卷，所有条目回到待组卷池；返回拆出件数 */
   decomposeVolume: (volumeId: string) => Promise<number>;
 
+  // ── 操作：拆分 / 合并 / 转卷（2026-08-17 组卷操作补全，全部草稿卷限定 + 同类同年同期校验） ──
+  /** 拆分：卷内选定件拆出为新案卷（继承源卷属性）；返回新案卷 */
+  splitVolume: (volumeId: string, recordIds: string[], title?: string) => Promise<Volume>;
+  /** 合并：来源草稿卷并入目标卷（来源卷删除）；返回目标卷与合并统计 */
+  mergeVolumes: (sourceVolumeIds: string[], targetVolumeId: string) => Promise<{ volume: Volume; mergedCount: number; mergedVolumes: number }>;
+  /** 转卷：卷内选定件移入目标草稿卷（全部移出时源卷自动销毁） */
+  moveItemsToVolume: (volumeId: string, recordIds: string[], targetVolumeId: string) => Promise<{ moved: number; sourceDestroyed: boolean }>;
+
   // ── 操作：移交至档案保管 ──
   transferVolume: (volumeId: string) => Promise<void>;
 
@@ -505,6 +514,74 @@ export const useVolumeStore = create<VolumeState>((set, get) => ({
       };
     });
     return count;
+  },
+
+  // ── 拆分 / 合并 / 转卷 ──
+  splitVolume: async (volumeId, recordIds, title) => {
+    const { volume, sourceDestroyed, sourceRemaining } = await splitVolumeApi(volumeId, recordIds, title);
+    const newItems = await fetchVolumeItems(volume.id);
+    set((s) => {
+      const nextItems: Record<string, VolumeItem[]> = { ...s.volumeItems, [volume.id]: newItems };
+      let volumes: Volume[];
+      if (sourceDestroyed) {
+        delete nextItems[volumeId];
+        volumes = s.volumes.filter((v) => v.id !== volumeId);
+      } else {
+        volumes = s.volumes.map((v) => (v.id === volumeId ? { ...v, totalItems: sourceRemaining } : v));
+      }
+      return {
+        volumes: [...volumes, volume],
+        volumeItems: nextItems,
+        activeVolume: s.activeVolume?.id === volumeId && sourceDestroyed ? null : s.activeVolume,
+      };
+    });
+    if (!sourceDestroyed) await get().loadVolumeItems(volumeId);
+    return volume;
+  },
+
+  mergeVolumes: async (sourceVolumeIds, targetVolumeId) => {
+    const result = await mergeVolumesApi(sourceVolumeIds, targetVolumeId);
+    const targetItems = await fetchVolumeItems(targetVolumeId);
+    set((s) => {
+      const srcSet = new Set(sourceVolumeIds);
+      const nextItems: Record<string, VolumeItem[]> = { ...s.volumeItems, [targetVolumeId]: targetItems };
+      for (const sid of sourceVolumeIds) delete nextItems[sid];
+      return {
+        volumes: s.volumes
+          .filter((v) => !srcSet.has(v.id))
+          .map((v) => (v.id === targetVolumeId ? result.volume : v)),
+        volumeItems: nextItems,
+        activeVolume: s.activeVolume && srcSet.has(s.activeVolume.id)
+          ? null
+          : s.activeVolume?.id === targetVolumeId ? result.volume : s.activeVolume,
+      };
+    });
+    return result;
+  },
+
+  moveItemsToVolume: async (volumeId, recordIds, targetVolumeId) => {
+    const { moved, sourceDestroyed, sourceRemaining } = await moveItemsApi(volumeId, recordIds, targetVolumeId);
+    const targetItems = await fetchVolumeItems(targetVolumeId);
+    set((s) => {
+      const nextItems: Record<string, VolumeItem[]> = { ...s.volumeItems, [targetVolumeId]: targetItems };
+      let volumes = s.volumes.map((v) => (v.id === targetVolumeId ? { ...v, totalItems: targetItems.length } : v));
+      if (sourceDestroyed) {
+        delete nextItems[volumeId];
+        volumes = volumes.filter((v) => v.id !== volumeId);
+      }
+      return {
+        volumes,
+        volumeItems: nextItems,
+        activeVolume: s.activeVolume?.id === volumeId && sourceDestroyed ? null : s.activeVolume,
+      };
+    });
+    if (!sourceDestroyed) {
+      await get().loadVolumeItems(volumeId);
+      set((s) => ({
+        volumes: s.volumes.map((v) => (v.id === volumeId ? { ...v, totalItems: sourceRemaining } : v)),
+      }));
+    }
+    return { moved, sourceDestroyed };
   },
 
   // ── 移交至档案保管（服务端自动找/建盒归位） ──

@@ -3,7 +3,6 @@ package com.finance.ams.volume;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,6 +15,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.finance.ams.api.BizException;
+import com.finance.ams.auth.AuthUser;
+import com.finance.ams.auth.PermissionService;
 
 /**
  * 卷域端点（P1-② 组卷写路径）
@@ -31,19 +32,25 @@ import com.finance.ams.api.BizException;
  *   POST   /volumes/{id}/confirm         确认组卷（赋号时机消费 ams_config）
  *   POST   /volumes/{id}/unconfirm       撤销确认
  *   POST   /volumes/{id}/decompose       拆卷（件全部回池）
+ *   POST   /volumes/{id}/split           拆分（选定件出新卷，继承类别/年度/期限）
+ *   POST   /volumes/{id}/merge           合并（来源草稿卷并入本卷，来源删除）
+ *   POST   /volumes/{id}/move-items      转卷（选定件移入目标草稿卷）
  *   POST   /volumes/{id}/transfer        移交归盒（自动找/建盒）
  *   POST   /volumes/{id}/return          退回组卷工作台
  *
  * 认证：X-User-Id + X-Alfresco-Ticket 头（同 /records 规约）。
+ * 授权（2026-08-18）：写操作=组卷工作台功能码；查询=catalog 操作权+全宗准入+行级过滤。
  */
 @RestController
 @RequestMapping("/volumes")
 public class VolumeController {
 
   private final VolumeService service;
+  private final PermissionService perm;
 
-  public VolumeController(VolumeService service) {
+  public VolumeController(VolumeService service, PermissionService perm) {
     this.service = service;
+    this.perm = perm;
   }
 
   // ── 建卷 ──
@@ -53,7 +60,8 @@ public class VolumeController {
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
       @RequestBody Map<String, Object> body) {
-    requireAuth(userId, ticket);
+    AuthUser me = guard(userId, ticket, "volume-workspace");
+    perm.checkFonds(me, str(body.get("fondsCode")));
     var cmd = new VolumeService.CreateCmd(
         str(body.get("fondsCode")),
         str(body.get("title")),
@@ -79,8 +87,11 @@ public class VolumeController {
       @RequestParam(required = false) Integer year,
       @RequestParam(required = false) String typeCode,
       @RequestParam(required = false) String status) {
-    requireAuth(userId, ticket);
-    return service.list(ticket, new VolumeService.ListQuery(fondsCode, year, typeCode, status));
+    AuthUser me = perm.me(userId, ticket);
+    perm.requireOperation(me, PermissionService.Op.catalog);
+    perm.checkFonds(me, fondsCode);
+    return perm.filterRows(me,
+        service.list(ticket, new VolumeService.ListQuery(fondsCode, year, typeCode, status)));
   }
 
   // ── 更新 / 删除 ──
@@ -92,7 +103,7 @@ public class VolumeController {
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
       @PathVariable String volumeId,
       @RequestBody Map<String, String> body) {
-    requireAuth(userId, ticket);
+    guard(userId, ticket, "volume-workspace");
     return service.update(ticket, volumeId, body);
   }
 
@@ -101,7 +112,7 @@ public class VolumeController {
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
       @PathVariable String volumeId) {
-    requireAuth(userId, ticket);
+    guard(userId, ticket, "volume-workspace");
     service.deleteEmpty(ticket, volumeId);
     return Map.of("deleted", true);
   }
@@ -113,7 +124,8 @@ public class VolumeController {
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
       @PathVariable String volumeId) {
-    requireAuth(userId, ticket);
+    AuthUser me = perm.me(userId, ticket);
+    perm.requireOperation(me, PermissionService.Op.catalog);
     return service.items(ticket, volumeId);
   }
 
@@ -124,7 +136,7 @@ public class VolumeController {
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
       @PathVariable String volumeId,
       @RequestBody Map<String, Object> body) {
-    requireAuth(userId, ticket);
+    guard(userId, ticket, "volume-workspace");
     List<String> recordIds = (List<String>) body.get("recordIds");
     Integer position = intVal(body.get("position"));
     return service.addItems(ticket, volumeId, recordIds, position);
@@ -136,7 +148,7 @@ public class VolumeController {
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
       @PathVariable String volumeId,
       @PathVariable String recordId) {
-    requireAuth(userId, ticket);
+    guard(userId, ticket, "volume-workspace");
     return service.removeItem(ticket, volumeId, recordId);
   }
 
@@ -147,7 +159,7 @@ public class VolumeController {
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
       @PathVariable String volumeId,
       @RequestBody Map<String, Object> body) {
-    requireAuth(userId, ticket);
+    guard(userId, ticket, "volume-workspace");
     return service.reorder(ticket, volumeId, (List<String>) body.get("orderedRecordIds"));
   }
 
@@ -158,7 +170,7 @@ public class VolumeController {
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
       @PathVariable String volumeId) {
-    requireAuth(userId, ticket);
+    guard(userId, ticket, "volume-workspace");
     return service.confirm(ticket, userId, volumeId);
   }
 
@@ -167,7 +179,7 @@ public class VolumeController {
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
       @PathVariable String volumeId) {
-    requireAuth(userId, ticket);
+    guard(userId, ticket, "volume-workspace");
     return service.unconfirm(ticket, volumeId);
   }
 
@@ -176,9 +188,56 @@ public class VolumeController {
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
       @PathVariable String volumeId) {
-    requireAuth(userId, ticket);
+    guard(userId, ticket, "volume-workspace");
     int count = service.decompose(ticket, volumeId);
     return Map.of("decomposed", true, "itemCount", count);
+  }
+
+  /**
+   * 拆分：卷内选定件拆出为新案卷（继承源卷类别/年度/期限）
+   * body: { recordIds: [...], title?: 新案卷题名 }
+   */
+  @PostMapping("/{volumeId}/split")
+  @SuppressWarnings("unchecked")
+  public Map<String, Object> split(
+      @RequestHeader(value = "X-User-Id", required = false) String userId,
+      @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
+      @PathVariable String volumeId,
+      @RequestBody Map<String, Object> body) {
+    guard(userId, ticket, "volume-workspace");
+    return service.split(ticket, userId, volumeId,
+        (List<String>) body.get("recordIds"), str(body.get("title")));
+  }
+
+  /**
+   * 合并：多个来源草稿卷并入本卷（来源卷删除）
+   * body: { sourceVolumeIds: [...] }
+   */
+  @PostMapping("/{volumeId}/merge")
+  @SuppressWarnings("unchecked")
+  public Map<String, Object> merge(
+      @RequestHeader(value = "X-User-Id", required = false) String userId,
+      @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
+      @PathVariable String volumeId,
+      @RequestBody Map<String, Object> body) {
+    guard(userId, ticket, "volume-workspace");
+    return service.merge(ticket, userId, (List<String>) body.get("sourceVolumeIds"), volumeId);
+  }
+
+  /**
+   * 转卷：卷内选定件移入目标草稿卷（跨案卷迁移，不回收集池）
+   * body: { recordIds: [...], targetVolumeId }
+   */
+  @PostMapping("/{volumeId}/move-items")
+  @SuppressWarnings("unchecked")
+  public Map<String, Object> moveItems(
+      @RequestHeader(value = "X-User-Id", required = false) String userId,
+      @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
+      @PathVariable String volumeId,
+      @RequestBody Map<String, Object> body) {
+    guard(userId, ticket, "volume-workspace");
+    return service.moveItems(ticket, userId, volumeId,
+        (List<String>) body.get("recordIds"), str(body.get("targetVolumeId")));
   }
 
   @PostMapping("/{volumeId}/transfer")
@@ -186,7 +245,7 @@ public class VolumeController {
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
       @PathVariable String volumeId) {
-    requireAuth(userId, ticket);
+    guard(userId, ticket, "volume-workspace");
     return service.transfer(ticket, userId, volumeId);
   }
 
@@ -195,16 +254,17 @@ public class VolumeController {
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
       @PathVariable String volumeId) {
-    requireAuth(userId, ticket);
+    guard(userId, ticket, "volume-workspace");
     return service.returnToWorkbench(ticket, volumeId);
   }
 
   // ── 内部 ──
 
-  private void requireAuth(String userId, String ticket) {
-    if (userId == null || userId.isBlank() || ticket == null || ticket.isBlank()) {
-      throw new BizException(HttpStatus.UNAUTHORIZED, "SESSION_EXPIRED", "缺少会话凭据，请重新登录");
-    }
+  /** 功能码守卫：会话 + 指定功能权限（写操作统一组卷工作台口径） */
+  private AuthUser guard(String userId, String ticket, String functionKey) {
+    AuthUser me = perm.me(userId, ticket);
+    perm.requireFunction(me, functionKey);
+    return me;
   }
 
   private static String str(Object o) {

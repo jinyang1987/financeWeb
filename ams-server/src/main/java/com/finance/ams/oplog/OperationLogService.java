@@ -3,7 +3,9 @@ package com.finance.ams.oplog;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -31,9 +33,11 @@ public class OperationLogService {
   public void append(String actorId, String actorName, String action, String target,
                      String orderId, String detail) {
     // 注意：表结构以 V1__init.sql 为准——时间列是 ts（非 created_at），目标列是 target_label（非 target），id 为 bigserial 自增
-    String prevHash = jdbc.sql("SELECT hash FROM ams_operation_log ORDER BY ts DESC LIMIT 1")
+    String prevHash = jdbc.sql("SELECT hash FROM ams_operation_log ORDER BY ts DESC, id DESC LIMIT 1")
         .query().listOfRows().stream().findFirst().map(r -> String.valueOf(r.get("hash"))).orElse("GENESIS");
-    java.time.LocalDateTime now = java.time.LocalDateTime.now();
+    // 毫秒截断：PG timestamptz 为微秒精度，纳秒值入库会四舍五入导致链式校验时 ts 文本漂移
+    // （2026-08-16 审计链验真修复：保证 hash 输入的 ts 与库内读回值严格一致，链可真实重算）
+    java.time.LocalDateTime now = java.time.LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
     String ts = now.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
     String hash = sha256(prevHash + actorId + action + target + ts);
 
@@ -45,6 +49,56 @@ public class OperationLogService {
         .param(action).param(target).param(toUuidOrNull(orderId)).param(detail)
         .param(hash).param(prevHash).param(java.sql.Timestamp.valueOf(now))
         .update();
+  }
+
+  /**
+   * 审计链验真（2026-08-16）：按 (ts, id) 顺序重算每条 hash 并核对 prev_hash 链接。
+   * 任何篡改/删除中间行都会导致断链。返回 total/verified/broken + 前 10 个断点行 id。
+   * 注意：精度修复前（2026-08-16 之前）写入的历史行因 ts 纳秒漂移无法重算匹配，
+   * 会计入 unverifiable（如实报告，不粉饰）。
+   */
+  public Map<String, Object> verifyChain() {
+    List<Map<String, Object>> rows = jdbc.sql("""
+        SELECT id, actor_id, action, target_label, ts, hash, prev_hash
+        FROM ams_operation_log ORDER BY ts ASC, id ASC
+        """).query().listOfRows();
+
+    String prev = "GENESIS";
+    int verified = 0;
+    List<Object> brokenIds = new ArrayList<>();
+    List<Object> unverifiableIds = new ArrayList<>();
+    for (Map<String, Object> r : rows) {
+      String tsText = toIsoText(r.get("ts"));
+      String expected = sha256(prev + str(r.get("actor_id")) + str(r.get("action")) + str(r.get("target_label")) + tsText);
+      boolean linkOk = prev.equals(str(r.get("prev_hash")));
+      boolean hashOk = expected.equals(str(r.get("hash")));
+      if (linkOk && hashOk) {
+        verified++;
+      } else if (linkOk) {
+        // 链接完好但内容哈希不符：历史行（精度漂移）或真篡改——如实单列
+        unverifiableIds.add(r.get("id"));
+      } else {
+        brokenIds.add(r.get("id"));
+      }
+      prev = str(r.get("hash"));
+    }
+    Map<String, Object> out = new LinkedHashMap<>();
+    out.put("total", rows.size());
+    out.put("verified", verified);
+    out.put("unverifiable", unverifiableIds.size());
+    out.put("broken", brokenIds.size());
+    out.put("brokenIds", brokenIds.stream().limit(10).toList());
+    out.put("unverifiableIds", unverifiableIds.stream().limit(10).toList());
+    out.put("chainIntact", brokenIds.isEmpty());
+    return out;
+  }
+
+  /** ts 列值 → ISO 文本（与 append 时 hash 输入严格一致的渲染） */
+  private static String toIsoText(Object ts) {
+    if (ts instanceof java.sql.Timestamp t) {
+      return t.toLocalDateTime().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+    }
+    return str(ts);
   }
 
   public List<Map<String, Object>> query(String actorId, String action, String orderId,
@@ -87,4 +141,6 @@ public class OperationLogService {
       return "ERROR";
     }
   }
+
+  private static String str(Object o) { return o == null ? "" : String.valueOf(o); }
 }

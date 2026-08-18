@@ -9,6 +9,8 @@ import {
 } from '../services/api';
 import type { OrgTreeNode, PersonnelItem } from '../services/api';
 import { GroupService, personToPersonnel } from '../services/alfresco';
+import { fetchUsers, updateUserClearance, CLEARANCE_LABELS } from '../services/userService';
+import { useAppStore } from '../stores/appStore';
 
 // ─── Modal 组件 ──────────────────────────────────────────
 const Modal: React.FC<{
@@ -105,6 +107,37 @@ export const PersonnelManagePanel: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // 人员密级（2026-08-18 三员分立：/users 视图，account → clearance）
+  const [clearanceMap, setClearanceMap] = useState<Record<string, number>>({});
+  const [clearanceSaving, setClearanceSaving] = useState<string | null>(null);
+  const triggerToast = useAppStore((s) => s.triggerToast);
+
+  /** 加载人员密级映射（sys-personnel 功能码内，页面可见者均有权） */
+  const loadClearances = useCallback(async () => {
+    try {
+      const users = await fetchUsers();
+      const map: Record<string, number> = {};
+      for (const u of users) map[u.account] = u.clearance;
+      setClearanceMap(map);
+    } catch {
+      // 密级加载失败不阻断页面（列显示默认 1内部）
+    }
+  }, []);
+
+  /** 调整人员密级：写服务端 + 本地映射 + 审计链（服务端） */
+  const handleClearanceChange = async (account: string, level: number) => {
+    setClearanceSaving(account);
+    try {
+      await updateUserClearance(account, level);
+      setClearanceMap((prev) => ({ ...prev, [account]: level }));
+      triggerToast(`${account} 密级已调整为「${CLEARANCE_LABELS[level]}」（30 秒内全端生效）`, 'success');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : '密级调整失败');
+    } finally {
+      setClearanceSaving(null);
+    }
+  };
+
   // ─── 编辑 Modal 状态 ──────────────────────────────────
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingPerson, setEditingPerson] = useState<PersonnelItem | null>(null);
@@ -139,6 +172,9 @@ export const PersonnelManagePanel: React.FC = () => {
       // 加载全部人员
       const allPeople = await fetchPersonnel();
       setAllPersonnel(allPeople);
+
+      // 人员密级（与人员列表并行失败隔离）
+      void loadClearances();
 
       // 遍历所有部门，构建 personId → 部门名称 的映射
       const map = new Map<string, string>();
@@ -544,23 +580,24 @@ export const PersonnelManagePanel: React.FC = () => {
           <div className="flex-1 overflow-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  <th className="p-3 px-4">账号</th>
-                  <th className="p-3 px-4">姓名</th>
-                  <th className="p-3 px-4">邮箱</th>
-                  <th className="p-3 px-4">部门</th>
-                  <th className="p-3 px-4">岗位</th>
-                  <th className="p-3 px-4">有效人员</th>
-                  <th className="p-3 px-4 text-center">操作</th>
+                <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold">账号</th>
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold">姓名</th>
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold">邮箱</th>
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold">部门</th>
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold">岗位</th>
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold">人员密级</th>
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold">有效人员</th>
+                  <th className="px-4 py-3 text-center text-[13px] font-semibold">操作</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-sm">
+              <tbody>
                 {pagedPersonnel.map(p => (
                   <tr
                     key={p.id}
-                    className="group hover:bg-sky-50/40 hover:shadow-[inset_0_0_0_1px_rgba(99,102,241,0.08)] transition-all duration-150"
+                    className="group border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors"
                   >
-                    <td className="p-3 px-4 font-medium text-slate-800">
+                    <td className="px-4 py-3 text-sm font-medium text-slate-800">
                       <div className="flex items-center gap-2">
                         <div className="w-7 h-7 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 text-xs font-bold shrink-0">
                           {p.name.charAt(0)}
@@ -568,9 +605,9 @@ export const PersonnelManagePanel: React.FC = () => {
                         <span>{p.account}</span>
                       </div>
                     </td>
-                    <td className="p-3 px-4 text-slate-700">{p.name}</td>
-                    <td className="p-3 px-4 text-slate-500 font-mono text-xs">{p.email}</td>
-                    <td className="p-3 px-4">
+                    <td className="px-4 py-3 text-sm text-slate-800">{p.name}</td>
+                    <td className="px-4 py-3 font-mono text-[13px] text-slate-600">{p.email}</td>
+                    <td className="px-4 py-3">
                       {p.org ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md text-xs font-medium">
                           {p.org}
@@ -579,7 +616,7 @@ export const PersonnelManagePanel: React.FC = () => {
                         <span className="text-slate-300">—</span>
                       )}
                     </td>
-                    <td className="p-3 px-4">
+                    <td className="px-4 py-3">
                       {p.position ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-sky-50 text-sky-600 rounded-md text-xs font-medium">
                           {p.position}
@@ -588,7 +625,34 @@ export const PersonnelManagePanel: React.FC = () => {
                         <span className="text-slate-300">—</span>
                       )}
                     </td>
-                    <td className="p-3 px-4">
+                    <td className="px-4 py-3">
+                      {/* 人员密级（三员分立：安全保密员/admin 可调；写审计链） */}
+                      {(() => {
+                        const level = clearanceMap[p.account] ?? 1;
+                        const colors = [
+                          'bg-slate-100 text-slate-600 border-slate-200',
+                          'bg-sky-50 text-sky-700 border-sky-200',
+                          'bg-amber-50 text-amber-700 border-amber-300',
+                          'bg-rose-50 text-rose-700 border-rose-300',
+                        ];
+                        return (
+                          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-xs font-medium ${colors[level]}`}>
+                            <select
+                              value={level}
+                              disabled={clearanceSaving === p.account}
+                              onChange={(e) => handleClearanceChange(p.account, Number(e.target.value))}
+                              className="bg-transparent text-xs font-medium focus:outline-none cursor-pointer disabled:opacity-50"
+                              title="人员密级：高于此密级的档案对其不可见/不可读（有效密级另受角色上限约束）"
+                            >
+                              {CLEARANCE_LABELS.map((label, idx) => (
+                                <option key={label} value={idx}>{label}</option>
+                              ))}
+                            </select>
+                          </span>
+                        );
+                      })()}
+                    </td>
+                    <td className="px-4 py-3">
                       <button
                         type="button"
                         onClick={() => handleToggleEnabled(p)}
@@ -602,7 +666,7 @@ export const PersonnelManagePanel: React.FC = () => {
                         )}
                       </button>
                     </td>
-                    <td className="p-3 px-4 text-center">
+                    <td className="px-4 py-3 text-center">
                       <div className="flex items-center justify-center gap-1">
                         {/* 编辑按钮 */}
                         <button
@@ -628,7 +692,7 @@ export const PersonnelManagePanel: React.FC = () => {
                 ))}
                 {membersLoading ? (
                   <tr>
-                    <td colSpan={7} className="p-12 text-center text-slate-400 text-sm">
+                    <td colSpan={8} className="p-12 text-center text-slate-400 text-sm">
                       <div className="flex flex-col items-center gap-2">
                         <Loader2 className="w-8 h-8 animate-spin text-sky-500" />
                         <span>加载部门人员...</span>
@@ -637,7 +701,7 @@ export const PersonnelManagePanel: React.FC = () => {
                   </tr>
                 ) : pagedPersonnel.length === 0 && !membersLoading ? (
                   <tr>
-                    <td colSpan={7} className="p-12 text-center text-slate-400 text-sm">
+                    <td colSpan={8} className="p-12 text-center text-slate-400 text-sm">
                       <div className="flex flex-col items-center gap-2">
                         {isUnitSelected ? (
                           <>

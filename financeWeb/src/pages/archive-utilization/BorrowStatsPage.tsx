@@ -222,24 +222,24 @@ const BorrowStatsPage: React.FC = () => {
             <p className="text-[11px] text-slate-400 mb-4">按部门统计实体档案逾期率，纳入部门考核</p>
             <table className="w-full">
               <thead>
-                <tr className="text-left border-b border-slate-100">
-                  <th className="py-2 text-[10px] font-semibold text-slate-500">部门</th>
-                  <th className="py-2 text-[10px] font-semibold text-slate-500 text-center">实体借阅</th>
-                  <th className="py-2 text-[10px] font-semibold text-slate-500 text-center">按期归还</th>
-                  <th className="py-2 text-[10px] font-semibold text-slate-500 text-center">逾期未还</th>
-                  <th className="py-2 text-[10px] font-semibold text-slate-500 text-right">逾期率</th>
+                <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold">部门</th>
+                  <th className="px-4 py-3 text-center text-[13px] font-semibold">实体借阅</th>
+                  <th className="px-4 py-3 text-center text-[13px] font-semibold">按期归还</th>
+                  <th className="px-4 py-3 text-center text-[13px] font-semibold">逾期未还</th>
+                  <th className="px-4 py-3 text-right text-[13px] font-semibold">逾期率</th>
                 </tr>
               </thead>
               <tbody>
                 {deptBoard.map((d) => (
-                  <tr key={d.dept} className="border-b border-slate-50">
-                    <td className="py-2.5 text-xs font-medium text-slate-700">{d.dept}</td>
-                    <td className="py-2.5 text-xs text-center font-mono text-slate-600">{d.total}</td>
-                    <td className="py-2.5 text-xs text-center font-mono text-emerald-600">{d.onTime}</td>
-                    <td className="py-2.5 text-xs text-center font-mono">
+                  <tr key={d.dept} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
+                    <td className="px-4 py-3 text-sm font-medium text-slate-800">{d.dept}</td>
+                    <td className="px-4 py-3 text-center font-mono text-[13px] text-slate-600">{d.total}</td>
+                    <td className="px-4 py-3 text-center font-mono text-[13px] text-emerald-600">{d.onTime}</td>
+                    <td className="px-4 py-3 text-center font-mono text-[13px]">
                       <span className={d.overdue > 0 ? 'text-red-600 font-bold' : 'text-slate-400'}>{d.overdue}</span>
                     </td>
-                    <td className="py-2.5 text-right">
+                    <td className="px-4 py-3 text-right">
                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                         d.rate === 0 ? 'bg-emerald-100 text-emerald-700' : d.rate < 30 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
                       }`}>
@@ -266,31 +266,31 @@ const BorrowStatsPage: React.FC = () => {
             </div>
             <span className="text-xs text-slate-400">共 {logs.length} 条</span>
           </div>
-          <div className="border border-slate-100 rounded-xl overflow-hidden">
+          <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
             <table className="w-full">
               <thead>
-                <tr className="bg-slate-50 text-left">
-                  <th className="px-3 py-2 text-[10px] font-semibold text-slate-500">时间</th>
-                  <th className="px-3 py-2 text-[10px] font-semibold text-slate-500">操作人</th>
-                  <th className="px-3 py-2 text-[10px] font-semibold text-slate-500">角色</th>
-                  <th className="px-3 py-2 text-[10px] font-semibold text-slate-500">动作</th>
-                  <th className="px-3 py-2 text-[10px] font-semibold text-slate-500">对象</th>
-                  <th className="px-3 py-2 text-[10px] font-semibold text-slate-500">详情</th>
+                <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold">时间</th>
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold">操作人</th>
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold">角色</th>
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold">动作</th>
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold">对象</th>
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold">详情</th>
                 </tr>
               </thead>
               <tbody>
                 {shownLogs.map((log: BorrowLog) => (
-                  <tr key={log.id} className="border-t border-slate-50 hover:bg-slate-50/60">
-                    <td className="px-3 py-2 text-[11px] font-mono text-slate-500 whitespace-nowrap">{log.timestamp}</td>
-                    <td className="px-3 py-2 text-[11px] text-slate-700 font-medium whitespace-nowrap">{log.actorName}</td>
-                    <td className="px-3 py-2 text-[11px] text-slate-400 whitespace-nowrap">{log.actorRoleLabel}</td>
-                    <td className="px-3 py-2">
+                  <tr key={log.id} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
+                    <td className="px-4 py-3 font-mono text-[13px] text-slate-600 whitespace-nowrap">{log.timestamp}</td>
+                    <td className="px-4 py-3 text-sm font-medium text-slate-800 whitespace-nowrap">{log.actorName}</td>
+                    <td className="px-4 py-3 text-[13px] text-slate-600 whitespace-nowrap">{log.actorRoleLabel}</td>
+                    <td className="px-4 py-3">
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap ${LOG_ACTION_COLORS[log.action] || 'bg-slate-100 text-slate-600'}`}>
                         {log.action}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-[11px] text-slate-600 max-w-[220px] truncate" title={log.target}>{log.target}</td>
-                    <td className="px-3 py-2 text-[11px] text-slate-400 max-w-[240px] truncate" title={log.detail}>{log.detail || '—'}</td>
+                    <td className="px-4 py-3 text-[13px] text-slate-600 max-w-[220px] truncate" title={log.target}>{log.target}</td>
+                    <td className="px-4 py-3 text-[13px] text-slate-600 max-w-[240px] truncate" title={log.detail}>{log.detail || '—'}</td>
                   </tr>
                 ))}
               </tbody>

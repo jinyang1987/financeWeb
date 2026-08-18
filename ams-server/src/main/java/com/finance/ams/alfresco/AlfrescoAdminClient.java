@@ -49,6 +49,11 @@ public class AlfrescoAdminClient {
     return adminTicket;
   }
 
+  /** 暴露 admin ticket（ams-server 内部使用，例如为前端 Alfresco 直连换发有效 ticket） */
+  public String getAdminTicket() {
+    return ticket();
+  }
+
   private String withTicket(String url) {
     return url + (url.contains("?") ? "&" : "?") + "alf_ticket=" + ticket();
   }
@@ -85,6 +90,35 @@ public class AlfrescoAdminClient {
           Map.of("id", id, "firstName", firstName, "lastName", lastName, "email", email, "password", password),
           Map.class);
       return null;
+    });
+  }
+
+  /** 人员列表（admin 视角；人员管理端点服务端代读——ACS 非 admin 读他人 403） */
+  @SuppressWarnings("unchecked")
+  public List<Map<String, Object>> listPeople() {
+    return callWithRetry(() -> {
+      ResponseEntity<Map> res = http.getForEntity(withTicket(baseUrl + apiV1 + "/people?maxItems=500"), Map.class);
+      Map<String, Object> list = (Map<String, Object>) res.getBody().get("list");
+      List<Map<String, Object>> entries = (List<Map<String, Object>>) list.get("entries");
+      return entries.stream().map(e -> (Map<String, Object>) e.get("entry")).toList();
+    });
+  }
+
+  /** 取用户所属组 id 列表（admin 视角；角色解析 GROUP_ROLE_*） */
+  @SuppressWarnings("unchecked")
+  public List<String> personGroupIds(String personId) {
+    return callWithRetry(() -> {
+      try {
+        ResponseEntity<Map> res = http.getForEntity(
+            withTicket(baseUrl + apiV1 + "/people/" + personId + "/groups?maxItems=100"), Map.class);
+        Map<String, Object> list = (Map<String, Object>) res.getBody().get("list");
+        List<Map<String, Object>> entries = (List<Map<String, Object>>) list.get("entries");
+        return entries.stream()
+            .map(e -> String.valueOf(((Map<String, Object>) e.get("entry")).get("id")))
+            .toList();
+      } catch (HttpClientErrorException.NotFound e) {
+        return List.of();
+      }
     });
   }
 

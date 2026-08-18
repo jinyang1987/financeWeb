@@ -1,5 +1,7 @@
 package com.finance.ams.sourcedoc;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -7,6 +9,9 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 
@@ -62,7 +67,14 @@ public class SourceDocService {
   /** 按 record 节点 id 查询其下全部原始凭证 */
   public List<Map<String, Object>> listByRecord(String ticket, String recordId) {
     List<Map<String, Object>> out = new ArrayList<>();
-    collectSourceDocs(ticket, recordId, out);
+    // 密级继承：附件行级过滤需父件密级（2026-08-18 权限补强）
+    String parentSecurity = "";
+    try {
+      parentSecurity = prop(nodes.getNode(ticket, recordId), "finance:securityLevel");
+    } catch (Exception e) {
+      log.debug("父件密级读取失败（按普通处理）: {}", recordId);
+    }
+    collectSourceDocs(ticket, recordId, parentSecurity, out);
     return out;
   }
 
@@ -98,7 +110,9 @@ public class SourceDocService {
       }
     }
     log.info("创建原始凭证: {} → {}", fields.get("documentNo"), entry.get("id"));
-    return toView(entry);
+    Map<String, Object> view = toView(entry);
+    view.put("parentRecordId", recordId);
+    return view;
   }
 
   // ═══════════════════ 内部遍历 ═══════════════════
@@ -120,7 +134,8 @@ public class SourceDocService {
         Map<String, Object> entry = (Map<String, Object>) e.get("entry");
         String nodeType = (String) entry.get("nodeType");
         if ("finance:record".equals(nodeType)) {
-          collectSourceDocs(ticket, (String) entry.get("id"), out);
+          // 密级继承下传：附件行级过滤口径 = max(附件自身密级, 父件密级)
+          collectSourceDocs(ticket, (String) entry.get("id"), prop(entry, "finance:securityLevel"), out);
         } else if (Boolean.TRUE.equals(entry.get("isFolder"))) {
           collectFromTree(ticket, (String) entry.get("id"), out);
         }
@@ -134,6 +149,13 @@ public class SourceDocService {
   /** 读取指定父节点下的 finance:sourceDocument 子节点 */
   @SuppressWarnings("unchecked")
   private void collectSourceDocs(String ticket, String parentId, List<Map<String, Object>> out) {
+    collectSourceDocs(ticket, parentId, "", out);
+  }
+
+  /** 读取指定父节点下的 finance:sourceDocument 子节点（携带父件密级做继承判定） */
+  @SuppressWarnings("unchecked")
+  private void collectSourceDocs(String ticket, String parentId, String parentSecurity,
+                                 List<Map<String, Object>> out) {
     int skip = 0;
     while (true) {
       Map<String, Object> list;
@@ -147,12 +169,68 @@ public class SourceDocService {
       for (Map<String, Object> e : (List<Map<String, Object>>) list.get("entries")) {
         Map<String, Object> entry = (Map<String, Object>) e.get("entry");
         if ("finance:sourceDocument".equals(entry.get("nodeType"))) {
-          out.add(toView(entry));
+          Map<String, Object> view = toView(entry);
+          // 父件关联（2026-08-16 贯通修复：附件↔记账凭证联动依赖此字段）
+          view.put("parentRecordId", parentId);
+          // 密级继承（2026-08-18 权限补强）：max(附件自身密级, 父件密级)，行级过滤消费
+          view.put("securityLevel", inheritSecurity(prop(entry, "finance:securityLevel"), parentSecurity));
+          out.add(view);
         }
       }
       Map<String, Object> paging = (Map<String, Object>) list.get("pagination");
       if (!Boolean.TRUE.equals(paging.get("hasMoreItems"))) break;
       skip += 500;
+    }
+  }
+
+  /** 密级继承：取附件自身与父件密级的较高者（附件不得比父件低密） */
+  private static String inheritSecurity(String own, String parent) {
+    String[] labels = {"普通", "内部", "秘密", "机密"};
+    int level = Math.max(
+        com.finance.ams.auth.PermissionService.levelOf(own),
+        com.finance.ams.auth.PermissionService.levelOf(parent));
+    return labels[level];
+  }
+
+  // ═══════════════════ 附件内容读取（预览/下载） ═══════════════════
+
+  /**
+   * 读取原始凭证节点内容（经 Alfresco，以登录用户 ticket 执行，权限生效）。
+   * 带 Content-Disposition：download=true 为附件下载，否则 inline 预览。
+   */
+  public ResponseEntity<byte[]> content(String ticket, String docId, boolean download, String filename) {
+    try {
+      Map<String, Object> entry = nodes.getNode(ticket, docId);
+      if (!"finance:sourceDocument".equals(entry.get("nodeType"))) {
+        throw BizException.badRequest("NOT_FOUND", "原始凭证不存在: " + docId);
+      }
+      ResponseEntity<byte[]> upstream = nodes.getContent(ticket, docId);
+      byte[] body = upstream.getBody();
+      MediaType mime = upstream.getHeaders().getContentType() == null
+          ? MediaType.APPLICATION_OCTET_STREAM : upstream.getHeaders().getContentType();
+      String safeName = (filename == null || filename.isBlank()) ? str(entry.get("name")) : filename;
+      String encoded = URLEncoder.encode(safeName, StandardCharsets.UTF_8).replace("+", "%20");
+      return ResponseEntity.status(upstream.getStatusCode())
+          .contentType(mime)
+          .header(HttpHeaders.CONTENT_DISPOSITION,
+              (download ? "attachment" : "inline") + "; filename*=UTF-8''" + encoded)
+          .body(body);
+    } catch (HttpClientErrorException e) {
+      throw RepoLayout.translate("附件内容读取失败", e);
+    }
+  }
+
+  /**
+   * 附件所属件节点 id（借阅授权按件授予，附件内容闸口需向上归属；
+   * 附件是 record 的直接子节点，entry.parentId 即件 id）
+   */
+  public String parentRecordIdOf(String ticket, String docId) {
+    try {
+      Map<String, Object> entry = nodes.getNode(ticket, docId);
+      Object parent = entry.get("parentId");
+      return parent == null ? "" : String.valueOf(parent);
+    } catch (HttpClientErrorException e) {
+      throw RepoLayout.translate("附件归属查询失败", e);
     }
   }
 

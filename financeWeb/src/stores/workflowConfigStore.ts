@@ -28,6 +28,55 @@ export const WORKFLOW_CATEGORY_META: Record<WorkflowCategory, { label: string; d
   utilization: { label: '借阅利用', dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
 };
 
+// ═══════════════════════════════════════════════════════════
+// 审批组链规则（借阅利用流程运行时消费，2026-08-18）
+// 与 Activiti OperateVariablesListener「审批人按约定动态计算」同思想：
+// 规则显式配置、服务端组链、配置缺失/停用回退默认，不做隐式魔术。
+// ═══════════════════════════════════════════════════════════
+
+/** 升级条件：extended_perms=含下载/打印/实体调阅；sensitive=涉密（秘密/机密） */
+export type EscalationWhen = 'extended_perms' | 'sensitive';
+
+export interface EscalationRule {
+  when: EscalationWhen;
+  appendRole: string;
+}
+
+/** 审批组链规则：base（基础链，有序）→ escalation（条件追加）→ final（终审） */
+export interface ApprovalChainRules {
+  base: string[];
+  escalation: EscalationRule[];
+  final: string;
+}
+
+/** 内置默认链（与历史硬编码行为一致；配置缺失/停用时服务端同口径回退） */
+export const DEFAULT_BORROW_CHAIN_RULES: ApprovalChainRules = {
+  base: ['dept_manager'],
+  escalation: [
+    { when: 'extended_perms', appendRole: 'cfo' },
+    { when: 'sensitive', appendRole: 'hrvp' },
+  ],
+  final: 'archivist',
+};
+
+/** 可担任审批节点的角色（与审批中心服务能力对齐） */
+export const APPROVER_ROLE_OPTIONS: { key: string; label: string }[] = [
+  { key: 'dept_manager', label: '部门经理' },
+  { key: 'cfo', label: '财务总监' },
+  { key: 'hrvp', label: 'HR副总裁' },
+  { key: 'archivist', label: '档案管理员' },
+  { key: 'archive_director', label: '档案主管' },
+];
+
+/** 取流程的组链规则（缺省回退默认；停用时调用方按默认语义提示） */
+export function getChainRules(wf?: BusinessWorkflow): ApprovalChainRules {
+  const r = wf?.chainRules;
+  if (!r || !Array.isArray(r.base) || !Array.isArray(r.escalation) || !r.final) {
+    return DEFAULT_BORROW_CHAIN_RULES;
+  }
+  return r;
+}
+
 /** 统一流程定义：业务元数据 + 可视化流程图 */
 export interface BusinessWorkflow {
   id: string;
@@ -44,6 +93,8 @@ export interface BusinessWorkflow {
   updatedDate: string;
   nodes: WfNode[];
   connections: WfConnection[];
+  /** 审批组链规则（借阅利用流程由服务端运行时消费；其他类别为登记册语义） */
+  chainRules?: ApprovalChainRules;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -200,6 +251,8 @@ export const DEFAULT_WORKFLOWS: BusinessWorkflow[] = [
     checkRule: '仅浏览→经理+管理员；含下载/打印/实体→追加 CFO；涉密→追加 HRVP 会签',
     approver: '部门经理 → CFO → HRVP → 档案管理员（按条件裁剪）',
     active: true, builtIn: true, version: 1, createdDate: TODAY, updatedDate: TODAY,
+    // ★ 组链规则：服务端运行时真消费（BorrowService.resolveChain），修改对今后发起的申请生效
+    chainRules: DEFAULT_BORROW_CHAIN_RULES,
     nodes: [
       n('bw-1', 'start', '提交借阅申请'),
       n('bw-2', 'userTask', '部门经理审批', { assigneeType: 'single', assigneeLabel: '部门经理', dueDateDays: 2 }),

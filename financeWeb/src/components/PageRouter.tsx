@@ -14,6 +14,7 @@ import UnitManagePage from '../pages/system/UnitManagePage';
 import OrgManagePage from '../pages/system/OrgManagePage';
 import PersonnelManagePage from '../pages/system/PersonnelManagePage';
 import RoleManagePage from '../pages/system/RoleManagePage';
+import StorageConfigPage from '../pages/system/StorageConfigPage';
 
 // Direct component imports
 import ApiReceivePage from '../pages/archive-rcv/ApiReceivePage';
@@ -51,6 +52,9 @@ const PageRouter: React.FC<PageRouterProps> = (props) => {
       return <PersonnelManagePage />;
     case 'sys-role':
       return <RoleManagePage />;
+
+    case 'sys-storage':
+      return <StorageConfigPage triggerToast={props.triggerToast} />;
 
     case 'sys-log':
       return (

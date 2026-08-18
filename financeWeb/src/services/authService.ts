@@ -46,4 +46,10 @@ export const authService = {
       session.clear();
     }
   },
+
+  /** 换发有效的 Alfresco ticket（供 Alfresco 直连：单位管理/组织人员；ticket 过期时前端自动刷新） */
+  async alfrescoTicket(): Promise<string> {
+    const r = await http.get<{ ticket: string }>('/auth/alfresco-ticket');
+    return r.ticket;
+  },
 };

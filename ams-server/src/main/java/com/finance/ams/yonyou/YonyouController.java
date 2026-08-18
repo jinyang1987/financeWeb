@@ -43,14 +43,17 @@ public class YonyouController {
   private final YonyouSyncService sync;
   private final YonyouScheduler scheduler;
   private final ConfigService config;
+  private final com.finance.ams.auth.AuthService auth;
   private final ObjectMapper json = new ObjectMapper();
 
   public YonyouController(YonyouClient client, YonyouSyncService sync,
-                          YonyouScheduler scheduler, ConfigService config) {
+                          YonyouScheduler scheduler, ConfigService config,
+                          com.finance.ams.auth.AuthService auth) {
     this.client = client;
     this.sync = sync;
     this.scheduler = scheduler;
     this.config = config;
+    this.auth = auth;
   }
 
   // ═══ 状态总览 ═══
@@ -86,7 +89,7 @@ public class YonyouController {
   public Map<String, Object> getConfig(
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket) {
-    requireAuth(userId, ticket);
+    requireAdminRole(userId, ticket);
     Map<String, Object> out = new LinkedHashMap<>();
     out.put("configured", client.configured());
     config.get(YonyouSyncService.CONFIG_CONN).ifPresent(e -> {
@@ -108,7 +111,7 @@ public class YonyouController {
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
       @RequestBody Map<String, Object> body) {
-    requireAuth(userId, ticket);
+    requireAdminRole(userId, ticket);
     // secret 传空/脱敏占位 = 保持原值
     String secret = str(body.get("appSecret"));
     if (secret.isBlank() || "********".equals(secret)) {
@@ -206,7 +209,10 @@ public class YonyouController {
     requireAuth(userId, ticket);
     String period = str(body.get("period"));
     Boolean autoGroup = body.get("autoGroup") instanceof Boolean b ? b : null;
-    return sync.syncNow(period, "manual", userId, ticket, autoGroup);
+    Boolean review = body.get("review") instanceof Boolean b2 ? b2 : null;
+    String destination = str(body.get("destination"));
+    return sync.syncNow(period, "manual", userId, ticket, autoGroup, review,
+        destination.isBlank() ? null : destination);
   }
 
   @GetMapping("/batches")
@@ -256,7 +262,8 @@ public class YonyouController {
     if (!org.springframework.scheduling.support.CronExpression.isValidExpression(cron)) {
       throw BizException.badRequest("VALIDATION_FAILED", "cron 表达式不合法: " + cron);
     }
-    sync.saveSchedule(new YonyouSyncService.ScheduleConfig(enabled, cron, autoGroup, str(body.get("description"))), userId);
+    sync.saveSchedule(new YonyouSyncService.ScheduleConfig(enabled, cron, autoGroup,
+        str(body.get("destination")), str(body.get("description"))), userId);
     return getSchedule(userId, ticket);
   }
 
@@ -265,6 +272,17 @@ public class YonyouController {
   private void requireAuth(String userId, String ticket) {
     if (userId == null || userId.isBlank() || ticket == null || ticket.isBlank()) {
       throw new BizException(HttpStatus.UNAUTHORIZED, "SESSION_EXPIRED", "缺少会话凭据，请重新登录");
+    }
+  }
+
+  /** 连接配置仅 档案管理员/档案主管/admin 可读写 */
+  private void requireAdminRole(String userId, String ticket) {
+    requireAuth(userId, ticket);
+    var user = auth.me(userId, ticket);
+    boolean allowed = user.roles().stream().anyMatch(r ->
+        java.util.List.of("admin", "archive_director", "archivist").contains(r));
+    if (!allowed) {
+      throw new BizException(HttpStatus.FORBIDDEN, "FORBIDDEN", "仅档案管理员/档案主管/系统管理员可管理连接配置");
     }
   }
 

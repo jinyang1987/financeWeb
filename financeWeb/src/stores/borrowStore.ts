@@ -157,7 +157,7 @@ export const useBorrowStore = create<BorrowState>((set, get) => ({
   },
 
   cancelOrder: async (orderId) => {
-    await borrowApi.terminateOrder(orderId);
+    await borrowApi.cancelOrderByApplicant(orderId);
     await get().loadOrders();
   },
 

@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿import React, { useState } from 'react';
+﻿﻿﻿﻿﻿﻿﻿import React, { useState } from 'react';
 import { ShieldCheck, Users, Lock } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { ApiRequestError } from '../services/http';
@@ -51,8 +51,7 @@ export function LoginPage() {
             会计档案管理系统
           </h1>
           <p className="text-sky-200/70 text-sm leading-relaxed">
-            符合GB/T 39719-2020标准的电子会计档案全生命周期管理平台，<br />
-            基于 Alfresco 内容管理平台构建。
+            符合GB/T 39719-2020标准的电子会计档案全生命周期管理平台。
           </p>
 
           <div className="mt-10 grid grid-cols-3 gap-4 text-left">

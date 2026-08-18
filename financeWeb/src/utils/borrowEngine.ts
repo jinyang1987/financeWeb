@@ -20,6 +20,7 @@ import type {
   OrderStatus,
 } from '../types/borrow';
 import { ROLE_LABELS, firstUserWithRole, type RoleKey } from '../types/user';
+import { DEFAULT_BORROW_CHAIN_RULES, type ApprovalChainRules } from '../stores/workflowConfigStore';
 
 // ──────────────────────────────────────────────
 // 1. 动态审批路由
@@ -41,22 +42,34 @@ export function hasSensitiveItems(items: BorrowOrderItem[]): boolean {
 }
 
 /**
- * 计算审批链：
- *   部门经理（必）→ 财务总监（高危权限）→ HRVP（涉密）→ 档案管理员（必）
+ * 计算审批链（预览）：
+ *   组链规则来自流程配置「借阅利用」（ApprovalChainRules），与服务端运行时同一份配置；
+ *   未传 rules 时回退内置默认链（与历史硬编码一致）。
+ *   base（基础链）→ escalation（条件追加）→ final（终审），去重保序。
  */
-export function computeApprovalRoute(items: BorrowOrderItem[]): ApprovalStep[] {
-  const roles: RoleKey[] = ['dept_manager'];
-  if (needsCfoApproval(items)) roles.push('cfo');
-  if (hasSensitiveItems(items)) roles.push('hrvp');
-  roles.push('archivist');
+export function computeApprovalRoute(items: BorrowOrderItem[], rules?: ApprovalChainRules): ApprovalStep[] {
+  const r = rules ?? DEFAULT_BORROW_CHAIN_RULES;
+  const extended = needsCfoApproval(items);
+  const sensitive = hasSensitiveItems(items);
 
-  return roles.map((role, i) => ({
-    seq: i + 1,
-    role,
-    roleLabel: ROLE_LABELS[role],
-    assigneeName: firstUserWithRole(role)?.name || ROLE_LABELS[role],
-    status: 'pending' as const,
-  }));
+  const roles: string[] = [];
+  for (const role of r.base) if (!roles.includes(role)) roles.push(role);
+  for (const esc of r.escalation) {
+    if ((esc.when === 'extended_perms' && extended) || (esc.when === 'sensitive' && sensitive)) {
+      if (esc.appendRole && !roles.includes(esc.appendRole)) roles.push(esc.appendRole);
+    }
+  }
+  if (r.final && !roles.includes(r.final)) roles.push(r.final);
+
+  return roles
+    .filter((role): role is RoleKey => role in ROLE_LABELS)
+    .map((role, i) => ({
+      seq: i + 1,
+      role,
+      roleLabel: ROLE_LABELS[role],
+      assigneeName: firstUserWithRole(role)?.name || ROLE_LABELS[role],
+      status: 'pending' as const,
+    }));
 }
 
 // ──────────────────────────────────────────────

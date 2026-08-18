@@ -15,8 +15,9 @@ import {
   ChevronRight, ChevronDown, CheckCircle2, AlertTriangle,
   FileText, DollarSign, Building2, Hash, Tag, Calendar,
   User, Package, ExternalLink, FileSpreadsheet, Edit3, Trash2,
-  FolderTree, Search, Monitor, StickyNote,
+  FolderTree, Search, Monitor, StickyNote, Paperclip, Eye, Download,
 } from 'lucide-react';
+import { fetchRecordContent, downloadRecord } from '../services/recordService';
 import { useArchiveStore } from '../stores/archiveStore';
 import { useSourceDocumentStore } from '../stores/sourceDocumentStore';
 import { useMetadataDisplayStore } from '../stores/metadataDisplayStore';
@@ -216,7 +217,24 @@ interface RecordDetailPanelProps {
 
 const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, onDelete, context = 'archive' }) => {
   const [expandedDocId, setExpandedDocId] = useState<string | null>(null);
+  const [ocrOpen, setOcrOpen] = useState(false);
   const isVoucher = context === 'voucher';
+  // ★ 原始凭证判别（2026-08-18 详情重设计）：上传向导以 archiveType=记账凭证 +
+  //   voucherCategory=原始凭证 入池；部分路径 archiveType 直接为原始凭证——两种都认。
+  const isSourceDoc = record.voucherCategory === '原始凭证' || (record.archiveType || '').includes('原始凭证');
+
+  // 原始凭证自身附件（上传原件）预览/下载
+  const handlePreview = useCallback(async () => {
+    try {
+      const blob = await fetchRecordContent(record.id);
+      window.open(URL.createObjectURL(blob), '_blank');
+    } catch {
+      alert('预览失败：无法读取附件内容');
+    }
+  }, [record.id]);
+  const handleDownload = useCallback((name: string) => {
+    downloadRecord(record.id, name).catch(() => alert('下载失败'));
+  }, [record.id]);
 
   // ── 元数据显示配置 ──
   const metaStore = useMetadataDisplayStore();
@@ -276,6 +294,28 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
   // ── L1 概要字段（FieldGrid 表格化） ──
   const summaryFields: FieldItem[] = useMemo(() => {
     const out: FieldItem[] = [];
+    // ★ 原始凭证版式：展示自身票据信息（不套记账凭证模板，不附加 v2.2 凭证扩展）
+    if (isSourceDoc) {
+      out.push({ label: '票据号码', value: record.voucherNo, mono: true });
+      out.push({ label: '票据类型', value: record.voucherCategory === '原始凭证' ? '原始凭证' : record.voucherCategory || record.archiveType });
+      if (record.documentNo) out.push({ label: '单据编号', value: record.documentNo, mono: true });
+      if (record.counterpartyName) out.push({ label: '往来单位', value: record.counterpartyName });
+      out.push({
+        label: '业务日期',
+        value: record.voucherDate || (record.year ? `${record.year}-${record.month ? record.month.padStart(2, '0') : '01'}` : ''),
+        mono: true,
+      });
+      out.push({ label: '小写金额', value: `¥${fmt(record.amount)}`, mono: true, valueClassName: 'text-emerald-700 font-medium' });
+      if (record.accountSubject) out.push({ label: '会计科目', value: record.accountSubject });
+      if (record.preparer) out.push({ label: '制单人', value: record.preparer });
+      if (record.department) out.push({ label: '部门', value: record.department });
+      out.push({ label: '载体', value: record.carrierType === 'electronic' ? '纯电子' : '纸质数字化' });
+      out.push({ label: '组卷状态', value: record.status });
+      if (record.volumeCode) out.push({ label: '所属案卷', value: record.volumeCode, mono: true });
+      if (record.archiveCode) out.push({ label: '档号', value: record.archiveCode, mono: true });
+      if (record.summary) out.push({ label: '摘要', value: record.summary, span: 2 });
+      return out;
+    }
     if (isVoucher) {
       voucherFields.forEach(col => out.push({ label: col.label, value: col.accessor(record) }));
     } else {
@@ -295,14 +335,21 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
     if (record.sourceSystem) out.push({ label: '来源系统', value: record.sourceSystem });
     if (record.summary) out.push({ label: '摘要', value: record.summary, span: 2 });
     return out;
-  }, [isVoucher, voucherFields, visibleArchiveFields, record]);
+  }, [isVoucher, isSourceDoc, voucherFields, visibleArchiveFields, record]);
 
   return (
     <div className="flex-1 h-full bg-white border-l border-slate-200 overflow-y-auto">
       {/* 顶栏 */}
       <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-3 bg-white border-b border-slate-200">
         <div>
-          <div className="text-sm font-bold text-slate-800">{record.voucherNo}</div>
+          <div className="flex items-center gap-2">
+            <div className="text-sm font-bold text-slate-800">{record.voucherNo}</div>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+              isSourceDoc ? 'bg-amber-50 text-amber-700' : 'bg-sky-50 text-sky-600'
+            }`}>
+              {isSourceDoc ? '原始凭证' : '记账凭证'}
+            </span>
+          </div>
           {isVoucher ? (
             <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
               record.status === '已组卷' ? 'bg-emerald-50 text-emerald-600' :
@@ -335,7 +382,7 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
           <div className="flex items-center gap-2 mb-3">
             <FileText className="w-4 h-4 text-sky-600" />
             <span className="text-xs font-semibold text-slate-700">
-              {isVoucher ? '记账凭证信息' : '档案条目信息'}
+              {isSourceDoc ? '原始凭证信息' : isVoucher ? '记账凭证信息' : '档案条目信息'}
             </span>
             {!isVoucher && (
               <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
@@ -389,7 +436,75 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
           </section>
         )}
 
-        {/* ═══ L2+L3: 所附原始凭证（附件） ═══ */}
+        {/* ═══ L2: 原始凭证 → 自身电子附件（上传原件）+ OCR 正文 ═══ */}
+        {isSourceDoc ? (
+          <section>
+            <div className="flex items-center gap-2 mb-3">
+              <Paperclip className="w-4 h-4 text-emerald-600" />
+              <span className="text-xs font-semibold text-slate-700">电子附件（上传原件）</span>
+              <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">
+                {record.components?.length || 0} 份
+              </span>
+            </div>
+            {record.components && record.components.length > 0 ? (
+              <div className="space-y-2">
+                {record.components.map((c, i) => (
+                  <div key={i} className="flex items-center gap-3 border border-slate-200 rounded-lg px-3 py-2.5 bg-white hover:border-sky-200 transition-colors">
+                    <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
+                      <FileText className="w-4 h-4 text-emerald-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-semibold text-slate-700 truncate" title={c.name}>{c.name}</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">
+                        {c.type} · {c.size}{c.contentType ? ` · ${c.contentType.toUpperCase()}` : ''}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handlePreview}
+                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-sky-700 bg-sky-50 border border-sky-200 rounded-lg hover:bg-sky-100 cursor-pointer"
+                    >
+                      <Eye className="w-3 h-3" />预览
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDownload(c.name)}
+                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer"
+                    >
+                      <Download className="w-3 h-3" />下载
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-20 border-2 border-dashed border-slate-200 rounded-xl">
+                <p className="text-xs text-slate-400">暂无电子附件</p>
+              </div>
+            )}
+
+            {/* OCR 双通道识别正文（PDF 文本层 / tesseract） */}
+            {record.ocrText && (
+              <div className="mt-3 border border-slate-200 rounded-lg overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setOcrOpen(!ocrOpen)}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs font-medium text-slate-600 hover:bg-slate-50 cursor-pointer"
+                >
+                  {ocrOpen
+                    ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                    : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+                  OCR 识别正文
+                  <span className="text-[10px] text-slate-400 font-normal">{record.ocrText.length} 字</span>
+                </button>
+                {ocrOpen && (
+                  <pre className="px-3 py-2 bg-slate-50/60 border-t border-slate-100 text-[11px] leading-relaxed text-slate-600 whitespace-pre-wrap max-h-64 overflow-y-auto">
+                    {record.ocrText}
+                  </pre>
+                )}
+              </div>
+            )}
+          </section>
+        ) : (
         <section>
           <div className="flex items-center gap-2 mb-3">
             <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
@@ -431,6 +546,7 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
             </div>
           )}
         </section>
+        )}
 
         {/* ═══ 四性检测详情 ═══ */}
         {record.checkDetails && record.checkDetails.length > 0 && (

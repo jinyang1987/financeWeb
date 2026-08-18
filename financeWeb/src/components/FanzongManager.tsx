@@ -375,8 +375,8 @@ export const FanzongManager: React.FC = () => {
   // ─── 渲染：全宗行 ────────────────────────────────────────
 
   const renderFondsRow = (f: FondsItem) => (
-    <tr key={f.id} className="hover:bg-slate-50 transition-colors">
-      <td className="p-3 px-4 text-center">
+    <tr key={f.id} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
+      <td className="px-4 py-3 text-center">
         <div className="flex items-center justify-center gap-1">
           <button type="button" onClick={() => openEditModal(f)}
             className="p-1 hover:bg-slate-100 rounded cursor-pointer text-slate-500 hover:text-sky-600" title="编辑">
@@ -384,9 +384,9 @@ export const FanzongManager: React.FC = () => {
           </button>
         </div>
       </td>
-      <td className="p-3 px-4 font-mono text-xs text-slate-700 font-bold">{f.code}</td>
-      <td className="p-3 px-4 font-medium text-slate-800">{f.name}</td>
-      <td className="p-3 px-4">
+      <td className="px-4 py-3 font-mono text-[13px] font-bold text-slate-800">{f.code}</td>
+      <td className="px-4 py-3 text-sm font-medium text-slate-800">{f.name}</td>
+      <td className="px-4 py-3">
         {f.type === 'active' ? (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700">
             <Shield className="w-3 h-3" /> 现行
@@ -397,7 +397,7 @@ export const FanzongManager: React.FC = () => {
           </span>
         )}
       </td>
-      <td className="p-3 px-4 text-xs text-slate-500">
+      <td className="px-4 py-3 text-[13px] text-slate-600">
         {f.type === 'custodial' && f.custodianCode ? (
           <span>由 <span className="font-mono font-bold text-slate-700">{f.custodianCode}</span> 代管</span>
         ) : (
@@ -515,17 +515,17 @@ export const FanzongManager: React.FC = () => {
                 加载全宗数据...
               </div>
             ) : (
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-wider sticky top-0">
-                    <th className="p-3 px-4 w-20 text-center">操作</th>
-                    <th className="p-3 px-4">全宗号</th>
-                    <th className="p-3 px-4">全宗名称</th>
-                    <th className="p-3 px-4">类型</th>
-                    <th className="p-3 px-4">代管关系</th>
+              <table className="w-full border-collapse">
+                <thead className="sticky top-0 bg-slate-100">
+                  <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
+                    <th className="px-4 py-3 text-center text-[13px] font-semibold w-20">操作</th>
+                    <th className="px-4 py-3 text-left text-[13px] font-semibold">全宗号</th>
+                    <th className="px-4 py-3 text-left text-[13px] font-semibold">全宗名称</th>
+                    <th className="px-4 py-3 text-left text-[13px] font-semibold">类型</th>
+                    <th className="px-4 py-3 text-left text-[13px] font-semibold">代管关系</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-sm">
+                <tbody>
                   {filteredFonds.all.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="p-8 text-center text-slate-400 text-sm">

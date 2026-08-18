@@ -61,6 +61,7 @@ public class YonyouSyncService {
   private final SourceDocService sourceDocs;
   private final VolumeService volumes;
   private final AlfrescoClient alfresco;
+  private final com.finance.ams.alfresco.AlfrescoNodeClient nodes;
   private final ConfigService config;
   private final ObjectMapper json = new ObjectMapper();
   private final RestTemplate http = new RestTemplate();
@@ -73,9 +74,15 @@ public class YonyouSyncService {
   /** 账簿缓存（GUID 与编码极少变更） */
   private volatile Map<String, String> accbookCache;
 
+  private final com.finance.ams.openapi.CollectItemService collectItems;
+  private final com.finance.ams.openapi.PushLogService pushLogs;
+
   public YonyouSyncService(DataSource dataSource, YonyouClient client, YonyouTransformer transformer,
                            VoucherPdfRenderer pdf, RecordService records, SourceDocService sourceDocs,
-                           VolumeService volumes, AlfrescoClient alfresco, ConfigService config,
+                           VolumeService volumes, AlfrescoClient alfresco,
+                           com.finance.ams.alfresco.AlfrescoNodeClient nodes, ConfigService config,
+                           com.finance.ams.openapi.CollectItemService collectItems,
+                           com.finance.ams.openapi.PushLogService pushLogs,
                            @Value("${ams.seed.admin-user:admin}") String seedAdminUser,
                            @Value("${ams.seed.admin-password:admin}") String seedAdminPassword) {
     this.jdbc = JdbcClient.create(dataSource);
@@ -86,7 +93,10 @@ public class YonyouSyncService {
     this.sourceDocs = sourceDocs;
     this.volumes = volumes;
     this.alfresco = alfresco;
+    this.nodes = nodes;
     this.config = config;
+    this.collectItems = collectItems;
+    this.pushLogs = pushLogs;
     this.seedAdminUser = seedAdminUser;
     this.seedAdminPassword = seedAdminPassword;
   }
@@ -103,9 +113,22 @@ public class YonyouSyncService {
    * @param operator   触发人 userId（auto 时为 scheduler）
    * @param userTicket 手动同步时触发用户的 Alfresco ticket（建件权限/审计）；auto 传 null 用 seed admin
    * @param autoGroup  null=读调度配置；true/false=本次覆盖
+   * @param review     null/false=入收集池（仅件数据，可直接组卷）；true=入审核库（待审核，审核通过后再组卷）
    */
   public Map<String, Object> syncNow(String period, String trigger, String operator,
-                                     String userTicket, Boolean autoGroup) {
+                                     String userTicket, Boolean autoGroup, Boolean review) {
+    return syncNow(period, trigger, operator, userTicket, autoGroup, review, null);
+  }
+
+  /**
+   * 执行一个期间的同步（v2：去向模型）。
+   *
+   * @param destination auto-archive=直接入库（自动组卷）| to-volume=送组卷工作台 |
+   *                    to-check=送核对工作台 | to-review=进审核库；null=按 autoGroup/review 旧语义
+   */
+  public Map<String, Object> syncNow(String period, String trigger, String operator,
+                                     String userTicket, Boolean autoGroup, Boolean review,
+                                     String destination) {
     if (period == null || !period.matches("\\d{4}-\\d{2}"))
       throw BizException.badRequest("VALIDATION_FAILED", "会计期间格式须为 yyyy-MM");
     if (!running.compareAndSet(false, true))
@@ -121,12 +144,30 @@ public class YonyouSyncService {
       YonyouClient.Conn conn = client.conn();
       Map<String, String> book = resolveAccbook();
       boolean doGroup = autoGroup != null ? autoGroup : scheduleConfig().autoGroup();
+      boolean toReview = review != null && review;
+      // ── 去向模型（destination 优先于旧 autoGroup/review 语义） ──
+      String dest = destination == null ? "" : destination;
+      switch (dest) {
+        case "auto-archive" -> { doGroup = true; toReview = false; }
+        case "to-volume" -> { doGroup = false; toReview = false; }
+        case "to-check" -> { doGroup = false; toReview = false; }
+        case "to-review" -> { doGroup = false; toReview = true; }
+        default -> { /* 旧语义：autoGroup/review 参数 */ }
+      }
+      // 进审核库时不允许自动组卷（须审核通过后才能组卷）
+      if (toReview) doGroup = false;
+      if (dest.isBlank()) dest = toReview ? "to-review" : (doGroup ? "auto-archive" : "to-volume");
 
       batchId = createBatch(period, trigger, operator);
+      String batchNo = jdbc.sql("SELECT batch_no FROM ams_sync_batch WHERE id = ?")
+          .param(batchId).query(String.class).single();
+      pushLogs.info(batchNo, "accept", String.format("用友抓取同步受理：期间 %s（%s），去向 %s",
+          period, "auto".equals(trigger) ? "自动调度" : "手动触发", dest));
       long t0 = System.currentTimeMillis();
       int success = 0, skipped = 0, failed = 0, reportCount = 0;
       List<String> successNodeIds = new ArrayList<>();
       List<String> successVoucherNos = new ArrayList<>();
+      List<String> successExternalIds = new ArrayList<>();
       StringBuilder notes = new StringBuilder();
 
       // ── 凭证链 ──
@@ -182,6 +223,7 @@ public class YonyouSyncService {
               attachOk > 0 ? "含 " + attachOk + " 个电子附件" : null);
           successNodeIds.add(nodeId);
           successVoucherNos.add(t.voucherNo());
+          successExternalIds.add(externalId);
           success++;
         } catch (Exception e) {
           log.warn("凭证同步失败 {}（{}）: {}", voucherNo, externalId, e.getMessage());
@@ -193,6 +235,34 @@ public class YonyouSyncService {
       // ── 报表链（诚实策略：有数据才归档） ──
       reportCount += syncReport(ticket, operator, batchId, book, period, "balance", "科目余额表", conn.fondsCode(), notes);
       reportCount += syncReport(ticket, operator, batchId, book, period, "profit", "利润发生表", conn.fondsCode(), notes);
+
+      // ── 进审核库（可选）：同步成功件置「待审核」，先审核后组卷 ──
+      if (toReview && !successNodeIds.isEmpty()) {
+        int moved = 0;
+        for (String nodeId : successNodeIds) {
+          try {
+            collectItems.enterReviewLibrary(ticket, nodeId, operator, "抓取批次 " + batchNo + " 转审核");
+            moved++;
+          } catch (Exception e) {
+            log.warn("进审核库失败 {}: {}", nodeId, e.getMessage());
+          }
+        }
+        notes.append("已入审核库 ").append(moved).append(" 件（审核通过后可组卷）；");
+        pushLogs.info(batchNo, "route", moved + " 件已转审核库（档案整理→核对工作台·待审核）");
+      }
+
+      // ── 收集台账：每条成功件统一登记（支撑核对工作台待核对/去向追踪） ──
+      for (int i = 0; i < successNodeIds.size(); i++) {
+        collectItems.record(successNodeIds.get(i), conn.fondsCode(), "yonyou-pull", batchNo,
+            "voucher", dest, "to-check".equals(dest) ? "pending" : "na",
+            successExternalIds.get(i), successVoucherNos.get(i), "记账凭证");
+      }
+      if ("to-check".equals(dest) && !successNodeIds.isEmpty()) {
+        notes.append("已进入核对工作台待核对队列 ").append(successNodeIds.size()).append(" 件；");
+        pushLogs.info(batchNo, "route", successNodeIds.size() + " 件已进入核对工作台·收集池待核对队列");
+      } else if ("to-volume".equals(dest) && !successNodeIds.isEmpty()) {
+        notes.append("已进入组卷工作台待组卷池 ").append(successNodeIds.size()).append(" 件；");
+      }
 
       // ── 自动组卷 ──
       String volumeNodeId = null;
@@ -210,6 +280,8 @@ public class YonyouSyncService {
       if (total == 0 && reportCount == 0) status = "success";
       finishBatch(batchId, status, total, success, skipped, failed, reportCount, volumeNodeId,
           notes.toString(), t0);
+      pushLogs.info(batchNo, "receipt", String.format("抓取同步完成：凭证 %d/%d 成功、%d 跳过、%d 失败、报表 %d。%s",
+          success, total, skipped, failed, reportCount, notes));
       log.info("同步完成: 期间 {} 批次 {} —— 凭证 {}/{} 成功、{} 跳过、{} 失败、报表 {}、耗时 {}ms",
           period, batchId, success, total, skipped, failed, reportCount, System.currentTimeMillis() - t0);
       return batchView(batchId);
@@ -537,10 +609,32 @@ public class YonyouSyncService {
   // ═══════════════════ 调度配置读写 ═══════════════════
 
   public record ScheduleConfig(boolean enabled, String cron, boolean autoGroup,
-                               String description) {}
+                               String destination, String description) {}
 
-  /** 读调度配置（含默认值：每月1日 02:30，同步上月，自动组卷开） */
+  /**
+   * 读调度配置。
+   * 优先：系统管理→连接配置→数据源连接（datasource.config 中 yonyou 源的
+   * scheduleEnabled/scheduleCron/defaultDestination，2026-08-16 配置收敛后的正式入口）。
+   * 回退：旧 yonyou.schedule 配置。默认：关，每月1日 02:30，同步上月，自动组卷开。
+   */
   public ScheduleConfig scheduleConfig() {
+    try {
+      var ds = config.get("datasource.config");
+      if (ds.isPresent()) {
+        var root = json.readTree(ds.get().valueJson());
+        for (var s : root.path("sources")) {
+          if (!"yonyou".equals(s.path("type").asText(""))) continue;
+          var cfg = s.path("config");
+          String cron = cfg.path("scheduleCron").asText("");
+          if (!cron.isBlank()) {
+            String dest = cfg.path("defaultDestination").asText("");
+            return new ScheduleConfig(
+                cfg.path("scheduleEnabled").asBoolean(false), cron,
+                "auto-archive".equals(dest), dest, "");
+          }
+        }
+      }
+    } catch (Exception ignored) { /* 回退旧配置 */ }
     return config.get(CONFIG_SCHEDULE).map(e -> {
       try {
         var n = json.readTree(e.valueJson());
@@ -548,6 +642,7 @@ public class YonyouSyncService {
             n.path("enabled").asBoolean(false),
             n.path("cron").asText("0 30 2 1 * *"),
             n.path("autoGroup").asBoolean(true),
+            n.path("destination").asText(""),
             n.path("description").asText(""));
       } catch (Exception ex) {
         return defaults();
@@ -556,7 +651,7 @@ public class YonyouSyncService {
   }
 
   private static ScheduleConfig defaults() {
-    return new ScheduleConfig(false, "0 30 2 1 * *", true, "");
+    return new ScheduleConfig(false, "0 30 2 1 * *", true, "", "");
   }
 
   /** 写调度配置 */
@@ -566,6 +661,7 @@ public class YonyouSyncService {
       v.put("enabled", cfg.enabled());
       v.put("cron", cfg.cron());
       v.put("autoGroup", cfg.autoGroup());
+      v.put("destination", cfg.destination());
       v.put("description", cfg.description());
       config.put(CONFIG_SCHEDULE, json.writeValueAsString(v), updatedBy);
     } catch (Exception e) {

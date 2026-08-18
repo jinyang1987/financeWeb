@@ -151,11 +151,10 @@ const RelatedRecordsSection: React.FC<{ record: ArchiveRecord }> = ({ record }) 
 };
 
 interface DrawerPanelProps {
-  onRepairUsability: (recordId: string) => void;
   triggerToast: (msg: string, type?: 'success' | 'info' | 'warning') => void;
 }
 
-const DrawerPanel: React.FC<DrawerPanelProps> = ({ onRepairUsability, triggerToast }) => {
+const DrawerPanel: React.FC<DrawerPanelProps> = ({ triggerToast }) => {
   const drawerVisible = useArchiveStore((s) => s.drawerVisible);
   const activeRecord = useArchiveStore((s) => s.activeRecord);
   const activeFileIndex = useArchiveStore((s) => s.activeFileIndex);
@@ -172,20 +171,6 @@ const DrawerPanel: React.FC<DrawerPanelProps> = ({ onRepairUsability, triggerToa
   }, [metaStore.contexts['archive-item']?.fields]);
 
   if (!drawerVisible || !activeRecord) return null;
-
-  const allChecksPass =
-    activeRecord.checks.real &&
-    activeRecord.checks.complete &&
-    activeRecord.checks.usable &&
-    activeRecord.checks.safe;
-
-  const handleRepairClick = () => {
-    if (!activeRecord.checks.usable) {
-      onRepairUsability(activeRecord.id);
-    } else {
-      triggerToast('该凭证四项检测已全部通过，无需修复', 'info');
-    }
-  };
 
   return (
     <div
@@ -310,7 +295,6 @@ const DrawerPanel: React.FC<DrawerPanelProps> = ({ onRepairUsability, triggerToa
             record={activeRecord}
             activeFileIndex={activeFileIndex}
             onActiveFileChange={setActiveFileIndex}
-            onRepairUsability={onRepairUsability}
             onForceClose={closeDrawer}
           />
 
@@ -328,18 +312,6 @@ const DrawerPanel: React.FC<DrawerPanelProps> = ({ onRepairUsability, triggerToa
             className="px-4 py-2 border border-slate-200 hover:bg-slate-50 rounded-xl font-bold cursor-pointer text-slate-700"
           >
             关闭查看
-          </button>
-          <button
-            type="button"
-            disabled={allChecksPass}
-            onClick={handleRepairClick}
-            className={`px-4 py-2 text-white font-bold rounded-xl shadow-xs cursor-pointer ${
-              allChecksPass
-                ? 'bg-slate-300 cursor-not-allowed'
-                : 'bg-sky-600 hover:bg-sky-700'
-            }`}
-          >
-            一键自动修复凭证
           </button>
         </div>
       </div>
