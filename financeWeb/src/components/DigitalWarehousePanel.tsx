@@ -26,6 +26,7 @@ import {
 import { useArchiveStore } from '../stores/archiveStore';
 import { useArchiveBoxStore } from '../stores/archiveBoxStore';
 import { useAppStore } from '../stores/appStore';
+import { toCategoryCode } from '../stores/volumeStore';
 import { fetchBoxVolumes, type BoxVolumeDto } from '../services/boxService';
 import {
   fetchRacks, fetchPositions, fetchRooms, createRack, deleteRack,
@@ -41,7 +42,12 @@ const CATEGORY_STYLE: Record<string, { spine: string; chip: string; label: strin
   FB: { spine: 'bg-emerald-500', chip: 'bg-emerald-50 text-emerald-700 border-emerald-200', label: '财务报表' },
   QT: { spine: 'bg-amber-500', chip: 'bg-amber-50 text-amber-700 border-amber-200', label: '其他资料' },
 };
-const catStyle = (code: string) => CATEGORY_STYLE[code] || CATEGORY_STYLE.QT;
+const catStyle = (code: string) => {
+  // archiveTypeCode 来自后端可能是数字代码（01-04），先归一为字母大类代码（KP/KB/FB/QT）再查表，
+  // 否则会误回退到「其他资料」，导致归档归类展示错误（2026-08-19 修复）。
+  const cat = toCategoryCode(code);
+  return CATEGORY_STYLE[cat] || CATEGORY_STYLE.QT;
+};
 
 const BOX_STATUS_LABEL: Record<string, string> = {
   active: '装盒中', sealed: '已封盒', stored: '在架', destroyed: '已销毁',
@@ -502,7 +508,7 @@ export const DigitalWarehousePanel: React.FC<{ triggerToast: (msg: string, type?
             <div className="flex-1 overflow-y-auto p-5 space-y-4">
               {/* 元信息 */}
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <InfoItem label="档案类别" value={`${catStyle(detailBox.archiveTypeCode).label}（${detailBox.archiveTypeCode}）`} />
+                <InfoItem label="档案类别" value={`${catStyle(detailBox.archiveTypeCode).label}（${toCategoryCode(detailBox.archiveTypeCode)}）`} />
                 <InfoItem label="年度 / 期限" value={`${detailBox.year} 年 · ${detailBox.retention || '—'}`} />
                 <InfoItem label="卷数 / 件数" value={`${detailBox.volumeCount} 卷 / ${detailBox.totalItems ?? 0} 件`} />
                 <InfoItem label="建档日期" value={detailBox.createdDate || '—'} />
