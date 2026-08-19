@@ -190,7 +190,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
           }`}
         >
           <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-slate-700' : 'text-slate-500'}`} />
-          <span className="flex-1 truncate whitespace-nowrap">{item.label}</span>
+          <span className="flex-1 min-w-0 truncate whitespace-nowrap">{item.label}</span>
           {isFinanceMenu && (
             isFinanceExpanded
               ? <ChevronDown className="w-3 h-3 text-slate-400" />
@@ -228,10 +228,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
                         : <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                     )}
                     <span className={`w-2 h-2 rounded-full shrink-0 ${isYearActive ? 'bg-sky-500' : 'bg-slate-300'}`} />
-                    <span className="flex-1">{y.year}年</span>
-                    {financeSubMenus.length > 0 && (
-                      <span className="text-[11px] text-slate-400">{financeSubMenus.length}</span>
-                    )}
+                    <span className="flex-1 min-w-0">{y.year}年</span>
                   </button>
 
                   {/* 四大类子菜单 */}
@@ -284,7 +281,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
                     }`}
                   >
                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isSubActive ? 'bg-sky-500' : 'bg-slate-300'}`} />
-                    <span className="flex-1 truncate whitespace-nowrap">{sub.label}</span>
+                    <span className="flex-1 min-w-0 truncate whitespace-nowrap">{sub.label}</span>
                   </button>
                 </div>
               );
@@ -330,7 +327,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
   };
 
   return (
-    <aside className="hidden md:flex flex-col w-[240px] bg-[#F8FAFC] shrink-0 h-screen sticky top-0 text-slate-600 transition-all duration-300 border-r border-slate-200">
+    <aside className="hidden md:flex flex-col w-[240px] max-w-[240px] bg-[#F8FAFC] shrink-0 h-screen sticky top-0 text-slate-600 transition-all duration-300 border-r border-slate-200 overflow-hidden">
       {/* LOGO AREA */}
       <div className="h-[64px] bg-[#F8FAFC] flex items-center justify-between px-5 shrink-0 select-none">
         <div className="flex items-center gap-3">
@@ -351,7 +348,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
       <div className="h-px bg-slate-200" />
 
       {/* SCROLLABLE SIDEBAR MENU */}
-      <nav className="flex-1 overflow-y-auto py-3 space-y-1 font-sans text-sm select-none">
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 space-y-1 font-sans text-sm select-none">
         {roleFilteredGroups.map(renderGroup)}
       </nav>
     </aside>
