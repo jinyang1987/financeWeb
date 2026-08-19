@@ -183,7 +183,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
               handleMenuClick(groupKey, item.key);
             }
           }}
-          className={`w-[calc(100%-36px)] flex items-center gap-3 mx-6 py-2 px-4 font-medium rounded-xl transition-all border-l-4 border-r-4 cursor-pointer text-left text-sm ${
+          className={`w-[calc(100%-32px)] flex items-center gap-3 mx-5 py-2 px-3.5 font-medium rounded-xl transition-all border-l-4 border-r-4 cursor-pointer text-left text-sm ${
             (isActive || (isFinanceMenu && isFinanceExpanded) || (isProjectMenu && isProjectExpanded))
               ? 'bg-sky-50 text-slate-800 border-sky-500 font-bold'
               : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-transparent'
@@ -216,7 +216,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
                   <button
                     type="button"
                     onClick={(e) => handleYearNodeClick(e, y.year)}
-                    className={`w-[calc(100%-40px)] flex items-center gap-2.5 mx-7 py-2 px-3 rounded-lg transition-all cursor-pointer text-left text-sm ${
+                    className={`w-[calc(100%-36px)] flex items-center gap-2.5 mx-6 py-2 px-3 rounded-lg transition-all cursor-pointer text-left text-sm ${
                       isYearActive
                         ? 'bg-sky-100 text-sky-800 font-bold'
                         : 'text-slate-600 hover:bg-slate-100 hover:text-slate-800'
@@ -244,7 +244,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
                             key={sub.key}
                             type="button"
                             onClick={(e) => handleTypeUnderYearClick(e, y.year, sub.code, sub.label)}
-                            className={`w-[calc(100%-40px)] flex items-center gap-2 mx-8 py-1.5 px-3 rounded-lg transition-all cursor-pointer text-left text-sm ${
+                            className={`w-[calc(100%-36px)] flex items-center gap-2 mx-7 py-1.5 px-3 rounded-lg transition-all cursor-pointer text-left text-sm ${
                               isTypeActive
                                 ? 'bg-sky-100 text-sky-700 font-semibold shadow-sm'
                                 : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
@@ -277,7 +277,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
                       setActiveMainMenu('project-query' as MenuId);
                       navigate(`/project-query?project=${sub.code}&name=${encodeURIComponent(sub.label)}`);
                     }}
-                    className={`w-[calc(100%-40px)] flex items-center gap-2.5 mx-7 py-2 px-3 rounded-lg transition-all cursor-pointer text-left text-sm ${
+                    className={`w-[calc(100%-36px)] flex items-center gap-2.5 mx-6 py-2 px-3 rounded-lg transition-all cursor-pointer text-left text-sm ${
                       isSubActive
                         ? 'bg-sky-100 text-sky-800 font-bold'
                         : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
@@ -330,7 +330,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
   };
 
   return (
-    <aside className="hidden md:flex flex-col w-[260px] bg-[#F8FAFC] shrink-0 h-screen sticky top-0 text-slate-600 transition-all duration-300 border-r border-slate-200">
+    <aside className="hidden md:flex flex-col w-[240px] bg-[#F8FAFC] shrink-0 h-screen sticky top-0 text-slate-600 transition-all duration-300 border-r border-slate-200">
       {/* LOGO AREA */}
       <div className="h-[64px] bg-[#F8FAFC] flex items-center justify-between px-5 shrink-0 select-none">
         <div className="flex items-center gap-3">
