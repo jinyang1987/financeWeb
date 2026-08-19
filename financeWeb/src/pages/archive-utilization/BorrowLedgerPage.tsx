@@ -12,6 +12,7 @@ import {
   Notebook, Search, ChevronDown, ChevronRight, Cloud, HardDrive,
 } from 'lucide-react';
 import { useBorrowStore } from '../../stores/borrowStore';
+import { toCategoryCode } from '../../stores/volumeStore';
 import {
   ORDER_STATUS_LABELS, FULFILLMENT_STATUS_LABELS, PERM_LABELS, PHYSICAL_MODE_LABELS,
   type BorrowOrder,
@@ -52,7 +53,7 @@ const BorrowLedgerPage: React.FC = () => {
   const filtered = useMemo(() => {
     let rows = [...orders].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     if (statusFilter !== '全部状态') rows = rows.filter((o) => o.status === statusFilter);
-    if (typeFilter !== '全部类型') rows = rows.filter((o) => o.items.some((i) => i.archiveTypeCode === typeFilter));
+    if (typeFilter !== '全部类型') rows = rows.filter((o) => o.items.some((i) => toCategoryCode(i.archiveTypeCode, i.archiveType) === typeFilter));
     if (query.trim()) {
       const q = query.trim().toLowerCase();
       rows = rows.filter((o) =>
