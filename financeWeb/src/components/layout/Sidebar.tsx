@@ -185,12 +185,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
           }}
           className={`w-[calc(100%-32px)] flex items-center gap-3 mx-5 py-2 px-3.5 font-medium rounded-xl transition-all border-l-4 border-r-4 cursor-pointer text-left text-sm ${
             (isActive || (isFinanceMenu && isFinanceExpanded) || (isProjectMenu && isProjectExpanded))
-              ? 'bg-sky-50 text-slate-800 border-sky-500 font-bold'
+              ? 'bg-sky-50 text-slate-800 border-sky-500'
               : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800 border-transparent'
           }`}
         >
           <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-slate-700' : 'text-slate-500'}`} />
-          <span className="flex-1">{item.label}</span>
+          <span className="flex-1 truncate whitespace-nowrap">{item.label}</span>
           {isFinanceMenu && (
             isFinanceExpanded
               ? <ChevronDown className="w-3 h-3 text-slate-400" />
@@ -218,7 +218,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
                     onClick={(e) => handleYearNodeClick(e, y.year)}
                     className={`w-[calc(100%-36px)] flex items-center gap-2.5 mx-6 py-2 px-3 rounded-lg transition-all cursor-pointer text-left text-sm ${
                       isYearActive
-                        ? 'bg-sky-100 text-sky-800 font-bold'
+                        ? 'bg-sky-100 text-sky-800'
                         : 'text-slate-600 hover:bg-slate-100 hover:text-slate-800'
                     }`}
                   >
@@ -230,7 +230,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
                     <span className={`w-2 h-2 rounded-full shrink-0 ${isYearActive ? 'bg-sky-500' : 'bg-slate-300'}`} />
                     <span className="flex-1">{y.year}年</span>
                     {financeSubMenus.length > 0 && (
-                      <span className="text-[11px] text-slate-400">{financeSubMenus.length}类</span>
+                      <span className="text-[11px] text-slate-400">{financeSubMenus.length}</span>
                     )}
                   </button>
 
@@ -246,12 +246,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
                             onClick={(e) => handleTypeUnderYearClick(e, y.year, sub.code, sub.label)}
                             className={`w-[calc(100%-36px)] flex items-center gap-2 mx-7 py-1.5 px-3 rounded-lg transition-all cursor-pointer text-left text-sm ${
                               isTypeActive
-                                ? 'bg-sky-100 text-sky-700 font-semibold shadow-sm'
+                                ? 'bg-sky-100 text-sky-700 shadow-sm'
                                 : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
                             }`}
                           >
                             <span className={`w-1 h-1 rounded-full shrink-0 ${isTypeActive ? 'bg-sky-500' : 'bg-slate-300'}`} />
-                            <span>{sub.label}</span>
+                            <span className="truncate whitespace-nowrap">{sub.label}</span>
                           </button>
                         );
                       })}
@@ -279,12 +279,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
                     }}
                     className={`w-[calc(100%-36px)] flex items-center gap-2.5 mx-6 py-2 px-3 rounded-lg transition-all cursor-pointer text-left text-sm ${
                       isSubActive
-                        ? 'bg-sky-100 text-sky-800 font-bold'
+                        ? 'bg-sky-100 text-sky-800'
                         : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
                     }`}
                   >
                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isSubActive ? 'bg-sky-500' : 'bg-slate-300'}`} />
-                    <span className="flex-1">{sub.label}</span>
+                    <span className="flex-1 truncate whitespace-nowrap">{sub.label}</span>
                   </button>
                 </div>
               );
