@@ -457,7 +457,7 @@ const FinanceViewPage: React.FC<FinanceViewPageProps> = ({
       <div className="flex items-center justify-between mb-4 shrink-0">
         <div className="flex items-center gap-3">
           <h2 className="text-lg font-bold text-slate-800">{displayTitle}</h2>
-          {archiveYear && <><ChevronRight className="w-4 h-4 text-slate-300" /><span className="text-sm font-medium text-slate-500">{archiveYear}年</span></>}
+          {archiveYear && <><ChevronRight className="w-4 h-4 text-slate-300" /><span className="text-sm font-medium text-slate-500">{archiveYear}</span></>}
           {!archiveYear && <span className="text-sm text-slate-400">（全部年份）</span>}
           {hasActiveFilters && (
             <button
