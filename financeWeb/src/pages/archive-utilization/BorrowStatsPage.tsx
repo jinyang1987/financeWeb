@@ -15,6 +15,7 @@ import {
   Search, MonitorPlay, Download, Printer, ShoppingCart,
 } from 'lucide-react';
 import { useBorrowStore } from '../../stores/borrowStore';
+import { toCategoryCode } from '../../stores/volumeStore';
 import { isOverdue, todayStr } from '../../utils/borrowEngine';
 import { computeUtilization } from '../../utils/statsEngine';
 import type { BorrowLog } from '../../types/borrow';
@@ -71,7 +72,10 @@ const BorrowStatsPage: React.FC = () => {
   const heatByType = useMemo(() => {
     const counts: Record<string, number> = { KP: 0, KB: 0, FB: 0, QT: 0 };
     orders.forEach((o) => o.items.forEach((i) => {
-      if (counts[i.archiveTypeCode] !== undefined) counts[i.archiveTypeCode]++;
+      // archiveTypeCode 来自后端卷数据为 DA/T 数字码（01-04），先归一为字母大类码（KP/KB/FB/QT）再累加，
+      // 否则 counts[数字码] 恒为 undefined，借阅类型热力图全部显示 0（2026-08-19 修复）。
+      const cat = toCategoryCode(i.archiveTypeCode, i.archiveType);
+      if (counts[cat] !== undefined) counts[cat]++;
     }));
     const max = Math.max(1, ...Object.values(counts));
     return Object.entries(counts).map(([code, count]) => ({ code, label: TYPE_LABELS[code], count, pct: (count / max) * 100 }));
