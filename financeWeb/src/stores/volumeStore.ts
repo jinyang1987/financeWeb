@@ -32,6 +32,8 @@ import {
   transferVolumeApi, returnVolumeApi,
 } from '../services/volumeService';
 import { fetchVolumeRecords } from '../services/recordService';
+import { useSourceDocumentStore } from './sourceDocumentStore';
+import type { SourceDocument } from '../types/sourceDocument';
 
 // ── 档案类别代码 → 中文名称 ──
 const ARCHIVE_TYPE_LABELS: Record<string, string> = {
@@ -672,9 +674,80 @@ export const useVolumeStore = create<VolumeState>((set, get) => ({
     const recs: VolumeRecommendation[] = [];
     let recId = 0;
 
+    // ★★★ 凭证+原始凭证＝【一件】单元化（2026-08-19 智能组卷修正） ★★★
+    // 会计归档规范（《会计基础工作规范》）：
+    //   1 张记账凭证 + 其全部原始凭证（附件）＝ 1 个独立业务单元；
+    //   诸多【件】按记账凭证编号顺序排列成【一卷】。
+    // 因此组卷的最小核算单元由「单张记账凭证」提升为「记账凭证 + 其全部原始凭证」。
+
+    // ① 富元数据原始凭证附件：sourceDocumentStore 中 parentRecordId 指向的源凭证
+    const sourceDocsByParent = new Map<string, SourceDocument[]>();
+    for (const sd of useSourceDocumentStore.getState().documents) {
+      if (!sd.parentRecordId) continue;
+      if (!sourceDocsByParent.has(sd.parentRecordId)) sourceDocsByParent.set(sd.parentRecordId, []);
+      sourceDocsByParent.get(sd.parentRecordId)!.push(sd);
+    }
+
+    // ② 待组卷池内 id 集合（判断独立『原始凭证』记录的属主是否在本池内）
+    const poolIds = new Set(unassignedRecords.map((r) => r.id));
+
+    // ③ 独立『原始凭证』记录（archiveType=原始凭证 且属主父件在本池内）→ 随父件整体归卷
+    const orphanSourceByParent = new Map<string, ArchiveRecord[]>();
+    for (const r of unassignedRecords) {
+      if (r.archiveType !== '原始凭证') continue;
+      const pid = r.parentRecordId;
+      if (pid && pid !== r.id && poolIds.has(pid)) {
+        if (!orphanSourceByParent.has(pid)) orphanSourceByParent.set(pid, []);
+        orphanSourceByParent.get(pid)!.push(r);
+      }
+    }
+
+    // 单件页数估算（缺省：记账凭证 2 页，与历史口径一致；有 components 则按件计）
+    const recordPages = (r: ArchiveRecord): number => {
+      const c = r.components || [];
+      if (c.length > 0) return c.length;
+      return 2;
+    };
+    // 原始凭证附件页数估算（缺省 1 页，有附件张数则按附件张数计）
+    const sourceDocPages = (sd: SourceDocument): number => Math.max(1, sd.attachmentCount || 1);
+
+    /**
+     * 按“凭证+其全部原始凭证”口径统计一组记录的完整单元：
+     *   recordIds  → 需随卷移动的全部记录 id（凭证 + 池内独立原始凭证；
+     *                富元数据附件是凭证节点的子节点，随父节点自动移动，无需列入）
+     *   items      → 预估件数 = 凭证数 + 池内原始凭证数 + 富元数据附件数
+     *   pages      → 预估页数 = 全部单件页数之和
+     */
+    const unitStats = (chunk: ArchiveRecord[]): { recordIds: string[]; items: number; pages: number } => {
+      const recordIds: string[] = [];
+      let items = 0;
+      let pages = 0;
+      for (const r of chunk) {
+        recordIds.push(r.id);
+        items += 1;
+        pages += recordPages(r);
+        // 池内独立原始凭证（随父件整体归卷）
+        for (const od of orphanSourceByParent.get(r.id) || []) {
+          recordIds.push(od.id);
+          items += 1;
+          pages += recordPages(od);
+        }
+        // 富元数据原始凭证附件（随父节点移动，不列入 recordIds）
+        for (const sd of sourceDocsByParent.get(r.id) || []) {
+          items += 1;
+          pages += sourceDocPages(sd);
+        }
+      }
+      return { recordIds, items, pages };
+    };
+
     // ★ Step 1: 按档案类别分桶
     const typeBuckets = new Map<string, ArchiveRecord[]>();
     for (const r of unassignedRecords) {
+      // ★ 原始凭证铁律：属主在池内的独立原始凭证随父件整体归卷，禁止单独分桶/单独成卷
+      if (r.archiveType === '原始凭证' && r.parentRecordId && r.parentRecordId !== r.id && poolIds.has(r.parentRecordId)) {
+        continue;
+      }
       const type = r.archiveType || '其他会计资料';
       if (!typeBuckets.has(type)) typeBuckets.set(type, []);
       typeBuckets.get(type)!.push(r);
@@ -764,6 +837,7 @@ export const useVolumeStore = create<VolumeState>((set, get) => ({
                 const chunkVoucherNos = chunk.map(r => r.voucherNo);
                 const continuity = validateVoucherContinuity(chunkVoucherNos);
                 const voucherRange = continuity.range || `${first.voucherNo}~${last.voucherNo}`;
+                const stats = unitStats(chunk);
 
                 recs.push({
                   id: `rec-${++recId}`,
@@ -773,11 +847,11 @@ export const useVolumeStore = create<VolumeState>((set, get) => ({
                   archiveType: first.archiveType,
                   retentionCode: inferRetentionCode(first.retention),
                   retention: first.retention,
-                  estimatedItems: chunk.length,
-                  estimatedPages: chunk.length * 2,
+                  estimatedItems: stats.items,
+                  estimatedPages: stats.pages,
                   dateFrom: `${first.year}-${String(first.month).padStart(2, '0')}`,
                   dateTo: `${last.year}-${String(last.month).padStart(2, '0')}`,
-                  recordIds: chunk.map((r) => r.id),
+                  recordIds: stats.recordIds,
                 });
               }
             }
@@ -787,6 +861,7 @@ export const useVolumeStore = create<VolumeState>((set, get) => ({
               const chunk = sorted.slice(i, i + maxItems);
               const first = chunk[0];
               const last = chunk[chunk.length - 1];
+              const stats = unitStats(chunk);
 
               recs.push({
                 id: `rec-${++recId}`,
@@ -796,11 +871,11 @@ export const useVolumeStore = create<VolumeState>((set, get) => ({
                 archiveType: first.archiveType,
                 retentionCode: inferRetentionCode(first.retention),
                 retention: first.retention,
-                estimatedItems: chunk.length,
-                estimatedPages: chunk.length * 2,
+                estimatedItems: stats.items,
+                estimatedPages: stats.pages,
                 dateFrom: `${first.year}-${String(first.month).padStart(2, '0')}`,
                 dateTo: `${last.year}-${String(last.month).padStart(2, '0')}`,
-                recordIds: chunk.map((r) => r.id),
+                recordIds: stats.recordIds,
               });
             }
           }

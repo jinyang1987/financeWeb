@@ -20,8 +20,10 @@ import {
   inferTypeCode,
   inferRetentionCode,
 } from '../stores/volumeStore';
+import { useSourceDocumentStore } from '../stores/sourceDocumentStore';
 import { useArchiveStore } from '../stores/archiveStore';
 import type { ArchiveRecord } from '../types';
+import type { SourceDocument } from '../types/sourceDocument';
 
 // ── 测试夹具：2026年6月记账凭证（待组卷） ──
 function makeVoucher(id: string, voucherNo: string, overrides: Partial<ArchiveRecord> = {}): ArchiveRecord {
@@ -169,5 +171,72 @@ describe('智能组卷取消（Bug1）', () => {
     expect(useVolumeStore.getState().recommendations).toHaveLength(0);
     // 未创建任何案卷
     expect(useVolumeStore.getState().volumes).toHaveLength(0);
+  });
+});
+
+// ── 原始凭证附件夹具 ──
+function makeSourceDoc(id: string, parentRecordId: string, overrides: Partial<SourceDocument> = {}): SourceDocument {
+  return {
+    id,
+    documentNo: `FP-${id}`,
+    docTypeCode: 'invoice',
+    docTypeName: '发票',
+    transactionDate: '2026-06-01',
+    amountLower: 100,
+    amountUpper: '壹佰元整',
+    counterpartyName: '某供应商',
+    summary: '采购',
+    attachmentCount: 1,
+    businessCategory: '采购',
+    parentVoucherNo: '',
+    attachmentSequence: 1,
+    parentRecordId,
+    ...overrides,
+  } as SourceDocument;
+}
+
+describe('凭证+原始凭证＝【一件】单元化（2026-08-19 智能组卷修正）', () => {
+  beforeEach(() => {
+    useSourceDocumentStore.setState({ documents: [] });
+  });
+
+  it('富元数据原始凭证附件计入预估件数/页数，且不进入 recordIds（随父节点移动）', () => {
+    const records = [makeVoucher('v1', '记-001'), makeVoucher('v2', '记-002')];
+    // v1 挂 2 张原始凭证附件，v2 挂 1 张
+    useSourceDocumentStore.setState({
+      documents: [
+        makeSourceDoc('sd-1', 'v1'),
+        makeSourceDoc('sd-2', 'v1'),
+        makeSourceDoc('sd-3', 'v2'),
+      ],
+    });
+
+    useVolumeStore.getState().generateRecommendations(records);
+    const recs = useVolumeStore.getState().recommendations;
+    expect(recs.length).toBe(1);
+    // 件数 = 2 凭证 + 3 附件 = 5
+    expect(recs[0].estimatedItems).toBe(5);
+    // 页数 = 2*2(凭证) + 3*1(附件) = 7
+    expect(recs[0].estimatedPages).toBe(7);
+    // recordIds 仅含凭证（附件是子节点，随父节点自动移动）
+    expect(recs[0].recordIds).toEqual(['v1', 'v2']);
+  });
+
+  it('池内独立『原始凭证』记录随父件整体归卷，禁止单独成卷', () => {
+    const records = [
+      makeVoucher('v1', '记-001'),
+      makeVoucher('v2', '记-002'),
+      // 独立原始凭证记录，属主为 v1（父件在本池内）
+      makeVoucher('s1', '记-001', { archiveType: '原始凭证', parentRecordId: 'v1' }),
+    ];
+
+    useVolumeStore.getState().generateRecommendations(records);
+    const recs = useVolumeStore.getState().recommendations;
+    // 只应生成 1 个凭证推荐（独立原始凭证被并入 v1 单元，不单独成卷）
+    expect(recs.length).toBe(1);
+    // recordIds 包含 v1 及其独立原始凭证 s1、v2
+    expect(recs[0].recordIds).toEqual(['v1', 's1', 'v2']);
+    // 件数 = 3
+    expect(recs[0].estimatedItems).toBe(3);
   });
 });
