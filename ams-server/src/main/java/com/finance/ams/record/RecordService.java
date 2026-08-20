@@ -655,6 +655,8 @@ public class RecordService {
     view.put("preparer", prop(entry, "finance:preparer"));
     view.put("voucherCategory", prop(entry, "finance:voucherCategory"));
     view.put("remarks", prop(entry, "finance:recordRemark"));
+    // 组件挂接（finance-model v2.3，2026-08-20）：原始凭证件 → 所属记账凭证件
+    view.put("parentRecordId", prop(entry, "finance:parentRecordId"));
     // V10 全文检索读模型补字段（2026-08-18）：科目/往来单位/单据号/正文（OCR 双通道回写）
     view.put("accountSubject", prop(entry, "finance:accountSubject"));
     view.put("counterpartyName", prop(entry, "finance:counterpartyName"));
@@ -721,16 +723,85 @@ public class RecordService {
   }
 
   /** Alfresco 异常 → 业务异常（401/403 翻译为会话/权限错误，其余透传状态） */
-  static BizException translate(String prefix, Exception e) {
-    if (e instanceof HttpClientErrorException hce) {
-      int status = hce.getStatusCode().value();
-      if (status == 401) return new BizException(HttpStatus.UNAUTHORIZED, "SESSION_EXPIRED", "会话已过期，请重新登录");
-      if (status == 403) return new BizException(HttpStatus.FORBIDDEN, "FORBIDDEN", "当前账号无档案库写入权限");
-      if (status == 404) return new BizException(HttpStatus.NOT_FOUND, "NODE_NOT_FOUND", prefix + "：节点不存在");
-      return new BizException(HttpStatus.valueOf(status), "ALFRESCO_ERROR", prefix + ": " + hce.getStatusText());
+  // ═══════════════════ 组件挂接（先组件再组卷，2026-08-20） ═══════════════════
+
+  /**
+   * 挂接/解挂：原始凭证件 → 所属记账凭证件（finance:parentRecordId 软关联）。
+   * 校验链：两端都是 finance:record；子件必须是原始凭证、父件必须不是（层级 ≤1，无环）；
+   *        双方均在池内（recordStatus=仅件数据）；同全宗；防自环。
+   *        入卷/移交后禁止改挂（业务上应走拆件流程）。
+   *
+   * @param parentRecordId null/空白 = 解挂；否则幂等覆盖式挂接
+   */
+  public void linkParent(String ticket, String nodeId, String parentRecordId) {
+    Map<String, Object> child = requireRecordEntry(ticket, nodeId);
+    if (!isSourceDocEntry(child)) {
+      throw BizException.badRequest("NOT_SOURCE_DOC", "只有原始凭证件才能挂接到记账凭证: " + nodeId);
     }
-    return new BizException(HttpStatus.INTERNAL_SERVER_ERROR, "ALFRESCO_ERROR", prefix + ": " + e.getMessage());
+    if (!"仅件数据".equals(prop(child, "finance:recordStatus"))) {
+      throw BizException.badRequest("NOT_IN_POOL", "该原始凭证已入卷/已移交，如需调整请先在组卷工作台拆件");
+    }
+
+    if (parentRecordId == null || parentRecordId.isBlank()) {
+      nodes.updateNode(ticket, nodeId, Map.of("finance:parentRecordId", ""));
+      events.publishEvent(RecordsChangedEvent.refreshOne(nodeId));
+      log.info("组件解挂: {}", nodeId);
+      return;
+    }
+
+    if (parentRecordId.equals(nodeId)) {
+      throw BizException.badRequest("SELF_LINK", "不能挂接到自身");
+    }
+    Map<String, Object> parent = requireRecordEntry(ticket, parentRecordId);
+    if (isSourceDocEntry(parent)) {
+      throw BizException.badRequest("PARENT_IS_SOURCE", "原始凭证不能作为所属件，请挂接到记账凭证: " + parentRecordId);
+    }
+    if (!"仅件数据".equals(prop(parent, "finance:recordStatus"))) {
+      throw BizException.badRequest("PARENT_NOT_IN_POOL", "所属记账凭证已入卷/已移交，不能挂接");
+    }
+    String childFondsId = str(layout.findFondsOf(ticket, nodeId).get("id"));
+    String parentFondsId = str(layout.findFondsOf(ticket, parentRecordId).get("id"));
+    if (!childFondsId.equals(parentFondsId)) {
+      throw BizException.badRequest("CROSS_FONDS", "不能跨全宗挂接");
+    }
+
+    nodes.updateNode(ticket, nodeId, Map.of("finance:parentRecordId", parentRecordId));
+    events.publishEvent(RecordsChangedEvent.refreshOne(nodeId));
+    log.info("组件挂接: {} → {}", nodeId, parentRecordId);
   }
-}
+
+  /** 件所属全宗号（组件挂接的权限校验用） */
+  public String fondsCodeOf(String ticket, String nodeId) {
+    return prop(layout.findFondsOf(ticket, nodeId), "finance:code");
+  }
+
+  /** 件节点读取（404/权限经 translate 翻译；非 finance:record 拒绝） */
+  private Map<String, Object> requireRecordEntry(String ticket, String nodeId) {
+    Map<String, Object> entry;
+    try {
+      entry = nodes.getNode(ticket, nodeId);
+    } catch (HttpClientErrorException e) {
+      throw translate("件查询失败", e);
+    }
+    if (!"finance:record".equals(str(entry.get("nodeType")))) {
+      throw BizException.badRequest("NOT_RECORD", "节点不是档案记录: " + nodeId);
+    }
+    return entry;
+  }
+
+  /** 原始凭证判定（与前端 utils/recordType.ts isSourceDocument 同口径） */
+  private static boolean isSourceDocEntry(Map<String, Object> entry) {
+    return "原始凭证".equals(prop(entry, "finance:voucherCategory"))
+        || prop(entry, "finance:archiveType").contains("原始凭证");
+  }
+
+  /**
+   * Alfresco 异常翻译。
+   * 2026-08-19 起统一委托 RepoLayout.translate：解析错误响应体 briefSummary 并中文化常见原因，
+   * 不再用 HTTP/2 下恒为空的 getStatusText()（移交/建件失败无原因的根因）。
+   */
+  static BizException translate(String prefix, Exception e) {
+    return com.finance.ams.alfresco.RepoLayout.translate(prefix, e);
+  }}
 
 

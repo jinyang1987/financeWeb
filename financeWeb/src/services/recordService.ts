@@ -62,6 +62,8 @@ export interface RecordDto {
   counterpartyName?: string;
   documentNo?: string;
   ocrText?: string;
+  // ── v2.3 组件挂接（2026-08-20）：原始凭证件 → 所属记账凭证件 ──
+  parentRecordId?: string;
 }
 
 export interface PoolResult {
@@ -234,6 +236,11 @@ export async function deleteRecord(nodeId: string): Promise<void> {
   await http.delete(`/records/${nodeId}`);
 }
 
+/** 组件挂接（2026-08-20 先组件再组卷）：原始凭证件 → 所属记账凭证件；parentRecordId=null 解挂 */
+export async function linkRecordParent(nodeId: string, parentRecordId: string | null): Promise<void> {
+  await http.put(`/records/${nodeId}/parent`, { parentRecordId });
+}
+
 /** 卷内件全量读取（完整 RecordView，含 voucherCategory/subType 等筛选字段）——P1-③ 读视图 */
 export async function fetchVolumeRecords(volumeId: string): Promise<ArchiveRecord[]> {
   const list = await http.get<RecordDto[]>(`/records/by-volume/${volumeId}`);
@@ -322,6 +329,8 @@ export function dtoToRecord(dto: RecordDto): ArchiveRecord {
     counterpartyName: dto.counterpartyName || undefined,
     documentNo: dto.documentNo || undefined,
     ocrText: dto.ocrText || undefined,
+    // 组件挂接（v2.3）：原始凭证件的所属记账凭证（空串 → undefined）
+    parentRecordId: dto.parentRecordId || undefined,
   };
 }
 

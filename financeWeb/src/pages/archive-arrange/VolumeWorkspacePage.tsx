@@ -33,6 +33,13 @@ import {
   getDefaultVisibleIds,
 } from '../../config/metadataContexts';
 import RecordDetailPanel from '../../components/RecordDetailPanel';
+import { isSourceDocument } from '../../utils/recordType';
+import {
+  toggleUnitSelection, selectPageWithUnits, isAllPageSelected,
+  resolveLinkableSelection, resolveUnlinkableSelection, findUnitSplitViolation,
+  attachedSourceIds,
+} from '../../utils/unitSelection';
+import { linkRecordParent } from '../../services/recordService';
 import { DataTable, type DataTableColumn } from '../../components/DataTable';
 import PaginationBar from '../../components/PaginationBar';
 import { usePagination } from '../../hooks/usePagination';
@@ -163,6 +170,8 @@ const FilterBar: React.FC<FilterBarProps> = ({
 // ── 子组件：未分配条目池（左面板） ──
 interface UnassignedPoolProps {
   records: ArchiveRecord[];
+  /** 全量待组卷池（单元扩展/挂接解析的数据源；records 为当前页切片，2026-08-20） */
+  allPoolRecords: ArchiveRecord[];
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
   onSelectAll: (ids: string[]) => void;
@@ -180,16 +189,26 @@ interface UnassignedPoolProps {
   onViewDetail: (record: any) => void;
   /** 表格列定义（从凭证上下文配置读取） */
   tableColumns: DataTableColumn<ArchiveRecord>[];
+  /** 组件（挂接）可用时的待挂接原始凭证数；0 = 置灰 */
+  linkableCount: number;
+  /** 解挂可用时的已挂接原始凭证数；>0 时按钮切换为【解挂】 */
+  unlinkableCount: number;
+  onLinkSelection: () => void;
+  onUnlinkSelection: () => void;
+  /** 凭证单元展开行 id（页面持有；凭证号列内的展开钮控制，2026-08-20） */
+  expandedId: string | null;
 }
 
 const UnassignedPool: React.FC<UnassignedPoolProps> = ({
-  records, selectedIds, onToggleSelect, onSelectAll,
+  records, allPoolRecords, selectedIds, onToggleSelect, onSelectAll,
   searchQuery, onSearchChange, onAddToVolume, onDeleteRecord, onBatchDelete, volumes,
   onCreateAndAdd,
   attachmentCountMap, onViewDetail, tableColumns,
+  linkableCount, unlinkableCount, onLinkSelection, onUnlinkSelection, expandedId,
 }) => {
   const allIds = records.map((r) => r.id);
-  const allSelected = records.length > 0 && selectedIds.size === records.length;
+  // ★ 单元化选择下 selectedIds 可能含页外附件 id，用 every 判定（2026-08-20）
+  const allSelected = isAllPageSelected(allIds, selectedIds);
   const draftVolumes = volumes.filter((v) => v.status === 'draft');
   const [showVolumeMenu, setShowVolumeMenu] = useState(false);
 
@@ -235,31 +254,31 @@ const UnassignedPool: React.FC<UnassignedPoolProps> = ({
             全选 ({records.length} 条)
           </label>
 
-          {/* ★ 操作区——勾选后直接组卷（会计实操：不会先建空卷再添凭证） */}
-          <div className="flex items-center gap-2" ref={menuRef}>
-              {selectedIds.size > 0 ? (
-                <>
-                  {/* 主操作：直接组卷 → 一键创建案卷并加入选中凭证 */}
-                  <button
-                    type="button"
-                    onClick={onCreateAndAdd}
-                    className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-lg hover:bg-sky-700 shadow-sm transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    组卷 ({selectedIds.size} 件)
-                  </button>
-                  {/* 次操作：加入已有草稿案卷（仅当存在草稿时显示） */}
-                  {draftVolumes.length > 0 && (
-                    <div className="relative">
-                      <button
-                        type="button"
-                        onClick={() => setShowVolumeMenu(!showVolumeMenu)}
-                        className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-400 rounded-lg hover:bg-slate-50 transition-colors"
-                      >
-                        加入已有
-                        <ChevronDown className="w-3.5 h-3.5 ml-0.5 opacity-50" />
-                      </button>
-                  {showVolumeMenu && (
+          {/* ★ 操作区：按钮常显等高（h-8），未勾选时置灰——不再用占位文字，杜绝行高跳动（2026-08-19） */}
+          <div className="flex items-center gap-1.5" ref={menuRef}>
+            {/* 主操作：直接组卷 → 一键创建案卷并加入选中凭证 */}
+            <button
+              type="button"
+              onClick={onCreateAndAdd}
+              disabled={selectedIds.size === 0}
+              title={selectedIds.size === 0 ? '请先勾选左侧凭证' : '以选中凭证创建案卷'}
+              className="flex h-8 items-center gap-1.5 px-3 text-[13px] font-medium rounded-lg transition-colors bg-sky-600 text-white hover:bg-sky-700 shadow-sm disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              组卷{selectedIds.size > 0 ? `（${selectedIds.size}）` : ''}
+            </button>
+            {/* 次操作：加入已有草稿案卷（常显；未选凭证或无草稿卷时置灰） */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowVolumeMenu(!showVolumeMenu)}
+                disabled={selectedIds.size === 0 || draftVolumes.length === 0}
+                title={selectedIds.size === 0 ? '请先勾选左侧凭证' : draftVolumes.length === 0 ? '暂无草稿状态的案卷' : '加入已有草稿案卷'}
+                className="flex h-8 items-center gap-1 px-3 text-[13px] font-medium rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 transition-colors disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
+              >
+                加入已有
+                <ChevronDown className="w-3.5 h-3.5 opacity-50" />
+              </button>{showVolumeMenu && selectedIds.size > 0 && draftVolumes.length > 0 && (
                     <div className="absolute right-0 top-full mt-1 w-64 bg-white border border-slate-200 rounded-lg shadow-xl z-20 max-h-80 overflow-y-auto">
                       <div className="px-3 py-2 text-xs text-slate-500 border-b border-slate-100 font-medium">
                         选择已有案卷
@@ -295,23 +314,40 @@ const UnassignedPool: React.FC<UnassignedPoolProps> = ({
                     </div>
                   )}
                 </div>
-              )}
-                </>
-            ) : (
-              <span className="text-xs text-slate-500 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg">
-                勾选左侧凭证后可组卷
-              </span>
-            )}
-            {selectedIds.size > 0 && (
+            {/* 组件/解挂（2026-08-20 先组件再组卷：原始凭证挂接到记账凭证形成「件」单元） */}
+            {unlinkableCount > 0 ? (
               <button
                 type="button"
-                onClick={() => onBatchDelete(Array.from(selectedIds))}
-                className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-600 bg-red-50 rounded-md hover:bg-red-100 transition-colors"
+                onClick={onUnlinkSelection}
+                title="解除所选原始凭证与其记账凭证的挂接"
+                className="flex h-8 items-center gap-1.5 px-3 text-[13px] font-medium rounded-lg border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors"
               >
-                <Trash2 className="w-3 h-3" />
-                删除 ({selectedIds.size})
+                <Link2 className="w-3.5 h-3.5" />
+                解挂（{unlinkableCount}）
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onLinkSelection}
+                disabled={linkableCount === 0}
+                title={linkableCount === 0 ? '勾选 1 张记账凭证 + N 张未挂接的原始凭证后可组件' : '将所选原始凭证挂接到记账凭证，形成「件」单元'}
+                className="flex h-8 items-center gap-1.5 px-3 text-[13px] font-medium rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 transition-colors disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
+              >
+                <Link2 className="w-3.5 h-3.5" />
+                组件{linkableCount > 0 ? `（${linkableCount}）` : ''}
               </button>
             )}
+            <span className="w-px h-4 bg-slate-200 mx-0.5" aria-hidden="true" />
+            <button
+              type="button"
+              onClick={() => onBatchDelete(Array.from(selectedIds))}
+              disabled={selectedIds.size === 0}
+              title={selectedIds.size === 0 ? '请先勾选左侧凭证' : '删除选中记录'}
+              className="flex h-8 items-center gap-1.5 px-3 text-[13px] font-medium rounded-lg border border-red-200 bg-white text-red-600 hover:bg-red-50 transition-colors disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              删除{selectedIds.size > 0 ? `（${selectedIds.size}）` : ''}
+            </button>
           </div>
         </div>
       </div>
@@ -331,6 +367,26 @@ const UnassignedPool: React.FC<UnassignedPoolProps> = ({
           }}
           onToggleAll={() => onSelectAll(allSelected ? [] : allIds)}
           onRowClick={(r) => onToggleSelect(r.id)}
+          expandedRowId={expandedId}
+          renderExpandedRow={(r) => {
+            const atts = attachedSourceIds(allPoolRecords, r.id)
+              .map((id) => allPoolRecords.find((x) => x.id === id)!)
+              .filter(Boolean);
+            return (
+              <div className="px-4 py-2 bg-sky-50/60 border-l-2 border-sky-300 space-y-1">
+                <div className="text-[11px] font-medium text-sky-700">所附原始凭证（{atts.length} 张，随本凭证整体组卷）</div>
+                {atts.map((a) => (
+                  <div key={a.id} className="flex items-center gap-3 text-xs text-slate-600 py-0.5">
+                    <Paperclip className="w-3 h-3 text-amber-500 shrink-0" />
+                    <span className="font-mono font-medium text-slate-700">{a.voucherNo}</span>
+                    {a.amount > 0 && <span>¥{a.amount.toLocaleString('zh-CN', { minimumFractionDigits: 2 })}</span>}
+                    {a.year && <span className="text-slate-400">{a.year}-{a.month}</span>}
+                    <span className="px-1 py-px text-[10px] rounded bg-amber-100 text-amber-700">原始凭证</span>
+                  </div>
+                ))}
+              </div>
+            );
+          }}
           renderActions={(r) => (
             <span className="flex items-center gap-0.5">
               <button
@@ -373,7 +429,7 @@ interface VolumeChecks {
 interface VolumeCardProps {
   volume: Volume;
   items: VolumeItem[];
-  recordMap: Map<string, { voucherNo: string; archiveType: string; amount: number; year: string; month: string }>;
+  recordMap: Map<string, { voucherNo: string; archiveType: string; amount: number; year: string; month: string; parentRecordId?: string }>;
   isActive: boolean;
   onSelect: () => void;
   onRemoveItem: (recordId: string) => void;
@@ -443,6 +499,31 @@ const VolumeCard: React.FC<VolumeCardProps> = ({
   const allChecksPassed = checks.real === 'passed' && checks.complete === 'passed' && checks.usable === 'passed' && checks.safe === 'passed';
   const checksRunning = checks.real === 'running' || checks.complete === 'running' || checks.usable === 'running' || checks.safe === 'running';
 
+  // ★ 单元化分组（2026-08-20 先组件再组卷）：主体件为主行，已挂接原始凭证收进其下的
+  //   附件组块（列表化整齐呈现）；父件不在本卷的悬挂件作为普通主行显示（避免"消失"）
+  const unitGroups = useMemo(() => {
+    const groups: Array<{ item: VolumeItem; children: VolumeItem[] }> = [];
+    const handled = new Set<string>();
+    for (const it of items) {
+      if (handled.has(it.recordId)) continue;
+      const pid = recordMap.get(it.recordId)?.parentRecordId;
+      if (pid && items.some((x) => x.recordId === pid)) continue; // 附件，等所属凭证带出
+      const children = items.filter(
+        (sub) => !handled.has(sub.recordId) && recordMap.get(sub.recordId)?.parentRecordId === it.recordId,
+      );
+      children.forEach((c) => handled.add(c.recordId));
+      handled.add(it.recordId);
+      groups.push({ item: it, children });
+    }
+    return groups;
+  }, [items, recordMap]);
+
+  /** 卷内已挂接原始凭证数（件数行展示"含 N 张原始凭证附件"） */
+  const linkedCount = useMemo(
+    () => items.filter((it) => recordMap.get(it.recordId)?.parentRecordId).length,
+    [items, recordMap],
+  );
+
   const handleConfirm = () => {
     setConfirming(true);
     try {
@@ -511,7 +592,7 @@ const VolumeCard: React.FC<VolumeCardProps> = ({
             {/* ★ 类别/期限显示中文名（archiveTypeCode 是档号用数字代码，直接显示不友好） */}
             <span>类别: {volume.archiveType || ARCHIVE_TYPE_CATEGORY_NAMES[toCategoryCode(volume.archiveTypeCode, volume.archiveType)] || '—'}</span>
             <span>期限: {volume.retention || volume.retentionCode || '—'}</span>
-            <span>件数: {items.length}</span>
+            <span>件数: {items.length}{linkedCount > 0 ? `（含 ${linkedCount} 张原始凭证附件）` : ''}</span>
             <span>日期: {volume.dateFrom || '?'} ~ {volume.dateTo || '?'}</span>
             {(() => {
               const totalAtt = items.reduce((sum, item) => sum + (attachmentCountMap.get(item.recordId) || 0), 0);
@@ -538,70 +619,136 @@ const VolumeCard: React.FC<VolumeCardProps> = ({
                 暂无条目，从左侧选择记录加入
               </div>
             ) : (
-              items.map((item) => {
+              unitGroups.map(({ item, children }) => {
                 const rec = recordMap.get(item.recordId);
                 const checked = itemSelIds.has(item.recordId);
                 return (
-                  <div
-                    key={item.id}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors text-sm group/item ${
-                      checked ? 'bg-sky-100/70 hover:bg-sky-100' : 'hover:bg-white'
-                    }`}
-                  >
-                    {/* ★ 勾选（草稿卷）：拆分/转卷/排序/移出的选择入口 */}
-                    {volume.status === 'draft' && (
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => onToggleItemSelect(item.recordId)}
-                        onClick={(e) => e.stopPropagation()}
-                        className="rounded border-slate-300 shrink-0 cursor-pointer"
-                        title="勾选后可拆分/转卷/排序/移出"
-                      />
-                    )}
-                    {/* ★ 插入按钮（悬浮显示）—— 在此位置之前插入 */}
-                    {volume.status === 'draft' && (
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); onInsertAtPosition(item.itemNo); }}
-                        className="p-0.5 text-slate-300 opacity-0 group-hover/item:opacity-100 hover:text-sky-500 hover:bg-sky-50 rounded transition-all shrink-0"
-                        title={`在 #${item.itemNo} 之前插入`}
-                      >
-                        <Plus className="w-3 h-3" />
-                      </button>
-                    )}
-                    <span className="text-xs text-slate-400 w-6 shrink-0">#{item.itemNo}</span>
-                    <span className="flex-1 font-medium text-slate-700 truncate">
-                      {rec?.voucherNo || item.recordArchiveCode || item.recordId}
-                    </span>
-                    {/* 该凭证的附件数 */}
-                    {(attachmentCountMap.get(item.recordId) || 0) > 0 && (
-                      <span className="text-[10px] text-amber-500 bg-amber-50 px-1 rounded shrink-0">
-                        <Paperclip className="w-3 h-3 inline" />{attachmentCountMap.get(item.recordId)}
-                      </span>
-                    )}
-                    {rec && (
-                      <span className="text-xs text-slate-400">{formatAmount(rec.amount)}</span>
-                    )}
-                    {/* 查看详情 */}
-                    <button
-                      type="button"
-                      onClick={() => onViewDetail(item.recordId)}
-                      className="p-0.5 text-slate-300 hover:text-sky-500"
-                      title="查看凭证详情"
+                  <React.Fragment key={item.id}>
+                    {/* 主行（凭证/普通件） */}
+                    <div
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors text-sm group/item ${
+                        checked ? 'bg-sky-100/70 hover:bg-sky-100' : 'hover:bg-white'
+                      }`}
                     >
-                      <Eye className="w-3 h-3" />
-                    </button>
-                    {volume.status === 'draft' && (
+                      {/* ★ 勾选（草稿卷）：拆分/转卷/排序/移出的选择入口 */}
+                      {volume.status === 'draft' && (
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => onToggleItemSelect(item.recordId)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="rounded border-slate-300 shrink-0 cursor-pointer"
+                          title="勾选后可拆分/转卷/排序/移出"
+                        />
+                      )}
+                      {/* ★ 插入按钮（悬浮显示）—— 在此位置之前插入 */}
+                      {volume.status === 'draft' && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); onInsertAtPosition(item.itemNo); }}
+                          className="p-0.5 text-slate-300 opacity-0 group-hover/item:opacity-100 hover:text-sky-500 hover:bg-sky-50 rounded transition-all shrink-0"
+                          title={`在 #${item.itemNo} 之前插入`}
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      )}
+                      <span className="text-xs text-slate-400 w-6 shrink-0">#{item.itemNo}</span>
+                      <span className="flex-1 truncate font-medium text-slate-700">
+                        {rec?.voucherNo || item.recordArchiveCode || item.recordId}
+                      </span>
+                      {/* 该凭证的附件数 */}
+                      {(attachmentCountMap.get(item.recordId) || 0) > 0 && (
+                        <span className="text-[10px] text-amber-500 bg-amber-50 px-1 rounded shrink-0">
+                          <Paperclip className="w-3 h-3 inline" />{attachmentCountMap.get(item.recordId)}
+                        </span>
+                      )}
+                      {/* 悬挂归属徽标：父件不在本卷的原始凭证才需要（在卷的已收进附件组块） */}
+                      {rec?.parentRecordId && children.length === 0 && (
+                        <span className="text-[10px] text-sky-600 bg-sky-50 px-1 rounded shrink-0" title="所属记账凭证（不在本卷）">
+                          附于 {recordMap.get(rec.parentRecordId)?.voucherNo || rec.parentRecordId.slice(0, 8)}
+                        </span>
+                      )}
+                      {rec && (
+                        <span className="text-xs text-slate-400">{formatAmount(rec.amount)}</span>
+                      )}
+                      {/* 查看详情 */}
                       <button
                         type="button"
-                        onClick={() => onRemoveItem(item.recordId)}
-                        className="p-0.5 text-slate-300 hover:text-red-400"
+                        onClick={() => onViewDetail(item.recordId)}
+                        className="p-0.5 text-slate-300 hover:text-sky-500"
+                        title="查看凭证详情"
                       >
-                        <X className="w-3 h-3" />
+                        <Eye className="w-3 h-3" />
                       </button>
+                      {volume.status === 'draft' && (
+                        <button
+                          type="button"
+                          onClick={() => onRemoveItem(item.recordId)}
+                          className="p-0.5 text-slate-300 hover:text-red-400"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* ★ 附件组块：所附原始凭证列表化呈现（与主行同样的列表感，2026-08-20） */}
+                    {children.length > 0 && (
+                      <div className="ml-7 mr-1 mb-1 rounded-lg border border-sky-100 bg-sky-50/40 overflow-hidden">
+                        <div className="px-2.5 py-1 text-[10px] font-medium text-sky-700 bg-sky-100/60 border-b border-sky-100 flex items-center gap-1">
+                          <Paperclip className="w-3 h-3" />
+                          所附原始凭证（{children.length} 张 · 与本凭证为一件）
+                        </div>
+                        {children.map((sub) => {
+                          const subRec = recordMap.get(sub.recordId);
+                          const subChecked = itemSelIds.has(sub.recordId);
+                          return (
+                            <div
+                              key={sub.id}
+                              className={`flex items-center gap-2 px-2.5 py-1 text-xs transition-colors ${
+                                subChecked ? 'bg-sky-100/70' : 'hover:bg-white/70'
+                              }`}
+                            >
+                              {volume.status === 'draft' && (
+                                <input
+                                  type="checkbox"
+                                  checked={subChecked}
+                                  onChange={() => onToggleItemSelect(sub.recordId)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="rounded border-slate-300 shrink-0 cursor-pointer"
+                                  title="随所属凭证为一件"
+                                />
+                              )}
+                              <span className="text-[10px] text-slate-400 w-6 shrink-0">#{sub.itemNo}</span>
+                              <span className="flex-1 truncate text-slate-600">
+                                {subRec?.voucherNo || sub.recordArchiveCode || sub.recordId}
+                              </span>
+                              {subRec && (
+                                <span className="text-[11px] text-slate-400">{formatAmount(subRec.amount)}</span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => onViewDetail(sub.recordId)}
+                                className="p-0.5 text-slate-300 hover:text-sky-500"
+                                title="查看原始凭证详情"
+                              >
+                                <Eye className="w-3 h-3" />
+                              </button>
+                              {volume.status === 'draft' && (
+                                <button
+                                  type="button"
+                                  onClick={() => onRemoveItem(sub.recordId)}
+                                  className="p-0.5 text-slate-300 hover:text-red-400"
+                                  title="移出（须随所属凭证整体移出）"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     )}
-                  </div>
+                  </React.Fragment>
                 );
               })
             )}
@@ -781,16 +928,38 @@ const VolumeCard: React.FC<VolumeCardProps> = ({
 // ── 子组件：推荐面板 ──
 interface RecommendPanelProps {
   recommendations: Array<{ id: string; title: string; estimatedItems: number; estimatedPages: number; dateFrom: string; dateTo: string }>;
+  /** ★ 组卷提示（纯原始凭证池 / 孤儿原始凭证被跳过等，2026-08-19） */
+  notice: string | null;
   onAccept: (index: number) => void;
   onAcceptAll: () => void;
   /** ★ 取消/关闭：中途终止本次智能组卷操作 */
   onCancel: () => void;
 }
 
-const RecommendPanel: React.FC<RecommendPanelProps> = ({ recommendations, onAccept, onAcceptAll, onCancel }) => {
+const RecommendPanel: React.FC<RecommendPanelProps> = ({ recommendations, notice, onAccept, onAcceptAll, onCancel }) => {
   const [expanded, setExpanded] = useState(true);
 
-  if (recommendations.length === 0) return null;
+  if (recommendations.length === 0 && !notice) return null;
+
+  // ★ 无推荐但有提示（如池中只有原始凭证）：渲染纯提示条，说明不出推荐的原因
+  if (recommendations.length === 0) {
+    return (
+      <div className="border-t border-amber-200 bg-amber-50/50 shrink-0">
+        <div className="flex items-center gap-2 px-4 py-2.5">
+          <Lightbulb className="w-4 h-4 text-amber-500 shrink-0" />
+          <span className="flex-1 text-xs text-amber-800 leading-relaxed">{notice}</span>
+          <button
+            type="button"
+            onClick={onCancel}
+            title="关闭"
+            className="p-1 text-amber-400 hover:text-amber-700 rounded shrink-0"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="border-t border-amber-200 bg-amber-50/50 shrink-0">
@@ -827,6 +996,13 @@ const RecommendPanel: React.FC<RecommendPanelProps> = ({ recommendations, onAcce
           <X className="w-3.5 h-3.5" />
         </button>
       </div>
+      {/* ★ 部分原始凭证被跳过时的说明（2026-08-19） */}
+      {notice && (
+        <div className="flex items-center gap-1.5 px-4 pb-2 -mt-1 text-xs text-amber-700">
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+          {notice}
+        </div>
+      )}
       {expanded && (
         /* ★ 高度受限 + 内部滚动：推荐组多时不再把条目池/分页栏顶出可视区（2026-08-08 修复） */
         <div className="px-4 pb-3 space-y-1.5 max-h-72 overflow-y-auto">
@@ -1159,9 +1335,12 @@ const VolumeWorkspacePage: React.FC = () => {
   // ── Stores ──
   const records = useArchiveStore((s) => s.records);
   const setRecords = useArchiveStore((s) => s.setRecords);
+  // 全量件视图（含已入卷件）：卷内件详情/类型判定的回退数据源（2026-08-19）
+  const allRecords = useArchiveStore((s) => s.allRecords);
   const volumes = useVolumeStore((s) => s.volumes);
   const volumeItems = useVolumeStore((s) => s.volumeItems);
   const recommendations = useVolumeStore((s) => s.recommendations);
+  const groupingNotice = useVolumeStore((s) => s.groupingNotice);
   const filters = useVolumeStore((s) => s.filters);
   const sourceDocs = useSourceDocumentStore((s) => s.documents);
 
@@ -1250,6 +1429,10 @@ const VolumeWorkspacePage: React.FC = () => {
   const [preselectedPrintVolumeId, setPreselectedPrintVolumeId] = useState<string | null>(null);
   const [volumeChecks, setVolumeChecks] = useState<Record<string, VolumeChecks>>({});
   const [detailRecord, setDetailRecord] = useState<ArchiveRecord | null>(null);
+  /** 详情件所属卷的检测是否实际运行过（passed/failed 任一），未运行 → 徽标显示「未检测」（2026-08-20） */
+  const [detailInspectionRan, setDetailInspectionRan] = useState(false);
+  /** ★ 纯原始凭证确认：所选件全为原始凭证时，组卷/加入已有案卷需二次确认（2026-08-19） */
+  const [pureSourceConfirm, setPureSourceConfirm] = useState<{ kind: 'create' } | { kind: 'add'; volumeId: string } | null>(null);
 
   // ── ★ 卷内件选择域（拆分/转卷/排序/移出；单域：跨卷勾选自动重置，2026-08-17） ──
   const [itemSel, setItemSel] = useState<{ volumeId: string; ids: Set<string> } | null>(null);
@@ -1281,9 +1464,37 @@ const VolumeWorkspacePage: React.FC = () => {
 
   // ★ 查看凭证详情（从未分配池或案卷卡片中点击）
   const handleViewDetail = useCallback((r: { id: string }) => {
-    const full = records.find((rec) => rec.id === r.id);
-    if (full) setDetailRecord(full);
-  }, [records]);
+    // ★ 2026-08-19 修复：卷内件不在待组卷池 records 里，必须回退全量件视图 allRecords，
+    //   否则案卷卡片上的小眼睛永远查不到记录 → 详情打不开（静默失效）
+    const full = records.find((rec) => rec.id === r.id)
+      ?? allRecords.find((rec) => rec.id === r.id);
+    if (!full) {
+      showToast('未找到该件的详情数据', 'info');
+      return;
+    }
+    // ★ 四性检测在卷级（2026-08-20）：件在卷内时，详情徽标继承所属案卷的检测结果
+    let volId: string | null = null;
+    for (const [vid, items] of Object.entries(volumeItems)) {
+      if (items.some((it) => it.recordId === full.id)) { volId = vid; break; }
+    }
+    const vc = volId ? volumeChecks[volId] : undefined;
+    setDetailInspectionRan(
+      !!vc && [vc.real, vc.complete, vc.usable, vc.safe].some((s) => s === 'passed' || s === 'failed'),
+    );
+    setDetailRecord(
+      vc
+        ? {
+            ...full,
+            checks: {
+              real: vc.real === 'passed',
+              complete: vc.complete === 'passed',
+              usable: vc.usable === 'passed',
+              safe: vc.safe === 'passed',
+            },
+          }
+        : full,
+    );
+  }, [records, allRecords, volumeItems, volumeChecks]);
 
   const showToast = (message: string, type: 'success' | 'info' = 'success') => {
     setToast({ message, type });
@@ -1312,6 +1523,14 @@ const VolumeWorkspacePage: React.FC = () => {
     return records.filter((r) => !volumeRecordIds.has(r.id) && !r.volumeId && pendingCheckIds.has(r.id)).length;
   }, [records, volumeItems, pendingCheckIds]);
 
+  /** 当前选中的凭证记录 */
+  const selectedRecords = useMemo(
+    () => records.filter((r) => selectedIds.has(r.id)),
+    [records, selectedIds],
+  );
+  /** 所选是否全为原始凭证（无记账凭证主体，2026-08-19 组卷规则） */
+  const pureSourceSelected = selectedRecords.length > 0 && selectedRecords.every(isSourceDocument);
+
   // 应用筛选 + ★ 按凭证号排序（会计实操：组卷唯一排序依据）
   const filteredUnassigned = useMemo(() => {
     let result = [...unassignedRecords];
@@ -1329,11 +1548,17 @@ const VolumeWorkspacePage: React.FC = () => {
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      result = result.filter(
-        (r) =>
-          r.voucherNo.toLowerCase().includes(q) ||
-          r.archiveCode.toLowerCase().includes(q) ||
-          r.amount.toString().includes(q)
+      const matchSelf = (r: ArchiveRecord) =>
+        r.voucherNo.toLowerCase().includes(q) ||
+        r.archiveCode.toLowerCase().includes(q) ||
+        r.amount.toString().includes(q);
+      // ★ 单元化搜索（2026-08-20）：附件命中时其所属凭证单元也要显示
+      result = result.filter((r) =>
+        matchSelf(r) ||
+        attachedSourceIds(unassignedRecords, r.id).some((sid) => {
+          const s = unassignedRecords.find((x) => x.id === sid);
+          return s ? matchSelf(s) : false;
+        })
       );
     }
     // ★ 按凭证号升序排序（会计实操：装订唯一依据是记账凭证编号升序）
@@ -1347,7 +1572,18 @@ const VolumeWorkspacePage: React.FC = () => {
     return result;
   }, [unassignedRecords, filters, searchQuery]);
 
-  // ── 分页 ──
+  // ★ 按件显示（2026-08-20）：已挂接且父件在池内的原始凭证不再平铺为独立行，
+  //   收进所属凭证的「件」单元（凭证号列展开可见）；父件不在池的悬挂件仍单列，避免"消失"
+  const unassignedIds = useMemo(() => new Set(unassignedRecords.map((r) => r.id)), [unassignedRecords]);
+  const poolDisplayRecords = useMemo(
+    () => filteredUnassigned.filter((r) => {
+      if (!isSourceDocument(r) || !r.parentRecordId) return true;
+      return !unassignedIds.has(r.parentRecordId);
+    }),
+    [filteredUnassigned, unassignedIds],
+  );
+
+  // ── 分页（按件口径：pageData = 单元行） ──
   const {
     pageData: pagedUnassigned,
     currentPage,
@@ -1356,10 +1592,63 @@ const VolumeWorkspacePage: React.FC = () => {
     pageSize,
     setPage,
     setPageSize,
-  } = usePagination(filteredUnassigned, { defaultPageSize: 20 });
+  } = usePagination(poolDisplayRecords, { defaultPageSize: 20 });
 
   // 筛选条件变化时重置到第1页
   useEffect(() => { setPage(1); }, [filters, searchQuery, setPage]);
+
+  // 凭证号查表（归属徽标"附于 {凭证号}"用，2026-08-20）
+  const voucherNoById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const r of allRecords) m.set(r.id, r.voucherNo);
+    for (const r of records) m.set(r.id, r.voucherNo);
+    return m;
+  }, [allRecords, records]);
+
+  /** 池列表凭证单元展开态（所附原始凭证查看，2026-08-20） */
+  const [expandedPoolId, setExpandedPoolId] = useState<string | null>(null);
+
+  // ★ 凭证号列包装（2026-08-20）：[单元展开钮|占位] + 凭证号 + 原始凭证归属徽标（附于/待挂接）
+  //   ⚠ 依赖 unassignedRecords，声明位置必须在其后（TDZ）
+  const poolColumns = useMemo((): DataTableColumn<ArchiveRecord>[] => {
+    return tableColumns.map((col) => {
+      if (col.id !== 'VOUCHER_NO') return col;
+      return {
+        ...col,
+        cell: (r: ArchiveRecord) => {
+          const isSrc = isSourceDocument(r);
+          const attCount = isSrc ? 0 : attachedSourceIds(unassignedRecords, r.id).length;
+          const parentNo = isSrc && r.parentRecordId ? voucherNoById.get(r.parentRecordId) : undefined;
+          return (
+            <span className="inline-flex items-center gap-1">
+              {attCount > 0 ? (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setExpandedPoolId((prev) => (prev === r.id ? null : r.id)); }}
+                  className="p-0.5 text-slate-400 hover:text-sky-600 rounded transition-colors shrink-0"
+                  title={`展开查看 ${attCount} 张所附原始凭证`}
+                >
+                  {expandedPoolId === r.id ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                </button>
+              ) : (
+                <span className="w-[18px] shrink-0" aria-hidden="true" />
+              )}
+              <span className="truncate">{col.cell?.(r)}</span>
+              {isSrc && (r.parentRecordId ? (
+                <span className="shrink-0 px-1 py-px text-[10px] rounded bg-sky-100 text-sky-700" title="所属记账凭证（随其整体组卷）">
+                  附于 {parentNo || r.parentRecordId!.slice(0, 8)}
+                </span>
+              ) : (
+                <span className="shrink-0 px-1 py-px text-[10px] rounded bg-amber-100 text-amber-700" title="未挂接：不会随任何凭证成单元；勾选 1 张记账凭证 + 本件后点【组件】">
+                  待挂接
+                </span>
+              ))}
+            </span>
+          );
+        },
+      };
+    });
+  }, [tableColumns, voucherNoById, unassignedRecords, expandedPoolId]);
 
   // ★ 凭证号连续性检测结果
   const continuityCheck = useMemo(() => {
@@ -1367,30 +1656,116 @@ const VolumeWorkspacePage: React.FC = () => {
     return validateVoucherContinuity(voucherNos);
   }, [filteredUnassigned]);
 
-  // 记录映射（供VolumeCard查找记录详情）
+  // 记录映射（供VolumeCard查找记录详情；parentRecordId 供「附于」徽标，2026-08-20）
   const recordMap = useMemo(() => {
-    const map = new Map<string, { voucherNo: string; archiveType: string; amount: number; year: string; month: string }>();
+    const map = new Map<string, { voucherNo: string; archiveType: string; amount: number; year: string; month: string; parentRecordId?: string }>();
+    // ★ 卷内件不在池内 records，需并入全量件视图，否则卷内只显示档号不显示凭证号（2026-08-19）
+    for (const r of allRecords) {
+      map.set(r.id, { voucherNo: r.voucherNo, archiveType: r.archiveType, amount: r.amount, year: r.year, month: r.month, parentRecordId: r.parentRecordId });
+    }
     for (const r of records) {
-      map.set(r.id, { voucherNo: r.voucherNo, archiveType: r.archiveType, amount: r.amount, year: r.year, month: r.month });
+      map.set(r.id, { voucherNo: r.voucherNo, archiveType: r.archiveType, amount: r.amount, year: r.year, month: r.month, parentRecordId: r.parentRecordId });
     }
     return map;
-  }, [records]);
+  }, [records, allRecords]);
+
+  /** recordId → ArchiveRecord 解析（全量件视图优先，池内兜底；单元闭合校验用，2026-08-20）
+   *  ⚠ 声明位置须在 handleRemoveItem/handleToggleItemSelect 等使用点之前（TDZ） */
+  const resolveRecById = useCallback(
+    (rid: string): ArchiveRecord | undefined =>
+      allRecords.find((r) => r.id === rid) ?? records.find((r) => r.id === rid),
+    [allRecords, records],
+  );
 
   // ── 事件处理 ──
+  // ★ 单元化勾选（2026-08-20 先组件再组卷）：勾/取消凭证联动其已挂接原始凭证
   const handleToggleSelect = useCallback((id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
+    setSelectedIds((prev) => toggleUnitSelection(unassignedRecords, prev, id));
+  }, [unassignedRecords]);
 
+  // ★ 全选：并集 + 单元扩展（不丢跨页/被过滤的既有选择）；传空数组 = 清空
   const handleSelectAll = useCallback((ids: string[]) => {
-    setSelectedIds(new Set(ids));
-  }, []);
+    setSelectedIds((prev) => (ids.length === 0 ? new Set() : selectPageWithUnits(unassignedRecords, ids, prev)));
+  }, [unassignedRecords]);
 
-  const handleAddToVolume = useCallback(
+  /** 目标卷（含卷内件）是否已有非原始凭证的主体件——经全量件视图解析卷内件类型（2026-08-19） */
+  const volumeHasMainRecord = useCallback(
+    (volumeId: string): boolean => {
+      const items = volumeItems[volumeId] || [];
+      if (items.length === 0) return false;
+      const allById = new Map(useArchiveStore.getState().allRecords.map((r) => [r.id, r]));
+      return items.some((it) => {
+        const rec = allById.get(it.recordId);
+        // 查不到记录时按"非原始凭证"放行——宁可不弹窗也不误拦
+        return rec ? !isSourceDocument(rec) : true;
+      });
+    },
+    [volumeItems]
+  );
+
+  /** ★ 凭证卷守卫（2026-08-19）：移出/拆分/转卷后，源卷不得只剩原始凭证——
+   *  《会计基础工作规范》：凭证卷以记账凭证为主体，原始凭证是其附件。
+   *  移空不受限（服务端自动销毁空卷）；仅凭证卷（KP）适用，账簿/报告卷天然无此约束。 */
+  const wouldLeaveOrphanSources = useCallback(
+    (volumeId: string, leavingIds: Set<string>): boolean => {
+      const vol = volumes.find((v) => v.id === volumeId);
+      if (!vol || toCategoryCode(vol.archiveTypeCode, vol.archiveType) !== 'KP') return false;
+      const items = volumeItems[volumeId] || [];
+      const remaining = items.filter((it) => !leavingIds.has(it.recordId));
+      if (remaining.length === 0) return false;
+      const allById = new Map(allRecords.map((r) => [r.id, r]));
+      return remaining.every((it) => {
+        const rec = allById.get(it.recordId) ?? records.find((r) => r.id === it.recordId);
+        return rec ? isSourceDocument(rec) : false; // 查不到按主体件放行，不误拦
+      });
+    },
+    [volumes, volumeItems, allRecords, records]
+  );
+
+  const ORPHAN_GUARD_MSG = '移出后该卷将只剩原始凭证：凭证卷至少要保留一张记账凭证作为主体。如需整卷清空，请使用【拆卷】。';
+
+  // ── ★ 组件/解挂（2026-08-20 先组件再组卷：原始凭证挂接到记账凭证形成「件」单元） ──
+  const linkableSelection = useMemo(
+    () => resolveLinkableSelection(unassignedRecords, selectedIds),
+    [unassignedRecords, selectedIds],
+  );
+  const unlinkableSelection = useMemo(
+    () => resolveUnlinkableSelection(unassignedRecords, selectedIds),
+    [unassignedRecords, selectedIds],
+  );
+
+  const handleLinkSelection = useCallback(async () => {
+    if (!linkableSelection) return;
+    const voucherNo = records.find((r) => r.id === linkableSelection.voucherId)?.voucherNo || '记账凭证';
+    try {
+      for (const sid of linkableSelection.sourceIds) {
+        await linkRecordParent(sid, linkableSelection.voucherId);
+      }
+      setSelectedIds(new Set());
+      useArchiveStore.getState().loadRecords();
+      void useArchiveStore.getState().loadAllRecords();
+      showToast(`已组件：${linkableSelection.sourceIds.length} 张原始凭证挂接到「${voucherNo}」`);
+    } catch (e: any) {
+      showToast(e.message || '组件失败', 'info');
+    }
+  }, [linkableSelection, records]);
+
+  const handleUnlinkSelection = useCallback(async () => {
+    if (!unlinkableSelection) return;
+    try {
+      for (const sid of unlinkableSelection) {
+        await linkRecordParent(sid, null);
+      }
+      setSelectedIds(new Set());
+      useArchiveStore.getState().loadRecords();
+      void useArchiveStore.getState().loadAllRecords();
+      showToast(`已解挂 ${unlinkableSelection.length} 张原始凭证`);
+    } catch (e: any) {
+      showToast(e.message || '解挂失败', 'info');
+    }
+  }, [unlinkableSelection]);
+
+  const doAddToVolume = useCallback(
     async (volumeId: string) => {
       if (selectedIds.size === 0) return;
       try {
@@ -1406,8 +1781,21 @@ const VolumeWorkspacePage: React.FC = () => {
     [selectedIds, addItemsToVolume]
   );
 
+  // ★ 加入已有案卷：纯原始凭证且目标卷内也没有记账凭证时，先弹确认（2026-08-19）
+  const handleAddToVolume = useCallback(
+    async (volumeId: string) => {
+      if (selectedIds.size === 0) return;
+      if (pureSourceSelected && !volumeHasMainRecord(volumeId)) {
+        setPureSourceConfirm({ kind: 'add', volumeId });
+        return;
+      }
+      await doAddToVolume(volumeId);
+    },
+    [selectedIds, pureSourceSelected, volumeHasMainRecord, doAddToVolume]
+  );
+
   // ★ 主操作：勾选凭证 → 直接组卷（创建案卷 + 加入凭证，一步完成）
-  const handleCreateAndAdd = useCallback(async () => {
+  const doCreateAndAdd = useCallback(async () => {
     if (selectedIds.size === 0) return;
     // ★ 从选中记录推断案卷属性（类别/期限/年度），归档归类依赖这些属性
     // 否则手动建卷属性为空，移交时会错误兜底归入"其他会计资料"（2026-07-18 Bug修复）
@@ -1431,6 +1819,26 @@ const VolumeWorkspacePage: React.FC = () => {
       showToast(e.message || '组卷失败', 'info');
     }
   }, [selectedIds, records, createVolume, addItemsToVolume, filters]);
+
+  // ★ 纯原始凭证拦截（2026-08-19）：所选全为原始凭证时先弹确认框——按《会计基础
+  //   工作规范》原始凭证应随所属记账凭证组卷，仅确需单独装订成册时才放行
+  const handleCreateAndAdd = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+    if (pureSourceSelected) {
+      setPureSourceConfirm({ kind: 'create' });
+      return;
+    }
+    await doCreateAndAdd();
+  }, [selectedIds, pureSourceSelected, doCreateAndAdd]);
+
+  /** 确认框「仍要组卷/仍要加入」：按确认来源执行原动作 */
+  const handlePureSourceConfirm = useCallback(async () => {
+    const action = pureSourceConfirm;
+    setPureSourceConfirm(null);
+    if (!action) return;
+    if (action.kind === 'create') await doCreateAndAdd();
+    else await doAddToVolume(action.volumeId);
+  }, [pureSourceConfirm, doCreateAndAdd, doAddToVolume]);
 
   // ★ 将左侧选中件加入指定案卷（右侧交互路径，直接使用卡片对应的案卷ID）
   const handleAddSelectedToActiveVolume = useCallback(async (volumeId: string) => {
@@ -1456,6 +1864,27 @@ const VolumeWorkspacePage: React.FC = () => {
       // Find which volume this item belongs to
       for (const [vid, items] of Object.entries(volumeItems)) {
         if (items.some((it) => it.recordId === recordId)) {
+          // ★ 单元闭合（2026-08-20）：凭证有同卷附件时不允许单独移出；原始凭证须随父件整体移出
+          const rec = resolveRecById(recordId);
+          if (rec && !isSourceDocument(rec)) {
+            const attachedInVol = items.filter((it) => {
+              const rr = resolveRecById(it.recordId);
+              return rr && isSourceDocument(rr) && rr.parentRecordId === recordId;
+            });
+            if (attachedInVol.length > 0) {
+              showToast(`该凭证还有 ${attachedInVol.length} 张原始凭证附件在本卷——请勾选凭证（自动带上附件）后批量移出，保持「件」单元完整`, 'info');
+              return;
+            }
+          }
+          if (rec && isSourceDocument(rec) && rec.parentRecordId && items.some((it) => it.recordId === rec.parentRecordId)) {
+            showToast('原始凭证须随所属记账凭证整体移出（勾选其父凭证会自动带上本件）', 'info');
+            return;
+          }
+          // ★ 凭证卷守卫（2026-08-19）：移出后不得只剩原始凭证
+          if (wouldLeaveOrphanSources(vid, new Set([recordId]))) {
+            showToast(ORPHAN_GUARD_MSG, 'info');
+            return;
+          }
           try {
             await removeItemFromVolume(vid, recordId);
             useArchiveStore.getState().loadRecords();
@@ -1468,7 +1897,7 @@ const VolumeWorkspacePage: React.FC = () => {
         }
       }
     },
-    [volumeItems, removeItemFromVolume]
+    [volumeItems, removeItemFromVolume, wouldLeaveOrphanSources, resolveRecById]
   );
 
   const handleConfirmVolume = useCallback(
@@ -1550,13 +1979,25 @@ const VolumeWorkspacePage: React.FC = () => {
   // ── ★ 卷内件勾选（单选择域：切换案卷自动重置，避免跨卷误操作） ──
   const handleToggleItemSelect = useCallback((volumeId: string, recordId: string) => {
     setItemSel((prev) => {
-      if (!prev || prev.volumeId !== volumeId) return { volumeId, ids: new Set([recordId]) };
-      const next = new Set(prev.ids);
-      if (next.has(recordId)) next.delete(recordId);
-      else next.add(recordId);
-      return next.size === 0 ? null : { volumeId, ids: next };
+      const base = (!prev || prev.volumeId !== volumeId)
+        ? { volumeId, ids: new Set<string>() }
+        : { volumeId, ids: new Set(prev.ids) };
+      const adding = !base.ids.has(recordId);
+      if (adding) base.ids.add(recordId); else base.ids.delete(recordId);
+      // ★ 单元闭合（2026-08-20）：勾/取消凭证时，同卷内其已挂接原始凭证联动
+      const rec = resolveRecById(recordId);
+      if (rec && !isSourceDocument(rec)) {
+        for (const it of volumeItems[volumeId] || []) {
+          if (it.recordId === recordId) continue;
+          const rr = resolveRecById(it.recordId);
+          if (rr && isSourceDocument(rr) && rr.parentRecordId === recordId) {
+            if (adding) base.ids.add(it.recordId); else base.ids.delete(it.recordId);
+          }
+        }
+      }
+      return base.ids.size === 0 ? null : { volumeId, ids: base.ids };
     });
-  }, []);
+  }, [volumeItems, resolveRecById]);
 
   // ── ★ 全选本卷（悬浮工具栏「全选」） ──
   const handleSelectAllInSelVolume = useCallback(() => {
@@ -1587,6 +2028,18 @@ const VolumeWorkspacePage: React.FC = () => {
   // ── ★ 批量移出回待组卷池（逐件独立成败；最后一件移出时服务端自动销毁空卷） ──
   const handleBatchRemoveItems = useCallback(
     async (volumeId: string, recordIds: string[]) => {
+      // ★ 凭证卷守卫（2026-08-19）：批量移出后不得只剩原始凭证
+      if (wouldLeaveOrphanSources(volumeId, new Set(recordIds))) {
+        showToast(ORPHAN_GUARD_MSG, 'info');
+        return;
+      }
+      // ★ 单元闭合（2026-08-20）：原始凭证须随所属记账凭证整体移出
+      const removeViolation = findUnitSplitViolation(
+        (volumeItems[volumeId] || []).map((it) => it.recordId), new Set(recordIds), resolveRecById);
+      if (removeViolation) {
+        showToast(removeViolation, 'info');
+        return;
+      }
       let ok = 0;
       let fail = 0;
       for (const rid of recordIds) {
@@ -1605,7 +2058,7 @@ const VolumeWorkspacePage: React.FC = () => {
         fail === 0 ? 'success' : 'info'
       );
     },
-    [removeItemFromVolume]
+    [removeItemFromVolume, wouldLeaveOrphanSources, volumeItems, resolveRecById]
   );
 
   // ── ★ 拆分为新案卷（选中件 → 新卷，继承源卷属性） ──
@@ -1613,6 +2066,18 @@ const VolumeWorkspacePage: React.FC = () => {
     async (title: string) => {
       if (!itemSel) return;
       const { volumeId, ids } = itemSel;
+      // ★ 凭证卷守卫（2026-08-19）：拆分后源卷不得只剩原始凭证（弹窗保持打开，可调整勾选）
+      if (wouldLeaveOrphanSources(volumeId, ids)) {
+        showToast(ORPHAN_GUARD_MSG, 'info');
+        return;
+      }
+      // ★ 单元闭合（2026-08-20）：原始凭证须随所属记账凭证整体拆分
+      const splitViolation = findUnitSplitViolation(
+        (volumeItems[volumeId] || []).map((it) => it.recordId), ids, resolveRecById);
+      if (splitViolation) {
+        showToast(splitViolation, 'info');
+        return;
+      }
       try {
         const newVol = await splitVolume(volumeId, Array.from(ids), title);
         setSplitTarget(null);
@@ -1623,7 +2088,7 @@ const VolumeWorkspacePage: React.FC = () => {
         showToast(e.message || '拆分失败', 'info');
       }
     },
-    [itemSel, splitVolume]
+    [itemSel, splitVolume, wouldLeaveOrphanSources, volumeItems, resolveRecById]
   );
 
   // ── ★ 转卷（选中件移入其他草稿卷，不回收集池） ──
@@ -1631,6 +2096,18 @@ const VolumeWorkspacePage: React.FC = () => {
     async (targetVolumeId: string) => {
       if (!itemSel) return;
       const { volumeId, ids } = itemSel;
+      // ★ 凭证卷守卫（2026-08-19）：转卷后源卷不得只剩原始凭证（弹窗保持打开，可调整勾选）
+      if (wouldLeaveOrphanSources(volumeId, ids)) {
+        showToast(ORPHAN_GUARD_MSG, 'info');
+        return;
+      }
+      // ★ 单元闭合（2026-08-20）：原始凭证须随所属记账凭证整体转卷
+      const moveViolation = findUnitSplitViolation(
+        (volumeItems[volumeId] || []).map((it) => it.recordId), ids, resolveRecById);
+      if (moveViolation) {
+        showToast(moveViolation, 'info');
+        return;
+      }
       const tv = volumes.find((v) => v.id === targetVolumeId);
       try {
         const { moved, sourceDestroyed } = await moveItemsToVolume(volumeId, Array.from(ids), targetVolumeId);
@@ -1643,7 +2120,7 @@ const VolumeWorkspacePage: React.FC = () => {
         showToast(e.message || '转卷失败', 'info');
       }
     },
-    [itemSel, moveItemsToVolume, volumes]
+    [itemSel, moveItemsToVolume, volumes, wouldLeaveOrphanSources, volumeItems, resolveRecById]
   );
 
   // ── ★ 合并案卷（来源卷并入目标卷，来源卷删除） ──
@@ -1663,7 +2140,12 @@ const VolumeWorkspacePage: React.FC = () => {
 
   const handleRecommend = useCallback(() => {
     generateRecommendations(unassignedRecords);
-    showToast(`已生成 ${unassignedRecords.length > 0 ? '推荐分组' : '暂无待组卷条目'}`, 'info');
+    // ★ 按实际生成结果给文案（2026-08-19：纯原始凭证池不再产生推荐，原因由面板提示条承载）
+    const n = useVolumeStore.getState().recommendations.length;
+    showToast(
+      n > 0 ? `已生成 ${n} 组推荐` : unassignedRecords.length > 0 ? '未发现可组卷的记账凭证' : '暂无待组卷条目',
+      'info',
+    );
   }, [generateRecommendations, unassignedRecords]);
 
   const handleAcceptRecommendation = useCallback(
@@ -1810,6 +2292,12 @@ const VolumeWorkspacePage: React.FC = () => {
   // ── 删除未组卷记录（真删除：调 DELETE /records/{id} 服务端永久删除；
   // 旧版只 filter 前端状态 → 下次 loadRecords 复活，2026-07-29 用户报障修复） ──
   const handleDeleteRecord = useCallback(async (recordId: string) => {
+    // ★ 删除有附件的凭证前确认：附件将变「待挂接」（2026-08-20 先组件再组卷）
+    const rec = records.find((r) => r.id === recordId);
+    if (rec && !isSourceDocument(rec)) {
+      const n = attachedSourceIds(records, recordId).length;
+      if (n > 0 && !window.confirm(`该凭证挂有 ${n} 张原始凭证；删除后它们将变为「待挂接」状态。\n确认删除该凭证？`)) return;
+    }
     try {
       await deleteRecord(recordId);
       setRecords(useArchiveStore.getState().records.filter((r) => r.id !== recordId));
@@ -1817,10 +2305,17 @@ const VolumeWorkspacePage: React.FC = () => {
     } catch (e: any) {
       showToast(e.message || '删除失败', 'info');
     }
-  }, [setRecords]);
+  }, [setRecords, records]);
 
   // ── 批量删除未组卷记录（逐件独立成败，失败件保留并提示） ──
   const handleBatchDelete = useCallback(async (ids: string[]) => {
+    // ★ 连带确认：选择集含随凭证挂接的原始凭证时先声明（2026-08-20）
+    const attachedCount = ids.filter((id) => {
+      const r = records.find((x) => x.id === id);
+      return r && isSourceDocument(r) && r.parentRecordId;
+    }).length;
+    if (attachedCount > 0
+        && !window.confirm(`选择集中含 ${attachedCount} 张随凭证挂接的原始凭证，将一并删除（不可恢复）。\n确认删除 ${ids.length} 条记录？`)) return;
     const failedIds = new Set<string>();
     let firstErr = '';
     for (const id of ids) {
@@ -1840,7 +2335,7 @@ const VolumeWorkspacePage: React.FC = () => {
     } else {
       showToast(`已删除 ${ids.length - failedIds.size} 条，${failedIds.size} 条失败（${firstErr}）`, 'info');
     }
-  }, [setRecords]);
+  }, [setRecords, records]);
 
   // ── 获取案卷的四性检测状态 ──
   const getChecks = (volumeId: string): VolumeChecks => {
@@ -1939,6 +2434,7 @@ const VolumeWorkspacePage: React.FC = () => {
           )}
           <UnassignedPool
             records={pagedUnassigned}
+            allPoolRecords={unassignedRecords}
             selectedIds={selectedIds}
             onToggleSelect={handleToggleSelect}
             onSelectAll={handleSelectAll}
@@ -1951,12 +2447,18 @@ const VolumeWorkspacePage: React.FC = () => {
             onCreateAndAdd={handleCreateAndAdd}
             attachmentCountMap={attachmentCountMap}
             onViewDetail={handleViewDetail}
-            tableColumns={tableColumns}
+            tableColumns={poolColumns}
+            linkableCount={linkableSelection?.sourceIds.length ?? 0}
+            unlinkableCount={unlinkableSelection?.length ?? 0}
+            onLinkSelection={() => void handleLinkSelection()}
+            onUnlinkSelection={() => void handleUnlinkSelection()}
+            expandedId={expandedPoolId}
           />
 
           {/* 智能推荐（在条目池下方） */}
           <RecommendPanel
             recommendations={recommendations}
+            notice={groupingNotice}
             onAccept={handleAcceptRecommendation}
             onAcceptAll={async () => {
               try {
@@ -1972,8 +2474,9 @@ const VolumeWorkspacePage: React.FC = () => {
               }
             }}
             onCancel={() => {
-              // ★ 中途终止本次智能组卷：清空推荐结果，不创建任何案卷
+              // ★ 中途终止本次智能组卷：清空推荐结果与提示，不创建任何案卷
               useVolumeStore.getState().setRecommendations([]);
+              useVolumeStore.getState().setGroupingNotice(null);
               showToast('已取消本次智能组卷推荐', 'info');
             }}
           />
@@ -2175,6 +2678,41 @@ const VolumeWorkspacePage: React.FC = () => {
         preselectedVolumeId={preselectedPrintVolumeId}
       />
 
+      {/* ★ 纯原始凭证组卷确认（2026-08-19：组件＝1张记账凭证+N个原始凭证附件，
+          原始凭证一般应随记账凭证组卷；确需单独装订成册时经确认放行） */}
+      {pureSourceConfirm && (
+        <OpModal
+          title={pureSourceConfirm.kind === 'create' ? '仅含原始凭证，确认组卷？' : '目标案卷缺少记账凭证'}
+          subtitle="原始凭证组卷规则"
+          icon={<AlertTriangle className="w-5 h-5 text-amber-600" />}
+          iconBg="bg-amber-100"
+          onClose={() => setPureSourceConfirm(null)}
+          footer={
+            <>
+              <button
+                type="button"
+                onClick={() => setPureSourceConfirm(null)}
+                className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={() => void handlePureSourceConfirm()}
+                className="px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-xl hover:bg-amber-700 transition-colors shadow-sm"
+              >
+                {pureSourceConfirm.kind === 'create' ? '仍要组卷' : '仍要加入'}
+              </button>
+            </>
+          }
+        >
+          <div className="text-xs text-slate-600 bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-1.5 leading-relaxed">
+            <p>· 所选 {selectedIds.size} 件均为原始凭证{pureSourceConfirm.kind === 'add' ? '，且目标案卷内也没有记账凭证' : ''}，缺少记账凭证作为主体。</p>
+            <p>· 按《会计基础工作规范》，原始凭证一般应作为附件随所属记账凭证组卷；仅当附件过多、确需单独装订成册时，才独立成卷。</p>
+          </div>
+        </OpModal>
+      )}
+
       {/* ★ 拆卷确认弹窗 */}
       {decomposeTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setDecomposeTarget(null)}>
@@ -2223,6 +2761,7 @@ const VolumeWorkspacePage: React.FC = () => {
             <RecordDetailPanel
               context="voucher"
               record={detailRecord}
+              inspectionRan={detailInspectionRan}
               onClose={() => setDetailRecord(null)}
             />
           </div>

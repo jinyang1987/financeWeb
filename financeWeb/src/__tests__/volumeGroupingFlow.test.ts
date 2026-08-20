@@ -57,6 +57,7 @@ beforeEach(() => {
     volumes: [],
     volumeItems: {},
     recommendations: [],
+    groupingNotice: null,
     transferLog: [],
   });
   // 件域自 P1-① 起不再内置仿真种子：依赖 records 的用例显式播种
@@ -238,5 +239,74 @@ describe('凭证+原始凭证＝【一件】单元化（2026-08-19 智能组卷�
     expect(recs[0].recordIds).toEqual(['v1', 's1', 'v2']);
     // 件数 = 3
     expect(recs[0].estimatedItems).toBe(3);
+  });
+});
+
+describe('原始凭证组卷规则（2026-08-19：组件＝1张记账凭证+N个原始凭证附件）', () => {
+  beforeEach(() => {
+    useSourceDocumentStore.setState({ documents: [] });
+  });
+
+  it('纯原始凭证池不出推荐并给出提示（真实数据形态：archiveType=记账凭证 + voucherCategory=原始凭证）', () => {
+    // 用户场景：待组卷池里只有 2 件原始凭证，没有记账凭证 → 不满足组件逻辑，不能成卷
+    const records = [
+      makeVoucher('s1', '记-附件-1', { voucherCategory: '原始凭证' }),
+      makeVoucher('s2', '记-附件-2', { voucherCategory: '原始凭证' }),
+    ];
+
+    useVolumeStore.getState().generateRecommendations(records);
+    const st = useVolumeStore.getState();
+    expect(st.recommendations).toHaveLength(0);
+    expect(st.groupingNotice).toContain('2 件均为原始凭证');
+  });
+
+  it('混合池：孤儿原始凭证（无属主）被跳过、不进任何推荐卷，并提示件数', () => {
+    const records = [
+      makeVoucher('v1', '记-001'),
+      makeVoucher('v2', '记-002'),
+      // 孤儿原始凭证：无 parentRecordId（真实数据服务端不下发该字段）
+      makeVoucher('s1', '记-附件-1', { voucherCategory: '原始凭证' }),
+    ];
+
+    useVolumeStore.getState().generateRecommendations(records);
+    const st = useVolumeStore.getState();
+    expect(st.recommendations.length).toBe(1);
+    expect(st.recommendations[0].recordIds).toEqual(['v1', 'v2']);
+    expect(st.groupingNotice).toContain('1 件原始凭证未参与组卷');
+  });
+
+  it('voucherCategory 形态的独立原始凭证，属主在池内时仍随父件整体归卷且无提示', () => {
+    const records = [
+      makeVoucher('v1', '记-001'),
+      makeVoucher('v2', '记-002'),
+      makeVoucher('s1', '记-001', { voucherCategory: '原始凭证', parentRecordId: 'v1' }),
+    ];
+
+    useVolumeStore.getState().generateRecommendations(records);
+    const st = useVolumeStore.getState();
+    expect(st.recommendations.length).toBe(1);
+    expect(st.recommendations[0].recordIds).toEqual(['v1', 's1', 'v2']);
+    expect(st.groupingNotice).toBeNull();
+  });
+
+  it('正常凭证池无跳过时不产生提示', () => {
+    const records = [makeVoucher('v1', '记-001'), makeVoucher('v2', '记-002')];
+    useVolumeStore.getState().generateRecommendations(records);
+    const st = useVolumeStore.getState();
+    expect(st.recommendations.length).toBe(1);
+    expect(st.groupingNotice).toBeNull();
+  });
+
+  it('原始凭证挂接到池外父件 → 按孤儿跳过并提示（父件不在本池不随卷）', () => {
+    const records = [
+      makeVoucher('v1', '记-001'),
+      // 父件已入卷/已移交/他全宗——不在待组卷池内
+      makeVoucher('s1', '记-附件-1', { voucherCategory: '原始凭证', parentRecordId: 'v-not-in-pool' }),
+    ];
+    useVolumeStore.getState().generateRecommendations(records);
+    const st = useVolumeStore.getState();
+    expect(st.recommendations.length).toBe(1);
+    expect(st.recommendations[0].recordIds).toEqual(['v1']);
+    expect(st.groupingNotice).toContain('1 件原始凭证未参与组卷');
   });
 });

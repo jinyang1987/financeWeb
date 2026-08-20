@@ -44,6 +44,14 @@ async function fetchWithTimeout(input: string, init: RequestInit, timeoutMs: num
   }
 }
 
+/** 401 全局兜底：清会话并广播（App 层弹回登录页）。
+ *  背景（2026-08-19）：Alfresco ticket 默认 1h 过期且重启即失效，此前会话死亡后
+ *  前端不跳登录页，每个操作各自报莫名错误（上传被误标「识别失败」）。 */
+function handleUnauthorized() {
+  session.clear();
+  window.dispatchEvent(new CustomEvent('ams:unauthorized'));
+}
+
 async function request<T>(method: string, path: string, body?: unknown, extraHeaders?: Record<string, string>): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json;charset=UTF-8',
@@ -68,6 +76,7 @@ async function request<T>(method: string, path: string, body?: unknown, extraHea
   }
 
   if (!res.ok) {
+    if (res.status === 401) handleUnauthorized();
     const err = data as { code?: string; message?: string } | undefined;
     throw new ApiRequestError(res.status, err?.code || `HTTP_${res.status}`, err?.message || `请求失败 (${res.status})`);
   }
@@ -91,6 +100,7 @@ async function upload<T>(path: string, formData: FormData): Promise<T> {
   }
 
   if (!res.ok) {
+    if (res.status === 401) handleUnauthorized();
     const err = data as { code?: string; message?: string } | undefined;
     throw new ApiRequestError(res.status, err?.code || `HTTP_${res.status}`, err?.message || `上传失败 (${res.status})`);
   }

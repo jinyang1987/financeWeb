@@ -16,6 +16,9 @@ export interface AmsSession {
   userId: string;
   ticket: string;
   displayName: string;
+  /** Alfresco 直连专用 ticket（服务端换发的 admin ticket）——与 ams 会话 ticket 分离存放，
+   *  避免换发覆盖会话后 userId/ticket 错配、401 死循环（2026-08-19 修复） */
+  alfTicket?: string;
 }
 
 const TICKET_KEY = 'ams-ticket-v1';
@@ -67,11 +70,18 @@ export const session = {
   },
   /**
    * Alfresco 直连 URL 注入 alf_ticket（ACS 26 实测不接受 Basic userId:ticket）。
-   * 无会话时返回 null（调用方回退到开发凭据）。
+   * 优先用换发的 alfTicket，其次用户自己的 ticket；无任何凭据时返回 null（调用方触发换发）。
    */
   withTicket(url: string): string | null {
-    if (!current) return null;
-    return url + (url.includes('?') ? '&' : '?') + 'alf_ticket=' + encodeURIComponent(current.ticket);
+    const t = current?.alfTicket || current?.ticket;
+    if (!t) return null;
+    return url + (url.includes('?') ? '&' : '?') + 'alf_ticket=' + encodeURIComponent(t);
+  },
+  /** 仅更新 Alfresco 直连 ticket（不动 ams 会话 ticket——换发的 admin ticket 不再污染会话） */
+  setAlfTicket(t: string) {
+    if (!current) return;
+    current = { ...current, alfTicket: t };
+    persist();
   },
   /** Alfresco REST 认证头（仅开发回退场景使用） */
   alfrescoAuthHeader(): string {

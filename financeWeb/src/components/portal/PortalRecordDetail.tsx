@@ -25,6 +25,7 @@ import { fetchSourceDocContent } from '../../services/sourceDocumentService';
 import { fetchRecordContent } from '../../services/recordService';
 import { PERM_LABELS, type ElectronicPerm } from '../../types/borrow';
 import ArchiveStatusTags from '../borrow/ArchiveStatusTags';
+import { isSourceDocument } from '../../utils/recordType';
 import type { ArchiveRecord } from '../../types';
 import type { SourceDocument } from '../../types/sourceDocument';
 
@@ -68,8 +69,8 @@ const PortalRecordDetail: React.FC<PortalRecordDetailProps> = ({ record, onBack,
     [sourceDocs, record],
   );
 
-  // ★ 原始凭证判别（2026-08-18 详情重设计）：自身即附件主体，展示上传原件而非「所附原始凭证」
-  const isSourceDoc = record.voucherCategory === '原始凭证' || (record.archiveType || '').includes('原始凭证');
+  // ★ 原始凭证判别（2026-08-18 详情重设计；2026-08-19 抽为共享 helper isSourceDocument）：自身即附件主体，展示上传原件而非「所附原始凭证」
+  const isSourceDoc = isSourceDocument(record);
 
   const handleViewOwn = async () => {
     try {

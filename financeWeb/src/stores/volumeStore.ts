@@ -34,6 +34,7 @@ import {
 import { fetchVolumeRecords } from '../services/recordService';
 import { useSourceDocumentStore } from './sourceDocumentStore';
 import type { SourceDocument } from '../types/sourceDocument';
+import { isSourceDocument } from '../utils/recordType';
 
 // ── 档案类别代码 → 中文名称 ──
 const ARCHIVE_TYPE_LABELS: Record<string, string> = {
@@ -254,6 +255,9 @@ interface VolumeState {
   /** 组卷推荐（纯前端计算） */
   recommendations: VolumeRecommendation[];
   setRecommendations: (recs: VolumeRecommendation[]) => void;
+  /** 智能组卷提示（纯原始凭证池 / 孤儿原始凭证被跳过等；随下次生成或取消清除） */
+  groupingNotice: string | null;
+  setGroupingNotice: (notice: string | null) => void;
 
   /** 筛选条件 */
   filters: {
@@ -336,6 +340,8 @@ export const useVolumeStore = create<VolumeState>((set, get) => ({
 
   recommendations: [],
   setRecommendations: (recommendations) => set({ recommendations }),
+  groupingNotice: null,
+  setGroupingNotice: (groupingNotice) => set({ groupingNotice }),
 
   filters: {
     year: null,
@@ -636,7 +642,7 @@ export const useVolumeStore = create<VolumeState>((set, get) => ({
   // ── 智能组卷（从 volumeGroupingStore 读取 perTypeRules 按类别执行；纯前端） ──
   generateRecommendations: (unassignedRecords) => {
     if (unassignedRecords.length === 0) {
-      set({ recommendations: [] });
+      set({ recommendations: [], groupingNotice: null });
       return;
     }
 
@@ -671,6 +677,13 @@ export const useVolumeStore = create<VolumeState>((set, get) => ({
       }
     };
 
+    /** 卷内日期安全值（2026-08-20）：月份缺失/非法（空串会拼出 "2026-00"）会被 Alfresco d:date 拒收，
+     *  dateFrom 兜底年初 01、dateTo 兜底年末 12 */
+    const safeYearMonth = (r: ArchiveRecord, fallback: string): string => {
+      const m = parseInt(r.month);
+      return `${r.year}-${m >= 1 && m <= 12 ? String(m).padStart(2, '0') : fallback}`;
+    };
+
     const recs: VolumeRecommendation[] = [];
     let recId = 0;
 
@@ -691,10 +704,10 @@ export const useVolumeStore = create<VolumeState>((set, get) => ({
     // ② 待组卷池内 id 集合（判断独立『原始凭证』记录的属主是否在本池内）
     const poolIds = new Set(unassignedRecords.map((r) => r.id));
 
-    // ③ 独立『原始凭证』记录（archiveType=原始凭证 且属主父件在本池内）→ 随父件整体归卷
+    // ③ 独立『原始凭证』记录（isSourceDocument 口径，属主父件在本池内）→ 随父件整体归卷
     const orphanSourceByParent = new Map<string, ArchiveRecord[]>();
     for (const r of unassignedRecords) {
-      if (r.archiveType !== '原始凭证') continue;
+      if (!isSourceDocument(r)) continue;
       const pid = r.parentRecordId;
       if (pid && pid !== r.id && poolIds.has(pid)) {
         if (!orphanSourceByParent.has(pid)) orphanSourceByParent.set(pid, []);
@@ -742,10 +755,17 @@ export const useVolumeStore = create<VolumeState>((set, get) => ({
     };
 
     // ★ Step 1: 按档案类别分桶
+    //   孤儿原始凭证（属主不在池内/无属主）：组件＝1张记账凭证+N个原始凭证附件，
+    //   原始凭证缺少所属记账凭证时不能单独成卷——跳过分桶，汇总进 groupingNotice（2026-08-19）
+    const skippedOrphans: ArchiveRecord[] = [];
     const typeBuckets = new Map<string, ArchiveRecord[]>();
     for (const r of unassignedRecords) {
       // ★ 原始凭证铁律：属主在池内的独立原始凭证随父件整体归卷，禁止单独分桶/单独成卷
-      if (r.archiveType === '原始凭证' && r.parentRecordId && r.parentRecordId !== r.id && poolIds.has(r.parentRecordId)) {
+      //   （2026-08-19 强化为 isSourceDocument 口径：真实数据是 archiveType=记账凭证 +
+      //     voucherCategory=原始凭证，旧 archiveType==='原始凭证' 判断对真数据是死代码）
+      if (isSourceDocument(r)) {
+        if (r.parentRecordId && r.parentRecordId !== r.id && poolIds.has(r.parentRecordId)) continue;
+        skippedOrphans.push(r);
         continue;
       }
       const type = r.archiveType || '其他会计资料';
@@ -849,8 +869,8 @@ export const useVolumeStore = create<VolumeState>((set, get) => ({
                   retention: first.retention,
                   estimatedItems: stats.items,
                   estimatedPages: stats.pages,
-                  dateFrom: `${first.year}-${String(first.month).padStart(2, '0')}`,
-                  dateTo: `${last.year}-${String(last.month).padStart(2, '0')}`,
+                  dateFrom: safeYearMonth(first, '01'),
+                  dateTo: safeYearMonth(last, '12'),
                   recordIds: stats.recordIds,
                 });
               }
@@ -873,8 +893,8 @@ export const useVolumeStore = create<VolumeState>((set, get) => ({
                 retention: first.retention,
                 estimatedItems: stats.items,
                 estimatedPages: stats.pages,
-                dateFrom: `${first.year}-${String(first.month).padStart(2, '0')}`,
-                dateTo: `${last.year}-${String(last.month).padStart(2, '0')}`,
+                dateFrom: safeYearMonth(first, '01'),
+                dateTo: safeYearMonth(last, '12'),
                 recordIds: stats.recordIds,
               });
             }
@@ -883,7 +903,14 @@ export const useVolumeStore = create<VolumeState>((set, get) => ({
       }
     }
 
-    set({ recommendations: recs });
+    // ★ 组卷提示（2026-08-19）：纯原始凭证池不出推荐；混合池提示被跳过的孤儿原始凭证
+    let groupingNotice: string | null = null;
+    if (recs.length === 0) {
+      groupingNotice = `待组卷池中 ${unassignedRecords.length} 件均为原始凭证，没有记账凭证。按《会计基础工作规范》，原始凭证应随所属记账凭证组卷，不能单独成卷。`;
+    } else if (skippedOrphans.length > 0) {
+      groupingNotice = `${skippedOrphans.length} 件原始凭证未参与组卷（未找到所属记账凭证）。`;
+    }
+    set({ recommendations: recs, groupingNotice });
   },
 
   acceptRecommendation: async (recIndex) => {

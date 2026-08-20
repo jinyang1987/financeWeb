@@ -27,6 +27,16 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ★ 会话失效全局兜底（2026-08-19）：任何 ams 请求 401 → http 层广播本事件 →
+  //   立即回登录页，不再让用户对着一堆「识别失败/操作失败」干瞪眼
+  useEffect(() => {
+    const onExpired = () => {
+      useAuthStore.setState({ isLoggedIn: false, currentUser: null, loggedUser: '', restoring: false });
+    };
+    window.addEventListener('ams:unauthorized', onExpired);
+    return () => window.removeEventListener('ams:unauthorized', onExpired);
+  }, []);
+
   // 按角色落地：无任何后台菜单的用户（如普通员工）直接进检索门户，有后台菜单的落后台管理。
   // 登录/会话恢复/切换身份/角色矩阵变更时重新判定；手动切换端不受影响。
   useEffect(() => {

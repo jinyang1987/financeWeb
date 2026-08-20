@@ -9,7 +9,7 @@
  *        规则分类（记账凭证/原始凭证）+ 字段抽取 → 人工校验兜底（2026-07-29 接真）
  */
 
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
   Upload, CheckCircle2, AlertCircle, XCircle, FileText, FileImage,
   FileSpreadsheet, ChevronDown, ChevronRight, Search, Eye, RefreshCw,
@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useArchiveStore } from '../../stores/archiveStore';
 import { useVolumeStore } from '../../stores/volumeStore';
-import { uploadRecord, scanRecordOcr } from '../../services/recordService';
+import { uploadRecord, scanRecordOcr, linkRecordParent } from '../../services/recordService';
 import { classifyDocument } from '../../services/docClassifier';
 import { partitionForPool } from '../../services/uploadEligibility';
 
@@ -167,7 +167,7 @@ const FileRow: React.FC<FileRowProps> = ({ item, onEdit, onRemove }) => {
     processing: { icon: <RefreshCw className="w-3.5 h-3.5 animate-spin" />, label: '识别中...', color: 'text-sky-600 bg-sky-100' },
     'ocr-done': { icon: <CheckCircle2 className="w-3.5 h-3.5" />, label: '识别完成', color: 'text-green-600 bg-green-100' },
     verified: { icon: <CheckCircle2 className="w-3.5 h-3.5" />, label: '已确认', color: 'text-sky-600 bg-sky-100' },
-    error: { icon: <XCircle className="w-3.5 h-3.5" />, label: '识别失败', color: 'text-red-600 bg-red-100' },
+    error: { icon: <XCircle className="w-3.5 h-3.5" />, label: '入池失败', color: 'text-red-600 bg-red-100' },
   };
   const sc = statusConfig[item.status];
 
@@ -187,6 +187,12 @@ const FileRow: React.FC<FileRowProps> = ({ item, onEdit, onRemove }) => {
           {display.amount && <span>¥{display.amount}</span>}
           {display.date && <span>{display.date}</span>}
         </div>
+        {/* ★ 失败/降级原因直接行内展示（2026-08-19：不再藏 tooltip，入池失败不再误标「识别失败」） */}
+        {item.errorMsg && (
+          <div className={`text-xs mt-0.5 ${item.status === 'error' ? 'text-red-600' : 'text-amber-600'}`}>
+            {item.errorMsg}
+          </div>
+        )}
       </div>
 
       {item.status === 'ocr-done' && (
@@ -217,7 +223,7 @@ const FileRow: React.FC<FileRowProps> = ({ item, onEdit, onRemove }) => {
   );
 };
 
-// ── 子组件：配对面板 ──
+// ── 子组件：配对面板（1 张记账凭证 + N 张原始凭证；pairId 单向存于原始凭证侧，2026-08-20） ──
 interface PairingPanelProps {
   items: UploadFileItem[];
   onPair: (voucherId: string, invoiceId: string) => void;
@@ -227,34 +233,63 @@ interface PairingPanelProps {
 const PairingPanel: React.FC<PairingPanelProps> = ({ items, onPair, onUnpair }) => {
   const vouchers = items.filter((i) => i.category === '记账凭证' && i.status !== 'pending');
   const invoices = items.filter((i) => i.category === '原始凭证' && i.status !== 'pending');
+  /** 两步点击配对：先点中的凭证 */
+  const [pendingVoucherId, setPendingVoucherId] = useState<string | null>(null);
 
-  const paired = items.filter((i) => i.pairId);
-  const unpairedVouchers = vouchers.filter((v) => !v.pairId);
+  const paired = invoices.filter((i) => i.pairId);
   const unpairedInvoices = invoices.filter((i) => !i.pairId);
 
   if (vouchers.length === 0 && invoices.length === 0) return null;
+
+  const labelOf = (f: UploadFileItem) => f.correctedResult?.voucherNo || f.ocrResult.voucherNo || f.name;
+
+  const handleVoucherClick = (vid: string) => setPendingVoucherId((p) => (p === vid ? null : vid));
+  const handleInvoiceClick = (inv: UploadFileItem) => {
+    if (!pendingVoucherId) return;
+    onPair(pendingVoucherId, inv.id);
+    // ★ 凭证保持选中（sticky）：M 张凭证 × N 张原始凭证场景，可连续点多张附件逐张配入（2026-08-20）
+  };
+  /** 改配：点已配对行 → 改挂到当前选中的凭证（组错了的向导内纠正） */
+  const handlePairedClick = (p: UploadFileItem) => {
+    if (!pendingVoucherId || p.pairId === pendingVoucherId) return;
+    onPair(pendingVoucherId, p.id);
+  };
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-4">
       <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
         <Link2 className="w-4 h-4 text-slate-500" />
-        凭证 - 附件配对
+        凭证 - 附件配对（组件）
         <span className="text-xs font-normal text-slate-400">
-          （已配对 {paired.length} 对，未配对记账凭证 {unpairedVouchers.length}，未配对原始凭证 {unpairedInvoices.length}）
+          （已配对 {paired.length} 张原始凭证，待配对 {unpairedInvoices.length} 张；一张记账凭证可配多张原始凭证）
         </span>
       </h3>
 
       {paired.length > 0 && (
         <div className="space-y-1.5 mb-3">
-          <span className="text-xs text-green-600 font-medium">已配对</span>
+          <span className="text-xs text-green-600 font-medium">
+            已配对（点 × 解除{pendingVoucherId ? '；点行可改配到选中凭证' : ''}）
+          </span>
           {paired.map((p) => {
             const partner = items.find((i) => i.id === p.pairId);
             return (
-              <div key={p.id} className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg text-xs">
-                <span className="font-mono text-green-700">{p.correctedResult?.voucherNo || p.ocrResult.voucherNo}</span>
+              <div
+                key={p.id}
+                onClick={() => handlePairedClick(p)}
+                title={pendingVoucherId && p.pairId !== pendingVoucherId ? '点击改配到选中凭证' : undefined}
+                className={`flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg text-xs ${
+                  pendingVoucherId && p.pairId !== pendingVoucherId ? 'cursor-pointer hover:bg-green-100' : ''
+                }`}
+              >
+                <span className="font-mono text-green-700">{partner ? labelOf(partner) : '（凭证已移除）'}</span>
                 <ChevronRight className="w-3 h-3 text-green-400" />
-                <span className="font-mono text-green-700">{partner?.correctedResult?.voucherNo || partner?.ocrResult.voucherNo || partner?.name}</span>
-                <button type="button" onClick={() => onUnpair(p.id)} className="ml-auto p-0.5 text-green-400 hover:text-red-500">
+                <span className="font-mono text-green-700">{labelOf(p)}</span>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onUnpair(p.id); }}
+                  className="ml-auto p-0.5 text-green-400 hover:text-red-500"
+                  title="解除配对"
+                >
                   <X className="w-3 h-3" />
                 </button>
               </div>
@@ -263,21 +298,40 @@ const PairingPanel: React.FC<PairingPanelProps> = ({ items, onPair, onUnpair }) 
         </div>
       )}
 
-      {unpairedVouchers.length > 0 && unpairedInvoices.length > 0 && (
+      {vouchers.length > 0 && unpairedInvoices.length > 0 && (
         <div className="space-y-1.5">
-          <span className="text-xs text-amber-600 font-medium">手动配对（点击左侧凭证，再点击右侧附件）</span>
+          <span className="text-xs text-amber-600 font-medium">
+            {pendingVoucherId ? '已选中记账凭证（保持选中）：可连续点击右侧原始凭证逐张配入；再点该凭证取消选中' : '手动配对：先点击左侧记账凭证，再点击右侧原始凭证（一张凭证可连配多张）'}
+          </span>
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
-              {unpairedVouchers.map((v) => (
-                <div key={v.id} className="px-2 py-1.5 bg-sky-50 border border-sky-200 rounded text-xs text-sky-700 font-mono cursor-pointer hover:bg-sky-100">
-                  {v.correctedResult?.voucherNo || v.ocrResult.voucherNo || v.name}
+              {vouchers.map((v) => (
+                <div
+                  key={v.id}
+                  onClick={() => handleVoucherClick(v.id)}
+                  className={`px-2 py-1.5 border rounded text-xs font-mono cursor-pointer transition-colors ${
+                    pendingVoucherId === v.id
+                      ? 'bg-sky-600 text-white border-sky-600'
+                      : 'bg-sky-50 border-sky-200 text-sky-700 hover:bg-sky-100'
+                  }`}
+                >
+                  {labelOf(v)}
                 </div>
               ))}
             </div>
             <div className="space-y-1">
               {unpairedInvoices.map((i) => (
-                <div key={i.id} className="px-2 py-1.5 bg-amber-50 border border-amber-200 rounded text-xs text-amber-700 font-mono cursor-pointer hover:bg-amber-100">
-                  {i.correctedResult?.voucherNo || i.ocrResult.voucherNo || i.name}
+                <div
+                  key={i.id}
+                  onClick={() => handleInvoiceClick(i)}
+                  className={`px-2 py-1.5 border rounded text-xs font-mono transition-colors ${
+                    pendingVoucherId
+                      ? 'bg-amber-50 border-amber-300 text-amber-700 cursor-pointer hover:bg-amber-100'
+                      : 'bg-amber-50/50 border-amber-200 text-amber-600/70 cursor-not-allowed'
+                  }`}
+                  title={pendingVoucherId ? '点击完成配对' : '请先选择左侧记账凭证'}
+                >
+                  {labelOf(i)}
                 </div>
               ))}
             </div>
@@ -297,6 +351,11 @@ interface VerifyEditorProps {
 
 const VerifyEditor: React.FC<VerifyEditorProps> = ({ item, onSave, onClose }) => {
   const [form, setForm] = useState(item.correctedResult.voucherNo ? item.correctedResult : item.ocrResult);
+
+  // ★ 原件预览（2026-08-19 接真，替换占位区域）：文件尚未上传，直接用本地 Blob URL 渲染；
+  //   PDF/图片浏览器原生可显，OFD/TIFF/XML 无原生支持显示降级提示
+  const previewUrl = useMemo(() => URL.createObjectURL(item.file), [item.file]);
+  useEffect(() => () => URL.revokeObjectURL(previewUrl), [previewUrl]);
 
   return (
     <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-[100] flex items-center justify-center" onClick={onClose}>
@@ -343,9 +402,18 @@ const VerifyEditor: React.FC<VerifyEditorProps> = ({ item, onSave, onClose }) =>
             </div>
           </div>
 
-          <div className="bg-slate-100 rounded-lg p-4 flex items-center justify-center aspect-[3/2] text-slate-400">
-            <FileText className="w-8 h-8" />
-            <span className="text-xs ml-2">原件预览区域（双层 PDF 效果示意）</span>
+          <div className="bg-slate-100 rounded-lg overflow-hidden aspect-[3/2] flex items-center justify-center">
+            {item.type === 'pdf' ? (
+              <iframe src={previewUrl} title={`预览 ${item.name}`} className="w-full h-full border-0" />
+            ) : item.type === 'jpg' || item.type === 'png' ? (
+              <img src={previewUrl} alt={item.name} className="max-w-full max-h-full object-contain" />
+            ) : (
+              <div className="flex flex-col items-center gap-1.5 text-slate-400">
+                <FileText className="w-8 h-8" />
+                <span className="text-xs">该格式（{(item.type || 'unknown').toUpperCase()}）暂不支持在线预览</span>
+                <span className="text-[10px] text-slate-400">请对照本地原件核对左侧字段</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -376,6 +444,13 @@ const VoucherUploadModal: React.FC<VoucherUploadModalProps> = ({ open, onClose, 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
+  /** 「是否组件」入池前选择点（2026-08-20 先组件再组卷） */
+  const [showPairPrompt, setShowPairPrompt] = useState(false);
+  /** 配对/上传结果的会话级累积（2026-08-20 配对丢失修复：条目上传成功即移出列表，
+   *  跨轮重试时 pairId 目标条目可能已不在列表——关系与 recordId 必须落在 ref 里） */
+  const pairMapRef = useRef(new Map<string, string>());  // 原始凭证 fileId → 凭证 fileId
+  const recordIdRef = useRef(new Map<string, string>()); // fileId → 已入池 recordId
+  const linkedRef = useRef(new Set<string>());           // 已完成挂接的原始凭证 fileId
 
   const showToast = (message: string, type: 'success' | 'info' = 'success') => {
     setToast({ message, type });
@@ -388,6 +463,9 @@ const VoucherUploadModal: React.FC<VoucherUploadModalProps> = ({ open, onClose, 
     setFiles([]);
     setEditingId(null);
     setToast(null);
+    pairMapRef.current.clear();
+    recordIdRef.current.clear();
+    linkedRef.current.clear();
   }, []);
 
   // ── 文件守卫（与服务端 multipart 上限对齐） ──
@@ -447,12 +525,13 @@ const VoucherUploadModal: React.FC<VoucherUploadModalProps> = ({ open, onClose, 
   // 单文件识别：OCR → 规则归类 → 按 id 回写（带状态守卫，并发安全）
   const ocrOne = async (item: UploadFileItem) => {
     let scanText = '';
-    let degraded = false;
+    let degradedMsg = '';
     try {
       const scan = await scanRecordOcr(item.file);
       scanText = scan.ocrText || '';
-    } catch {
-      degraded = true; // OCR 服务不可用 → 仅文件名识别
+    } catch (e: any) {
+      // ★ 区分失败原因（2026-08-19）：401/403 权限/会话问题与 OCR 服务不可用不再混为一谈
+      degradedMsg = e?.message || 'OCR 服务不可用';
     }
     const result = classifyDocument({ fileName: item.name, ocrText: scanText });
     setFiles((prev) => prev.map((f) => {
@@ -468,8 +547,8 @@ const VoucherUploadModal: React.FC<VoucherUploadModalProps> = ({ open, onClose, 
           archiveType: result.category === '未识别' ? '' : result.category,
         },
         // 仅文件名识别时置信度封顶 60，提示人工必须过目
-        confidence: degraded || result.source === 'filename' ? Math.min(result.confidence, 60) : result.confidence,
-        errorMsg: degraded ? 'OCR 服务不可用，仅按文件名识别' : '',
+        confidence: degradedMsg || result.source === 'filename' ? Math.min(result.confidence, 60) : result.confidence,
+        errorMsg: degradedMsg ? `${degradedMsg}（已降级为仅文件名识别）` : '',
       };
     }));
   };
@@ -494,36 +573,37 @@ const VoucherUploadModal: React.FC<VoucherUploadModalProps> = ({ open, onClose, 
     await Promise.all(Array.from({ length: Math.min(OCR_CONCURRENCY, items.length) }, () => worker()));
   };
 
-  // 自动配对
+  // 自动配对（1:N）：
+  //   规则1 —— 本批只有 1 张记账凭证时，全部原始凭证挂到它（最常见实操：一本凭证 + 一摞发票）；
+  //   规则2 —— 金额唯一匹配才挂（同金额多凭证时宁可不配，防错配）；金额为空不参与自动配对。
   const handleAutoPair = useCallback(() => {
     setFiles((prev) => {
-      const vouchers = prev.filter((f) => f.category === '记账凭证' && f.status !== 'pending' && !f.pairId);
+      const vouchers = prev.filter((f) => f.category === '记账凭证' && f.status !== 'pending');
       const invoices = prev.filter((f) => f.category === '原始凭证' && f.status !== 'pending' && !f.pairId);
-      const pairMap = new Map<string, string>();
+      const pairMap = new Map<string, string>(); // 原始凭证 fileId → 凭证 fileId
 
-      for (const v of vouchers) {
-        const match = invoices.find((inv) =>
-          !pairMap.has(inv.id) && inv.ocrResult.amount === v.ocrResult.amount
-        );
-        if (match) pairMap.set(v.id, match.id);
+      for (const inv of invoices) {
+        if (vouchers.length === 1) {
+          pairMap.set(inv.id, vouchers[0].id);
+          continue;
+        }
+        if (inv.ocrResult.amount) {
+          const cands = vouchers.filter((v) => v.ocrResult.amount === inv.ocrResult.amount);
+          if (cands.length === 1) pairMap.set(inv.id, cands[0].id);
+        }
       }
 
       if (pairMap.size === 0) {
-        showToast('未找到可自动配对的凭证', 'info');
+        showToast(
+          vouchers.length === 0 ? '没有可配对的记账凭证' : '未能自动配对：金额为空或同金额凭证不唯一，请手动配对',
+          'info',
+        );
         return prev;
       }
 
-      showToast(`已自动配对 ${pairMap.size} 对`);
-      return prev.map((f) => {
-        if (pairMap.has(f.id)) return { ...f, pairId: pairMap.get(f.id)! };
-        for (const [, invId] of pairMap) {
-          if (f.id === invId && !f.pairId) {
-            const vId = [...pairMap.entries()].find(([, i]) => i === f.id)?.[0];
-            if (vId) return { ...f, pairId: vId };
-          }
-        }
-        return f;
-      });
+      const skipped = invoices.length - pairMap.size;
+      showToast(`已自动配对 ${pairMap.size} 张原始凭证${skipped > 0 ? `；${skipped} 张请手动配对（金额不唯一或无匹配）` : ''}`);
+      return prev.map((f) => (pairMap.has(f.id) ? { ...f, pairId: pairMap.get(f.id)! } : f));
     });
   }, []);
 
@@ -548,7 +628,7 @@ const VoucherUploadModal: React.FC<VoucherUploadModalProps> = ({ open, onClose, 
   // 入待组卷池（P1-② 真上传：文件落 Alfresco 收集池，目标案卷时再入卷）
   // 多文件扎实语义：逐件独立成败——成功即移出列表（防重试重复入池），
   // 失败标红保留可重试，不中断后续件；全部清空才进成功页自动关闭。
-  const handleConfirm = useCallback(async () => {
+  const doConfirm = useCallback(async () => {
     if (eligible.length === 0) {
       showToast('没有可入池的文件：低置信度文件请先校验确认', 'info');
       return;
@@ -558,6 +638,8 @@ const VoucherUploadModal: React.FC<VoucherUploadModalProps> = ({ open, onClose, 
     const fondsCode = useArchiveStore.getState().currentFanzongCode;
     const okRecordIds: string[] = [];
     const failList: { id: string; name: string; msg: string }[] = [];
+    // 本轮先把列表内配对关系并入会话级 ref（条目移出列表后关系仍在）
+    files.forEach((f) => { if (f.pairId) pairMapRef.current.set(f.id, f.pairId); });
 
     for (const f of eligible) {
       const display = f.correctedResult.voucherNo ? f.correctedResult : f.ocrResult;
@@ -582,6 +664,7 @@ const VoucherUploadModal: React.FC<VoucherUploadModalProps> = ({ open, onClose, 
           voucherCategory: cat === '记账凭证' || cat === '原始凭证' ? cat : undefined,
         });
         okRecordIds.push(rec.id);
+        recordIdRef.current.set(f.id, rec.id);
         // 成功一件移出一件：后续件失败重试时不会重复入池
         setFiles((prev) => prev.filter((x) => x.id !== f.id));
       } catch (e: any) {
@@ -589,6 +672,24 @@ const VoucherUploadModal: React.FC<VoucherUploadModalProps> = ({ open, onClose, 
         setFiles((prev) => prev.map((x) =>
           x.id === f.id ? { ...x, status: 'error' as const, errorMsg: e?.message || '上传失败' } : x
         ));
+      }
+    }
+
+    // ★ 补挂阶段（2026-08-20 先组件再组卷）：上传主循环语义不动；配对关系从会话级 ref 解析——
+    //   凭证未校验/被拦导致附件先单独入池时给出明确提示，下轮凭证入池后自动补挂，不再静默丢失。
+    let linkedNow = 0, linkDeferred = 0, linkFailed = 0;
+    for (const [childFid, parentFid] of pairMapRef.current) {
+      if (linkedRef.current.has(childFid)) continue;
+      const childId = recordIdRef.current.get(childFid);
+      if (!childId) continue; // 附件自身尚未入池（本轮失败/未校验）——后续轮次再挂
+      const parentId = recordIdRef.current.get(parentFid);
+      if (!parentId) { linkDeferred++; continue; } // 凭证未入池（被拦/待重试）
+      try {
+        await linkRecordParent(childId, parentId);
+        linkedRef.current.add(childFid);
+        linkedNow++;
+      } catch {
+        linkFailed++;
       }
     }
 
@@ -606,9 +707,10 @@ const VoucherUploadModal: React.FC<VoucherUploadModalProps> = ({ open, onClose, 
     const remainingCount = files.filter((f) => !okRecordIds.includes(f.id) && !eligible.includes(f)).length + failList.length;
 
     if (remainingCount === 0) {
-      showToast(targetVolumeId
+      showToast((targetVolumeId
         ? `成功上传 ${okRecordIds.length} 件资料并已加入当前案卷`
-        : `成功将 ${okRecordIds.length} 件资料入待组卷池`);
+        : `成功将 ${okRecordIds.length} 件资料入待组卷池`)
+        + (linkedNow > 0 ? `，已组件 ${linkedNow} 对` : ''));
       setFiles([]);
       setStep(4);
       // 3秒后关闭弹窗
@@ -619,12 +721,34 @@ const VoucherUploadModal: React.FC<VoucherUploadModalProps> = ({ open, onClose, 
     } else {
       const parts: string[] = [];
       if (okRecordIds.length > 0) parts.push(`已入池 ${okRecordIds.length} 件`);
+      if (linkedNow > 0) parts.push(`已组件 ${linkedNow} 对`);
+      if (linkDeferred > 0) parts.push(`${linkDeferred} 对配对待其凭证校验入池后自动补挂`);
+      if (linkFailed > 0) parts.push(`${linkFailed} 张挂接失败（可在组卷工作台【组件】补挂）`);
       if (failList.length > 0) parts.push(`${failList.length} 件失败（列表标红，可重试）`);
       if (blocked.length > 0) parts.push(`${blocked.length} 件置信度不足待校验`);
       showToast(parts.join('；'), 'info');
     }
     setUploading(false);
   }, [files, eligible, blocked, targetVolumeId, addItemsToVolume, onClose, resetState]);
+
+  // ★ 入池前「是否组件」选择点（2026-08-20 先组件再组卷）：
+  //   有未配对原始凭证且列表里有可配对的记账凭证时，先给选择，不静默入池
+  const unpairedSourceCount = useMemo(() => eligible.filter((f) => {
+    const display = f.correctedResult.voucherNo ? f.correctedResult : f.ocrResult;
+    return (display.archiveType || f.category) === '原始凭证' && !f.pairId;
+  }).length, [eligible]);
+  const hasPairableVoucher = useMemo(() => files.some((f) => {
+    const display = f.correctedResult.voucherNo ? f.correctedResult : f.ocrResult;
+    return (display.archiveType || f.category) === '记账凭证';
+  }), [files]);
+
+  const handleConfirm = useCallback(async () => {
+    if (unpairedSourceCount > 0 && hasPairableVoucher) {
+      setShowPairPrompt(true);
+      return;
+    }
+    await doConfirm();
+  }, [unpairedSourceCount, hasPairableVoucher, doConfirm]);
 
   // 统计
   const stats = useMemo(() => ({
@@ -730,19 +854,17 @@ const VoucherUploadModal: React.FC<VoucherUploadModalProps> = ({ open, onClose, 
               <PairingPanel
                 items={files}
                 onPair={(vid, iid) => {
+                  // pairId 单向存于原始凭证侧 + 会话级 ref（跨轮重试不丢）
+                  pairMapRef.current.set(iid, vid);
                   setFiles((prev) => prev.map((f) =>
-                    f.id === vid ? { ...f, pairId: iid } :
                     f.id === iid ? { ...f, pairId: vid } : f
                   ));
                 }}
                 onUnpair={(id) => {
-                  setFiles((prev) => {
-                    const item = prev.find((f) => f.id === id);
-                    if (!item || !item.pairId) return prev;
-                    return prev.map((f) =>
-                      f.id === id || f.id === item.pairId ? { ...f, pairId: null } : f
-                    );
-                  });
+                  pairMapRef.current.delete(id);
+                  setFiles((prev) => prev.map((f) =>
+                    f.id === id ? { ...f, pairId: null } : f
+                  ));
                 }}
               />
 
@@ -830,6 +952,40 @@ const VoucherUploadModal: React.FC<VoucherUploadModalProps> = ({ open, onClose, 
             onSave={handleSaveCorrection}
             onClose={() => setEditingId(null)}
           />
+        )}
+
+        {/* ★「是否组件」选择点（2026-08-20 先组件再组卷） */}
+        {showPairPrompt && (
+          <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-[100] flex items-center justify-center" onClick={() => setShowPairPrompt(false)}>
+            <div className="bg-white rounded-xl shadow-2xl w-[460px] max-w-[90vw] p-6" onClick={(e) => e.stopPropagation()}>
+              <h3 className="font-bold text-slate-800 mb-2 flex items-center gap-2">
+                <Link2 className="w-4 h-4 text-sky-600" />
+                有原始凭证尚未组件
+              </h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                <strong>{unpairedSourceCount}</strong> 张原始凭证未与记账凭证配对。按《会计基础工作规范》，原始凭证应作为附件随所属记账凭证组成「件」后再组卷。
+              </p>
+              <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                选择「直接入池」后，也可在组卷工作台勾选 1 张记账凭证 + 若干原始凭证，点【组件】补挂。
+              </p>
+              <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setShowPairPrompt(false)}
+                  className="px-4 py-1.5 text-sm font-medium text-sky-600 bg-sky-50 border border-sky-200 rounded-lg hover:bg-sky-100"
+                >
+                  去组件配对
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowPairPrompt(false); void doConfirm(); }}
+                  className="px-4 py-1.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700"
+                >
+                  直接入池
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

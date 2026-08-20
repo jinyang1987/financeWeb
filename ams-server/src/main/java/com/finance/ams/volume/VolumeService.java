@@ -75,6 +75,17 @@ public class VolumeService {
 
   // ═══════════════════ 建卷 / 更新 / 删除 ═══════════════════
 
+  /**
+   * 卷内日期格式校验（2026-08-20）：finance:dateFrom/dateTo 是 d:date，
+   * Alfresco 只收 yyyy-MM / yyyy-MM-dd 且月份须 01-12；"2026-00" 这类值会带出一整屏
+   * 模型堆栈——在校验层转成可读中文错误。
+   */
+  private static String checkedYearMonth(String v, String label) {
+    if (v != null && v.matches("^\\d{4}-(0[1-9]|1[0-2])(-(0[1-9]|[12]\\d|3[01]))?$")) return v;
+    throw BizException.badRequest("VALIDATION_FAILED",
+        label + "格式不合法: " + v + "（应为 yyyy-MM 或 yyyy-MM-dd，月份 01-12）");
+  }
+
   public record CreateCmd(
       String fondsCode, String title, String archiveType, String archiveTypeCode,
       Integer year, String retention, String retentionCode,
@@ -103,8 +114,8 @@ public class VolumeService {
     props.put("finance:retentionCode", retentionCode);
     props.put("finance:volumeStatus", "draft");
     props.put("finance:volumeTotalItems", 0);
-    if (notBlank(cmd.dateFrom())) props.put("finance:dateFrom", cmd.dateFrom());
-    if (notBlank(cmd.dateTo())) props.put("finance:dateTo", cmd.dateTo());
+    if (notBlank(cmd.dateFrom())) props.put("finance:dateFrom", checkedYearMonth(cmd.dateFrom(), "卷内日期起"));
+    if (notBlank(cmd.dateTo())) props.put("finance:dateTo", checkedYearMonth(cmd.dateTo(), "卷内日期止"));
     props.put("finance:createdDate", LocalDate.now().toString());
     props.put("finance:createdBy", userId);
     if (notBlank(cmd.carrierType())) props.put("finance:volumeCarrierType", cmd.carrierType());
@@ -124,8 +135,8 @@ public class VolumeService {
       props.put("finance:volumeRetention", f.get("retention"));
       props.put("finance:retentionCode", CategoryCodes.inferRetentionCode(f.get("retention")));
     }
-    if (f.get("dateFrom") != null) props.put("finance:dateFrom", f.get("dateFrom"));
-    if (f.get("dateTo") != null) props.put("finance:dateTo", f.get("dateTo"));
+    if (f.get("dateFrom") != null) props.put("finance:dateFrom", checkedYearMonth(f.get("dateFrom"), "卷内日期起"));
+    if (f.get("dateTo") != null) props.put("finance:dateTo", checkedYearMonth(f.get("dateTo"), "卷内日期止"));
     if (f.get("cabinetNo") != null) props.put("finance:cabinetNo", f.get("cabinetNo"));
     if (f.get("shelfNo") != null) props.put("finance:shelfNo", f.get("shelfNo"));
     if (f.get("securityLevel") != null) props.put("finance:volumeSecurityLevel", f.get("securityLevel"));

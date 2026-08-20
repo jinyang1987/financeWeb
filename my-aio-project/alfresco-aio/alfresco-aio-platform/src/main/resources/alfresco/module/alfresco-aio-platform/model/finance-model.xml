@@ -268,6 +268,9 @@
         <property name="finance:storageLocation"><title>实体存储位置</title><type>d:text</type></property>
         <property name="finance:ocrText"><title>OCR 全文</title><type>d:text</type></property>
         <property name="finance:recordRemark"><title>备注</title><type>d:text</type></property>
+        <!-- v2.3（2026-08-20）：组件挂接——原始凭证件 → 所属记账凭证件的软关联（先组件再组卷）；
+             可选属性，存量节点不受影响；仅池内（仅件数据）件可挂接/解挂 -->
+        <property name="finance:parentRecordId"><title>所属记账凭证件ID（组件挂接）</title><type>d:text</type><index enabled="true"/></property>
       </properties>
       <associations>
         <child-association name="finance:recordSourceDocs">

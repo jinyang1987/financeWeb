@@ -25,6 +25,7 @@ import { ARCHIVE_ITEM_COLUMN_MAP } from '../config/metadataColumnMaps/archiveIte
 import { VOUCHER_MANAGER_COLUMN_MAP } from '../config/metadataColumnMaps/voucherManagerColumns';
 import { getExtFieldDefs } from '../types/sourceDocument';
 import { FieldGrid, DetailRows, type FieldItem } from './common/DetailTable';
+import { isSourceDocument } from '../utils/recordType';
 import type { ArchiveRecord } from '../types';
 import type { SourceDocument } from '../types/sourceDocument';
 
@@ -47,14 +48,31 @@ function parseEntries(raw?: string): VoucherEntry[] {
 }
 
 // ── 四性状态 ──
-const ChecksBadge: React.FC<{ checks: { real: boolean; complete: boolean; usable: boolean; safe: boolean } }> = ({ checks }) => {
-  const all = checks.real && checks.complete && checks.usable && checks.safe;
+const ChecksBadge: React.FC<{
+  checks: { real: boolean; complete: boolean; usable: boolean; safe: boolean };
+  /** 检测是否实际运行过（件级检测无 runner；卷级检测过则件详情继承其卷结果，2026-08-20） */
+  inspectionRan?: boolean;
+}> = ({ checks, inspectionRan = false }) => {
+  const vals = [checks.real, checks.complete, checks.usable, checks.safe];
+  const all = vals.every(Boolean);
+  if (all) {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
+        <CheckCircle2 className="w-3 h-3" />全部通过
+      </span>
+    );
+  }
+  // ★ 2026-08-20：从未检测（全 false 且未运行过）≠ 存在异常——如实区分，避免误导
+  if (!inspectionRan && vals.every((v) => !v)) {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500" title="四性检测尚未执行（检测在案卷级运行）">
+        未检测
+      </span>
+    );
+  }
   return (
-    <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full ${
-      all ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
-    }`}>
-      {all ? <CheckCircle2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
-      {all ? '全部通过' : '存在异常'}
+    <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700" title="四性检测存在未通过项">
+      <AlertTriangle className="w-3 h-3" />存在异常
     </span>
   );
 };
@@ -213,15 +231,18 @@ interface RecordDetailPanelProps {
   onDelete?: (id: string) => void;
   /** 上下文模式：voucher=记账凭证（核对/组卷），archive=档案条目（财务/项目视图） */
   context?: 'voucher' | 'archive';
+  /** 检测是否实际运行过（件在卷内时继承卷级检测结果）；false=显示「未检测」（2026-08-20） */
+  inspectionRan?: boolean;
 }
 
-const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, onDelete, context = 'archive' }) => {
+const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, onDelete, context = 'archive', inspectionRan = false }) => {
   const [expandedDocId, setExpandedDocId] = useState<string | null>(null);
   const [ocrOpen, setOcrOpen] = useState(false);
   const isVoucher = context === 'voucher';
-  // ★ 原始凭证判别（2026-08-18 详情重设计）：上传向导以 archiveType=记账凭证 +
-  //   voucherCategory=原始凭证 入池；部分路径 archiveType 直接为原始凭证——两种都认。
-  const isSourceDoc = record.voucherCategory === '原始凭证' || (record.archiveType || '').includes('原始凭证');
+  // ★ 原始凭证判别（2026-08-18 详情重设计；2026-08-19 抽为共享 helper isSourceDocument）：
+  //   上传向导以 archiveType=记账凭证 + voucherCategory=原始凭证 入池；
+  //   部分路径 archiveType 直接为原始凭证——helper 两种都认。
+  const isSourceDoc = isSourceDocument(record);
 
   // 原始凭证自身附件（上传原件）预览/下载
   const handlePreview = useCallback(async () => {
@@ -259,6 +280,14 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
   // 直接从 store 选数据，避免选函数引用导致的稳定性问题
   const allSourceDocs = useSourceDocumentStore((s) => s.documents);
   const allArchiveRecords = useArchiveStore((s) => s.records);
+  const allRecordsFull = useArchiveStore((s) => s.allRecords);
+
+  // ★ 件级挂接的原始凭证（v2.3 组件挂接 record→record，2026-08-20）：
+  //   走全量件视图（池内/卷内件都在），与 SourceDocument 富元数据附件并存展示
+  const linkedSourceRecords = useMemo(
+    () => allRecordsFull.filter((r) => isSourceDocument(r) && r.parentRecordId === record.id),
+    [allRecordsFull, record.id],
+  );
 
   // 旧版子件（ArchiveRecord-based，向后兼容）
   const childRecords = useMemo(() => {
@@ -363,7 +392,7 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
           )}
         </div>
         <div className="flex items-center gap-2">
-          <ChecksBadge checks={record.checks} />
+          <ChecksBadge checks={record.checks} inspectionRan={inspectionRan} />
           {onDelete && (
             <button
               onClick={() => onDelete(record.id)}
@@ -515,11 +544,11 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
               附件
             </span>
             <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">
-              {richSourceDocs.length + childRecords.length} 份
+              {richSourceDocs.length + childRecords.length + linkedSourceRecords.length} 份
             </span>
           </div>
 
-          {richSourceDocs.length === 0 && childRecords.length === 0 ? (
+          {richSourceDocs.length === 0 && childRecords.length === 0 && linkedSourceRecords.length === 0 ? (
             <div className="flex items-center justify-center h-20 border-2 border-dashed border-slate-200 rounded-xl">
               <div className="text-center">
                 <Search className="w-5 h-5 text-slate-300 mx-auto mb-1" />
@@ -529,6 +558,17 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
             </div>
           ) : (
             <div className="space-y-2">
+              {/* 件级挂接的原始凭证（v2.3 组件挂接，随本凭证整体组卷） */}
+              {linkedSourceRecords.map((lr) => (
+                <div key={lr.id} className="flex items-center gap-3 px-3 py-2 border border-sky-100 bg-sky-50/40 rounded-lg text-xs">
+                  <Paperclip className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                  <span className="font-mono font-medium text-slate-700">{lr.voucherNo}</span>
+                  {lr.amount > 0 && <span className="text-slate-500">¥{fmt(lr.amount)}</span>}
+                  {lr.year && <span className="text-slate-400">{lr.year}-{lr.month}</span>}
+                  <span className="ml-auto px-1.5 py-px text-[10px] rounded bg-amber-100 text-amber-700 shrink-0">原始凭证 · 随附入卷</span>
+                </div>
+              ))}
+
               {/* 富元数据原始凭证（主） */}
               {richSourceDocs.map(sd => (
                 <SourceDocRow

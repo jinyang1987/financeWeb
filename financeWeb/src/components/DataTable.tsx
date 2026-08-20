@@ -97,7 +97,8 @@ const headerJustify: Record<string, string> = {
 };
 
 const DEFAULT_SIZE = 150;
-const CHECKBOX_SIZE = 40;
+// 复选框列：基础单元格 px-4 会吃掉 32px，40px 列宽只剩 8px 必然裁切复选框（2026-08-19 修复：加宽 + 单元格 px-0 居中）
+const CHECKBOX_SIZE = 44;
 const EXTRA_COL_SIZE = 36;
 
 // ── 组件 ──
@@ -138,10 +139,12 @@ export function DataTable<TData extends { id: string }>({
     // 复选框列 — 通过 row.getIsSelected() 取值，不依赖 selectedIds
     cols.push({
       id: '_select',
-      header: () => (
+      header: ({ table }) => (
         <input
           type="checkbox"
-          checked={data.length > 0 && selectedIds.size === data.length}
+          // ★ 2026-08-20：从 TanStack 上下文读实时全选态（闭包捕获的 selectedIds 在 memo 下会过期；
+          //   且单元化勾选让 selectedIds ⊋ 当前页，size 相等判定会误判未全选）
+          checked={table.getIsAllPageRowsSelected()}
           onChange={() => onToggleAllRef.current?.()}
           className="rounded accent-sky-600 cursor-pointer"
         />
@@ -266,7 +269,7 @@ export function DataTable<TData extends { id: string }>({
                 return (
                   <TableHead
                     key={header.id}
-                    className={`relative ${alignClass[(header.column.columnDef.meta as any)?.align || 'left']}`}
+                    className={`relative ${header.column.id === '_select' ? 'px-0 text-center' : alignClass[(header.column.columnDef.meta as any)?.align || 'left']}`}
                     style={{ width: header.getSize() }}
                   >
                     {flexRender(header.column.columnDef.header, header.getContext())}
@@ -306,7 +309,14 @@ export function DataTable<TData extends { id: string }>({
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
                         key={cell.id}
-                        className={alignClass[(cell.column.columnDef.meta as any)?.align || 'left']}
+                        className={
+                          cell.column.id === '_select'
+                            ? 'px-0 text-center'
+                            : cell.column.id === '_actions'
+                              // 操作列 px-4 会吃掉 32px，两个小图标被裁（2026-08-20 修复）
+                              ? `${alignClass[(cell.column.columnDef.meta as any)?.align || 'left']} px-2`
+                              : alignClass[(cell.column.columnDef.meta as any)?.align || 'left']
+                        }
                         style={{ width: cell.column.getSize() }}
                         onClick={
                           cell.column.id === '_select' || cell.column.id === '_actions' || cell.column.id === '_extra'

@@ -5,11 +5,14 @@ services:
     image: alfresco/alfresco-content-repository-community:26.1.0
     environment:
       JAVA_TOOL_OPTIONS: "-Dencryption.keystore.type=JCEKS -Dencryption.cipherAlgorithm=AES/CBC/PKCS5Padding -Dencryption.keyAlgorithm=AES -Dencryption.keystore.location=/usr/local/tomcat/shared/classes/alfresco/extension/keystore/keystore -Dmetadata-keystore.password=mp6yc0UD9e -Dmetadata-keystore.aliases=metadata -Dmetadata-keystore.metadata.password=oKIWzVdEdA -Dmetadata-keystore.metadata.algorithm=AES"
-      JAVA_OPTS: "-Xms512m -Xmx2g -Dfile.encoding=UTF-8 -Ddb.driver=org.postgresql.Driver -Ddb.url=jdbc:postgresql://postgres:5432/alfresco?charSet=UTF-8 -Ddb.username=alfresco -Ddb.password=alfresco -Dhibernate.dialect=org.hibernate.dialect.PostgreSQLDialect"
+      JAVA_OPTS: "-Xms512m -Xmx2g -Dfile.encoding=UTF-8 -Ddb.driver=org.postgresql.Driver -Ddb.url=jdbc:postgresql://postgres:5432/alfresco?charSet=UTF-8 -Ddb.username=alfresco -Ddb.password=alfresco -Dhibernate.dialect=org.hibernate.dialect.PostgreSQLDialect -Dauthentication.ticket.ticketsExpire=false"
     ports:
       - "8080:8080"
     volumes:
       - alfresco-data:/usr/local/tomcat/alf_data
+      # finance 内容模型热部署文件（容器重建不再丢模型，2026-08-19 根治；勿删）
+      - ../alfresco-aio-platform/src/main/resources/alfresco/module/alfresco-aio-platform/model/finance-model.xml:/usr/local/tomcat/shared/classes/alfresco/extension/finance-model.xml:ro
+      - ../../../seed/finance-model-context.xml:/usr/local/tomcat/shared/classes/alfresco/extension/finance-model-context.xml:ro
     depends_on:
       - postgres
 

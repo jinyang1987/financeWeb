@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -109,6 +111,26 @@ public class RecordController {
     perm.requireFunction(me, "voucher-manager");
     service.delete(ticket, nodeId);
     return ResponseEntity.noContent().build();
+  }
+
+  // ── 组件挂接（先组件再组卷，2026-08-20） ──
+
+  /**
+   * PUT /records/{nodeId}/parent — 原始凭证件挂接到所属记账凭证（body.parentRecordId 空=解挂）。
+   * 校验链在 RecordService.linkParent：两端 record / 子件必原始凭证 / 父件非原始凭证 / 双方池内 / 同全宗 / 防自环。
+   */
+  @PutMapping("/{nodeId}/parent")
+  public Map<String, Object> linkParent(
+      @RequestHeader(value = "X-User-Id", required = false) String userId,
+      @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
+      @PathVariable String nodeId,
+      @RequestBody(required = false) Map<String, String> body) {
+    AuthUser me = perm.me(userId, ticket);
+    perm.requireFunction(me, "voucher-manager", "archive-rcv", "volume-workspace");
+    perm.checkFonds(me, service.fondsCodeOf(ticket, nodeId));
+    String parentId = body == null ? null : body.get("parentRecordId");
+    service.linkParent(ticket, nodeId, parentId);
+    return Map.of("nodeId", nodeId, "parentRecordId", parentId == null ? "" : parentId);
   }
 
   // ── 收集池列表 / 全量件列表 ──

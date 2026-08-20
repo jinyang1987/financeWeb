@@ -25,15 +25,11 @@ async function ensureTicketed(url: string): Promise<string> {
   return t;
 }
 
-/** 从 ams-server 换发有效 Alfresco ticket（ticket 缺失/过期时调用） */
+/** 从 ams-server 换发有效 Alfresco ticket（ticket 缺失/过期时调用）；
+ *  只写 alfTicket 专用字段，不覆盖会话 ticket（2026-08-19：避免 userId/ticket 错配死会话） */
 async function refreshAlfrescoTicket(): Promise<void> {
   const ticket = await authService.alfrescoTicket();
-  const cur = session.get();
-  session.set({
-    userId: cur?.userId ?? 'admin',
-    ticket,
-    displayName: cur?.displayName ?? 'Administrator',
-  });
+  session.setAlfTicket(ticket);
 }
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {

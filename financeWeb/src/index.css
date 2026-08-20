@@ -131,3 +131,14 @@
     }
 }
 
+/* 侧边栏菜单：预留纵向滚动条槽位 + 细滚动条，根治展开/收起子菜单时的宽度抖动（2026-08-19） */
+.sidebar-nav {
+  scrollbar-gutter: stable;      /* 始终预留滚动条槽位，菜单项宽度不再随滚动条出现/消失而变化 */
+  scrollbar-width: thin;         /* Firefox 细滚动条 */
+  scrollbar-color: #cbd5e1 transparent;
+}
+.sidebar-nav::-webkit-scrollbar { width: 6px; }
+.sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+.sidebar-nav::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+

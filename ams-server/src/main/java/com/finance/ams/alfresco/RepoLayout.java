@@ -193,8 +193,43 @@ public class RepoLayout {
       if (status == 401) return new BizException(HttpStatus.UNAUTHORIZED, "SESSION_EXPIRED", "会话已过期，请重新登录");
       if (status == 403) return new BizException(HttpStatus.FORBIDDEN, "FORBIDDEN", "当前账号无档案库写入权限");
       if (status == 404) return new BizException(HttpStatus.NOT_FOUND, "NODE_NOT_FOUND", prefix + "：节点不存在");
-      return new BizException(HttpStatus.valueOf(status), "ALFRESCO_ERROR", prefix + ": " + hce.getStatusText());
+      return new BizException(HttpStatus.valueOf(status), "ALFRESCO_ERROR", prefix + "：" + alfrescoReason(hce));
     }
-    return new BizException(HttpStatus.INTERNAL_SERVER_ERROR, "ALFRESCO_ERROR", prefix + ": " + e.getMessage());
+    return new BizException(HttpStatus.INTERNAL_SERVER_ERROR, "ALFRESCO_ERROR", prefix + "：" + e.getMessage());
+  }
+
+  /**
+   * 从 Alfresco 错误响应体提取可读原因（{"error":{"errorKey","briefSummary"}}）。
+   * 2026-08-19 修复：原实现用 hce.getStatusText()——HTTP/2 没有 reason phrase，恒为空串，
+   * 导致「移交归盒失败: 」这类无原因报错，业务侧无法理解。常见错误中文化，其余透传 briefSummary。
+   */
+  private static String alfrescoReason(HttpClientErrorException hce) {
+    try {
+      String body = hce.getResponseBodyAsString();
+      if (body != null && !body.isBlank()) {
+        com.fasterxml.jackson.databind.JsonNode err =
+            new com.fasterxml.jackson.databind.ObjectMapper().readTree(body).path("error");
+        String key = err.path("errorKey").asText("");
+        String summary = err.path("briefSummary").asText("");
+        if (key.contains("DuplicateChildNodeName") || summary.contains("Duplicate child")) {
+          return "目标位置已存在同名节点（请勿重复操作）";
+        }
+        if (key.contains("NodeLocked") || summary.contains("NodeLocked") || summary.contains("node is locked")) {
+          return "节点已被锁定，禁止移动/修改";
+        }
+        if (summary.toLowerCase().contains("access denied") || summary.contains("Permission")) {
+          return "当前账号在档案库中的权限不足";
+        }
+        if (!summary.isBlank()) {
+          // briefSummary 形如 "08210045 Duplicate child node name: xxx"（前导为日志 id），剥掉前导数字
+          String cleaned = summary.replaceFirst("^\\d+\\s*", "").trim();
+          if (!cleaned.isEmpty()) return cleaned;
+        }
+      }
+    } catch (Exception ignored) { /* 解析失败走兜底 */ }
+    String st = hce.getStatusText();
+    return (st == null || st.isBlank())
+        ? "档案库返回错误（HTTP " + hce.getStatusCode().value() + "）"
+        : st;
   }
 }

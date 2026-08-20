@@ -76,6 +76,14 @@ export const ArchiveBoxTreeView: React.FC<ArchiveBoxTreeViewProps> = ({
   // ── 本地状态 ──
   const [selectedBoxIds, setSelectedBoxIds] = useState<Set<string>>(new Set());
   const [showReturnConfirm, setShowReturnConfirm] = useState(false);
+  /** 单卷退回目标（盒内件列表行级入口，2026-08-19） */
+  const [returnVolumeId, setReturnVolumeId] = useState<string | null>(null);
+  /** 轻量提示（退回成败反馈——此前盒级退回静默无反馈） */
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
+  const showToast = (message: string, type: 'success' | 'info' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   // ── 当前聚焦盒 ──
   const focusedEntry = useMemo(
@@ -224,11 +232,27 @@ export const ArchiveBoxTreeView: React.FC<ArchiveBoxTreeViewProps> = ({
       setSelectedBoxIds(new Set());
       onFocusBox(null);
       setShowReturnConfirm(false);
+      showToast(`已退回 ${volumeIdsToReturn.length} 卷至组卷工作台`);
     } catch (e: any) {
       console.error('退回失败:', e);
       setShowReturnConfirm(false);
+      showToast(e?.message || '退回失败', 'info');
     }
   }, [selectedBoxIds, volumes, returnVolumes, onFocusBox]);
+
+  // ── 单卷退回组卷工作台（盒内件列表行级入口，2026-08-19：档案保管侧可直接打回拆卷/调整） ──
+  const handleReturnVolume = useCallback(async () => {
+    if (!returnVolumeId) return;
+    const vol = volumes.find((v) => v.id === returnVolumeId);
+    try {
+      await returnVolumes([returnVolumeId]);
+      setReturnVolumeId(null);
+      showToast(`案卷「${vol?.title || vol?.volumeCode || '未命名'}」已退回组卷工作台`);
+    } catch (e: any) {
+      setReturnVolumeId(null);
+      showToast(e?.message || '退回失败', 'info');
+    }
+  }, [returnVolumeId, volumes, returnVolumes]);
 
   const focusedTotalAmount = useMemo(
     () => (focusedEntry?.matchedItems || []).reduce((sum, r) => sum + r.amount, 0),
@@ -340,17 +364,34 @@ export const ArchiveBoxTreeView: React.FC<ArchiveBoxTreeViewProps> = ({
               selectedIds={new Set()}
               onSelectionChange={() => {}}
               onRowClick={(r) => onItemClick(r)}
-              renderActions={(r) => (
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); onItemClick(r); }}
-                  className="p-1 text-slate-400 hover:text-sky-500 hover:bg-sky-50 rounded-md transition-colors"
-                  title="查看档案详情"
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                </button>
-              )}
-              actionsWidth={44}
+              renderActions={(r) => {
+                // ★ 行级操作：查看详情 + 退回组卷（仅已移交卷可退回，2026-08-19）
+                const vol = volumes.find((v) => v.id === r.volumeId);
+                const canReturn = vol?.status === 'transferred';
+                return (
+                  <span className="flex items-center gap-0.5">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); onItemClick(r); }}
+                      className="p-1 text-slate-400 hover:text-sky-500 hover:bg-sky-50 rounded-md transition-colors"
+                      title="查看档案详情"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                    </button>
+                    {canReturn && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setReturnVolumeId(vol.id); }}
+                        className="p-1 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-md transition-colors"
+                        title="退回组卷工作台（案卷恢复草稿，可拆卷/调整）"
+                      >
+                        <Undo2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </span>
+                );
+              }}
+              actionsWidth={76}
               emptyLabel="此盒内暂无符合筛选条件的档案"
             />
           </div>
@@ -397,6 +438,57 @@ export const ArchiveBoxTreeView: React.FC<ArchiveBoxTreeViewProps> = ({
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {/* ★ 单卷退回确认弹窗（盒内件列表行级入口，2026-08-19） */}
+      {returnVolumeId && (() => {
+        const vol = volumes.find((v) => v.id === returnVolumeId);
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setReturnVolumeId(null)}>
+            <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-sm" />
+            <div
+              className="relative bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                  <Undo2 className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-800">退回组卷工作台</h3>
+                  <p className="text-xs text-slate-500 mt-0.5 truncate max-w-[260px]">{vol?.title || vol?.volumeCode || '未命名案卷'}</p>
+                </div>
+              </div>
+              <p className="text-sm text-slate-600 mb-4 leading-relaxed">
+                该案卷将从本盒移出、状态恢复为"草稿"，可在组卷工作台进行拆卷/拆件/调整后重新移交。
+              </p>
+              <div className="flex items-center gap-3 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setReturnVolumeId(null)}
+                  className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors"
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  onClick={handleReturnVolume}
+                  className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-amber-500 rounded-xl hover:bg-amber-600 transition-colors shadow-sm"
+                >
+                  <Undo2 className="w-4 h-4" />
+                  确认退回
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* 轻量提示 */}
+      {toast && (
+        <div className={`fixed top-4 right-4 z-[70] px-4 py-2 rounded-lg shadow-lg text-sm font-medium ${
+          toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-slate-700 text-white'}`}>
+          {toast.message}
         </div>
       )}
     </>
