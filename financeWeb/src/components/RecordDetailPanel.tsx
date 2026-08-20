@@ -15,7 +15,7 @@ import {
   ChevronRight, ChevronDown, CheckCircle2, AlertTriangle,
   FileText, DollarSign, Building2, Hash, Tag, Calendar,
   User, Package, ExternalLink, FileSpreadsheet, Edit3, Trash2,
-  FolderTree, Search, Monitor, StickyNote, Paperclip, Eye, Download,
+  FolderTree, Search, Monitor, StickyNote, Paperclip, Eye, Download, X,
 } from 'lucide-react';
 import { fetchRecordContent, downloadRecord } from '../services/recordService';
 import { useArchiveStore } from '../stores/archiveStore';
@@ -402,6 +402,15 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
               删除
             </button>
           )}
+          {/* ★ 关闭按钮（2026-08-20）：此前仅抽屉遮罩可点关，组卷工作台等场景找不到出口 */}
+          <button
+            type="button"
+            onClick={onClose}
+            title="关闭"
+            className="p-1.5 -mr-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       </div>
 

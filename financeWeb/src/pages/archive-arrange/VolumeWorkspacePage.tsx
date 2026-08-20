@@ -21,11 +21,13 @@ import {
   Loader2, CheckCircle2, Trash2, Upload, Shield, Send, Clock,
   RefreshCw, Trash, Link2, Eye, AlertTriangle, Paperclip,
   ArrowUp, ArrowDown, FolderOutput, Split, Merge, Ungroup, ListChecks,
+  MapPin, Warehouse,
 } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
 import { useArchiveStore } from '../../stores/archiveStore';
 import { useSourceDocumentStore } from '../../stores/sourceDocumentStore';
 import { useVolumeStore, validateVoucherContinuity, inferTypeCode, inferRetentionCode, toCategoryCode } from '../../stores/volumeStore';
+import { useArchiveBoxStore } from '../../stores/archiveBoxStore';
 import { useMetadataDisplayStore } from '../../stores/metadataDisplayStore';
 import { getVoucherColumns, getVoucherDefaultColumns } from '../../config/metadataColumnMaps/voucherColumns';
 import {
@@ -33,6 +35,7 @@ import {
   getDefaultVisibleIds,
 } from '../../config/metadataContexts';
 import RecordDetailPanel from '../../components/RecordDetailPanel';
+import ShelfPositionPicker from '../../components/ShelfPositionPicker';
 import { isSourceDocument } from '../../utils/recordType';
 import {
   toggleUnitSelection, selectPageWithUnits, isAllPageSelected,
@@ -44,12 +47,20 @@ import { DataTable, type DataTableColumn } from '../../components/DataTable';
 import PaginationBar from '../../components/PaginationBar';
 import { usePagination } from '../../hooks/usePagination';
 import type { Volume, VolumeItem } from '../../types/volume';
+import type { ArchiveBox } from '../../types/archiveBox';
 import type { ArchiveRecord } from '../../types';
 import VoucherUploadModal from './VoucherUploadModal';
 import VolumePrintModal from './VolumePrintModal';
 import { deleteRecord } from '../../services/recordService';
 import { openPushService } from '../../services/openPushService';
 import { runVolumeInspection, type InspectionIssue } from '../../services/inspectionService';
+import {
+  fetchBoxes, shelveBoxApi, shelveBoxAutoApi, type ShelfPosition,
+} from '../../services/boxService';
+import {
+  fetchRacks, fetchPositions, locationText,
+  type StorageRack, type BoxPosition,
+} from '../../services/storageService';
 
 // ── 类型辅助 ──
 const ARCHIVE_TYPES = ['全部', '记账凭证', '会计账簿', '财务报告', '其他会计资料'] as const;
@@ -1330,6 +1341,266 @@ const MergeVolumesModal: React.FC<{
   );
 };
 
+/** 移交上架方式（2026-08-20）：none=仅移交归盒（默认）；auto=移交并自动上架；pick=移交并指定架位 */
+type ShelveMode = 'none' | 'auto' | 'pick';
+
+/** 移交至档案保管弹窗：案卷摘要 + 归盒预测 + 是否上架（联通实体库房密集架点选格位） */
+const TransferVolumeModal: React.FC<{
+  volume: Volume;
+  itemCount: number;
+  fondsCode: string;
+  onCancel: () => void;
+  /** 父组件执行 移交(+上架)；移交失败抛异常由本弹窗内联展示（弹窗保持打开），
+   *  上架失败由父组件兜底提示后正常返回（弹窗关闭，盒可在实体档案库房补上架） */
+  onSubmit: (choice: { mode: ShelveMode; position?: ShelfPosition }) => Promise<void>;
+}> = ({ volume, itemCount, fondsCode, onCancel, onSubmit }) => {
+  const [mode, setMode] = useState<ShelveMode>('none');
+  const [pickPos, setPickPos] = useState<ShelfPosition | null>(null);
+  const [racks, setRacks] = useState<StorageRack[]>([]);
+  const [positions, setPositions] = useState<BoxPosition[]>([]);
+  const [boxes, setBoxes] = useState<ArchiveBox[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadErr, setLoadErr] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [submitErr, setSubmitErr] = useState('');
+
+  // 弹窗打开即拉取：密集架布局 + 格位占用 + 本全宗盒列表（归盒预测）
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const [r, p, b] = await Promise.all([fetchRacks(), fetchPositions(), fetchBoxes({ fondsCode })]);
+        if (!alive) return;
+        setRacks(r);
+        setPositions(p);
+        setBoxes(b);
+      } catch (e) {
+        if (alive) setLoadErr(e instanceof Error ? e.message : '库房数据加载失败');
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, [fondsCode]);
+
+  const categoryCode = toCategoryCode(volume.archiveTypeCode, volume.archiveType);
+  const typeName = ARCHIVE_TYPE_CATEGORY_NAMES[categoryCode] || '其他会计资料';
+
+  // ── 归盒预测：同类别/年度的「装盒中」盒（与服务端 transfer 取首个 active 盒的口径一致；
+  //    极少数情况下同目录存在多个 active 盒（如开封造成），则以服务端实际归盒为准） ──
+  const predictedBox = useMemo(
+    () => boxes.find((b) => b.status === 'active' && b.year === volume.year
+      && toCategoryCode(b.archiveTypeCode) === categoryCode) || null,
+    [boxes, volume.year, categoryCode],
+  );
+
+  const storageReady = racks.length > 0;
+  const canSubmit = !busy && !loading && (mode !== 'pick' || (!!pickPos && storageReady));
+
+  const submit = async () => {
+    setBusy(true);
+    setSubmitErr('');
+    try {
+      await onSubmit({ mode, position: mode === 'pick' ? pickPos ?? undefined : undefined });
+      // 成功：父组件关闭弹窗
+    } catch (e) {
+      setSubmitErr(e instanceof Error ? e.message : '移交失败');
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => { if (!busy) onCancel(); }}>
+      <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-sm" />
+      <div
+        className="relative bg-white rounded-2xl shadow-2xl p-6 max-w-2xl w-full mx-4 animate-in zoom-in-95 max-h-[88vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* 标题栏 */}
+        <div className="flex items-center gap-3 mb-4 shrink-0">
+          <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center shrink-0">
+            <Send className="w-5 h-5 text-sky-600" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-base font-bold text-slate-800">移交至档案保管</h3>
+            <p className="text-xs text-slate-500 mt-0.5 truncate" title={volume.title || volume.volumeCode}>
+              {volume.title || volume.volumeCode || '未命名案卷'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={busy}
+            title="关闭"
+            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-40"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="min-h-0 overflow-y-auto space-y-4 pr-0.5">
+          {/* 案卷摘要 */}
+          <div className="grid grid-cols-4 gap-2 text-xs">
+            {([
+              ['档案类别', typeName],
+              ['年度', `${volume.year} 年`],
+              ['保管期限', volume.retention || volume.retentionCode || '—'],
+              ['卷内件数', `${itemCount} 件`],
+            ] as const).map(([k, v]) => (
+              <div key={k} className="bg-slate-50 rounded-lg px-3 py-2">
+                <div className="text-[10px] text-slate-400">{k}</div>
+                <div className="font-medium text-slate-700 mt-0.5 truncate" title={v}>{v}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* 归盒预测 */}
+          <div className="flex items-start gap-2 text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5">
+            <Archive className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-px" />
+            {loading ? (
+              <span className="text-slate-400">正在查询归盒位置…</span>
+            ) : loadErr ? (
+              <span className="text-slate-500">归盒位置查询失败（不影响移交；服务端将自动找/建同类别盒）</span>
+            ) : predictedBox ? (
+              <span className="text-slate-600">
+                预计归入盒 <strong className="font-mono text-slate-800">{predictedBox.boxNo}</strong>
+                （装盒中，已有 {predictedBox.volumeCount} 卷，本卷为第 {predictedBox.volumeCount + 1} 卷）
+                <span className="text-slate-400"> · 以服务端实际归盒为准</span>
+              </span>
+            ) : (
+              <span className="text-slate-600">
+                同类别/年度暂无装盒中的档案盒，移交时将<strong className="text-slate-800">自动新建盒</strong>
+                <span className="text-slate-400"> · 以服务端实际归盒为准</span>
+              </span>
+            )}
+          </div>
+
+          {/* 上架方式 */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+              <Warehouse className="w-3.5 h-3.5 text-slate-400" />
+              上架方式（是否随本次移交一并上架）
+            </div>
+            {([
+              {
+                key: 'none' as ShelveMode,
+                title: '仅移交归盒',
+                desc: '盒进入库房「待上架区」，稍后在 档案保管 → 实体档案库房 上架（默认）',
+                disabled: false,
+              },
+              {
+                key: 'auto' as ShelveMode,
+                title: '移交并自动上架',
+                desc: '服务端自动分配密集架第一个空格位',
+                disabled: !storageReady,
+              },
+              {
+                key: 'pick' as ShelveMode,
+                title: '移交并指定架位',
+                desc: '点选密集架空格位（库房 → 架 → 列 → 层 → 位）',
+                disabled: !storageReady,
+              },
+            ]).map((opt) => (
+              <label
+                key={opt.key}
+                className={`flex items-start gap-2.5 p-2.5 border rounded-xl transition-colors ${
+                  opt.disabled ? 'opacity-45 cursor-not-allowed' : 'cursor-pointer'
+                } ${mode === opt.key ? 'border-sky-300 bg-sky-50/70' : 'border-slate-200 hover:border-slate-300'}`}
+              >
+                <input
+                  type="radio"
+                  name="shelve-mode"
+                  className="mt-0.5"
+                  checked={mode === opt.key}
+                  disabled={opt.disabled}
+                  onChange={() => setMode(opt.key)}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-semibold text-slate-700">{opt.title}</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">{opt.desc}</div>
+                </div>
+              </label>
+            ))}
+          </div>
+
+          {/* 密集架格位选择器（指定架位时展开） */}
+          {mode === 'pick' && storageReady && (
+            <div className="pl-1 space-y-2">
+              <ShelfPositionPicker racks={racks} positions={positions} value={pickPos} onChange={setPickPos} />
+              {pickPos ? (
+                <div className="flex items-center gap-2 text-xs">
+                  <MapPin className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="font-medium text-emerald-700">
+                    已选：{locationText(pickPos.room, pickPos.rack, pickPos.column, pickPos.layer, pickPos.cell)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPickPos(null)}
+                    className="text-[11px] text-slate-400 hover:text-slate-600 underline"
+                  >
+                    重选
+                  </button>
+                </div>
+              ) : (
+                <div className="text-[11px] text-slate-400">请点击上方虚线空格位选定上架位置（灰块为已占用）</div>
+              )}
+            </div>
+          )}
+
+          {/* 业务后果披露（选择上架时） */}
+          {mode !== 'none' && (
+            <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 leading-relaxed">
+              上架以「盒」为单位：本卷归入的档案盒（含盒内既有案卷）将整体定位在架；
+              盒上架后不再接收新卷，后续同类别案卷移交将自动开新盒。
+            </div>
+          )}
+
+          {/* 库房未配置密集架时的降级说明 */}
+          {!loading && !storageReady && !loadErr && (
+            <div className="text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 leading-relaxed">
+              库房尚未配置密集架，本次仅可移交归盒；如需上架，请先在 档案保管 → 实体档案库房 新增密集架，
+              或移交后在「待上架区」补上架。
+            </div>
+          )}
+
+          {loadErr && (
+            <div className="text-[11px] text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              库房数据加载失败：{loadErr}（仍可仅移交归盒，上架可在实体档案库房补做）
+            </div>
+          )}
+          {submitErr && (
+            <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              {submitErr}
+            </div>
+          )}
+        </div>
+
+        {/* 底部操作 */}
+        <div className="flex items-center gap-3 justify-end mt-5 shrink-0">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={busy}
+            className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors disabled:opacity-50"
+          >
+            取消
+          </button>
+          <button
+            type="button"
+            onClick={() => void submit()}
+            disabled={!canSubmit}
+            title={mode === 'pick' && !pickPos ? '请先点选一个空格位' : undefined}
+            className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-xl hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+          >
+            {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            {mode === 'auto' ? '确认移交并自动上架' : mode === 'pick' ? '确认移交并上架' : '确认移交'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ── 主组件 ──
 const VolumeWorkspacePage: React.FC = () => {
   // ── Stores ──
@@ -1436,10 +1707,11 @@ const VolumeWorkspacePage: React.FC = () => {
 
   // ── ★ 卷内件选择域（拆分/转卷/排序/移出；单域：跨卷勾选自动重置，2026-08-17） ──
   const [itemSel, setItemSel] = useState<{ volumeId: string; ids: Set<string> } | null>(null);
-  // 弹窗目标：拆分（源卷）/ 转卷（源卷）/ 合并（目标卷）
+  // 弹窗目标：拆分（源卷）/ 转卷（源卷）/ 合并（目标卷）/ 移交上架（2026-08-20）
   const [splitTarget, setSplitTarget] = useState<string | null>(null);
   const [moveTarget, setMoveTarget] = useState<string | null>(null);
   const [mergeTarget, setMergeTarget] = useState<string | null>(null);
+  const [transferTarget, setTransferTarget] = useState<string | null>(null);
 
   /** 案卷规格一致性（同大类/年度/期限才可合并/转卷，与服务端 requireCompatible 对齐） */
   const sameVolumeSpec = useCallback((a: Volume, b: Volume) => (
@@ -2263,25 +2535,57 @@ const VolumeWorkspacePage: React.FC = () => {
     }
   }, []);
 
-  // ── 移交至档案保管（服务端自动分类归盒） ──
-  const handleTransfer = useCallback(async (volumeId: string) => {
-    const volumeStore = useVolumeStore.getState();
-    try {
-      const volume = volumeStore.volumes.find(v => v.id === volumeId);
-      // ★ 类别名按归一化后的大类代码查表（数字代码 01 需先映射为 KP）
-      const typeLabel: Record<string, string> = { KP: '会计凭证', KB: '会计账簿', FB: '财务报表', QT: '其他会计资料' };
-      const categoryCode = toCategoryCode(volume?.archiveTypeCode || '', volume?.archiveType);
-      const typeName = typeLabel[categoryCode] || '';
-      // 移交（服务端自动按 archiveTypeCode 归入对应分类盒）
-      await volumeStore.transferVolume(volumeId);
-      useArchiveStore.getState().loadRecords();
-        void useArchiveStore.getState().loadAllRecords(); // 同步刷新全量件视图（2026-08-16 贯通修复）
-      const transferred = useVolumeStore.getState().volumes.find(v => v.id === volumeId);
-      showToast(`已移交 1 卷（${typeName}）至档案保管${transferred?.boxNo ? ` · ${transferred.boxNo}` : ''}`);
-    } catch (e: any) {
-      showToast(e.message || '移交失败', 'info');
-    }
+  // ── 移交至档案保管（弹窗选择上架方式，2026-08-20） ──
+  const handleTransfer = useCallback((volumeId: string) => {
+    setTransferTarget(volumeId);
   }, []);
+
+  /** 移交弹窗「确认移交」：先移交归盒（服务端自动找/建盒），再按选择上架。
+   *  移交失败 → 异常抛回弹窗内联展示（弹窗保持打开，可重试）；
+   *  上架失败 → 不回滚移交，提示盒已入「待上架区」可补上架（兜底闭环）。 */
+  const handleTransferSubmit = useCallback(async (choice: { mode: ShelveMode; position?: ShelfPosition }) => {
+    const volumeId = transferTarget;
+    if (!volumeId) return;
+    const volumeStore = useVolumeStore.getState();
+    const volume = volumeStore.volumes.find((v) => v.id === volumeId);
+    // ★ 类别名按归一化后的大类代码查表（数字代码 01 需先映射为 KP）
+    const categoryCode = toCategoryCode(volume?.archiveTypeCode || '', volume?.archiveType);
+    const typeName = ARCHIVE_TYPE_CATEGORY_NAMES[categoryCode] || '';
+    // 第一步：移交归盒
+    await volumeStore.transferVolume(volumeId);
+    useArchiveStore.getState().loadRecords();
+    void useArchiveStore.getState().loadAllRecords(); // 同步刷新全量件视图（2026-08-16 贯通修复）
+    const transferred = useVolumeStore.getState().volumes.find((v) => v.id === volumeId);
+    const boxId = transferred?.boxId || '';
+    const boxNo = transferred?.boxNo || '';
+    // 第二步：按选择上架（仅当有盒且非「仅移交」时）
+    if (boxId && choice.mode !== 'none') {
+      try {
+        if (choice.mode === 'auto') {
+          const shelved = await shelveBoxAutoApi(boxId);
+          showToast(`已移交并上架：${boxNo || '档案盒'} → ${shelved.location || '已自动分配架位'}`);
+        } else if (choice.mode === 'pick' && choice.position) {
+          const p = choice.position;
+          await shelveBoxApi(boxId, p);
+          showToast(`已移交并上架：${boxNo || '档案盒'} → ${locationText(p.room, p.rack, p.column, p.layer, p.cell)}`);
+        }
+        // 刷新盒镜像，实体档案库房页数据保持新鲜
+        const fonds = volume?.fondsCode || filters.fondsCode;
+        if (fonds) void useArchiveBoxStore.getState().loadBoxes(fonds);
+      } catch (e: any) {
+        setTransferTarget(null);
+        showToast(
+          `已移交归盒${boxNo ? `（${boxNo}）` : ''}，但上架失败：${e?.message || '未知原因'}。`
+          + '盒已进入待上架区，可在 档案保管 → 实体档案库房 补上架',
+          'info',
+        );
+        return;
+      }
+    } else {
+      showToast(`已移交 1 卷（${typeName}）至档案保管${boxNo ? ` · ${boxNo}` : ''}`);
+    }
+    setTransferTarget(null);
+  }, [transferTarget, filters.fondsCode]);
 
   // ── 打开目录打印弹窗 ──
   const handleOpenPrint = useCallback((volumeId: string) => {
@@ -2813,6 +3117,21 @@ const VolumeWorkspacePage: React.FC = () => {
             itemsCountOf={(vid) => (volumeItems[vid] || []).length}
             onCancel={() => setMergeTarget(null)}
             onSubmit={handleMergeSubmit}
+          />
+        );
+      })()}
+
+      {/* ★ 移交至档案保管弹窗（可选同时上架，联通实体库房密集架，2026-08-20） */}
+      {transferTarget && (() => {
+        const vol = volumes.find((v) => v.id === transferTarget);
+        if (!vol) return null;
+        return (
+          <TransferVolumeModal
+            volume={vol}
+            itemCount={(volumeItems[transferTarget] || []).length}
+            fondsCode={vol.fondsCode || filters.fondsCode}
+            onCancel={() => setTransferTarget(null)}
+            onSubmit={handleTransferSubmit}
           />
         );
       })()}
