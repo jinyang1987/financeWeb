@@ -271,6 +271,10 @@
         <!-- v2.3（2026-08-20）：组件挂接——原始凭证件 → 所属记账凭证件的软关联（先组件再组卷）；
              可选属性，存量节点不受影响；仅池内（仅件数据）件可挂接/解挂 -->
         <property name="finance:parentRecordId"><title>所属记账凭证件ID（组件挂接）</title><type>d:text</type><index enabled="true"/></property>
+        <!-- v2.6（回收站）：逻辑删除标记。置位 = 已移入回收站（从池/卷/盒列表隐藏），
+             清除 = 恢复回池。非空时记录不参与任何正常列表/组卷/检索。 -->
+        <property name="finance:deleted"><title>删除时间（回收站）</title><type>d:datetime</type></property>
+        <property name="finance:deletedBy"><title>删除人（回收站）</title><type>d:text</type></property>
       </properties>
       <associations>
         <child-association name="finance:recordSourceDocs">

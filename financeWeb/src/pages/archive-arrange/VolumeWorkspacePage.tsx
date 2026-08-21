@@ -2587,19 +2587,18 @@ const VolumeWorkspacePage: React.FC = () => {
     setShowPrintModal(true);
   }, []);
 
-  // ── 删除未组卷记录（真删除：调 DELETE /records/{id} 服务端永久删除；
-  // 旧版只 filter 前端状态 → 下次 loadRecords 复活，2026-07-29 用户报障修复） ──
+  // ── 删除未组卷记录（v2.6 起逻辑删除：移入回收站，可恢复；已删件不再出现于列表） ──
   const handleDeleteRecord = useCallback(async (recordId: string) => {
     // ★ 删除有附件的凭证前确认：附件将变「待挂接」（2026-08-20 先组件再组卷）
     const rec = records.find((r) => r.id === recordId);
     if (rec && !isSourceDocument(rec)) {
       const n = attachedSourceIds(records, recordId).length;
-      if (n > 0 && !window.confirm(`该凭证挂有 ${n} 张原始凭证；删除后它们将变为「待挂接」状态。\n确认删除该凭证？`)) return;
+      if (n > 0 && !window.confirm(`该凭证挂有 ${n} 张原始凭证；删除后它们将变为「待挂接」状态。\n确认将该凭证移入回收站？`)) return;
     }
     try {
       await deleteRecord(recordId);
       setRecords(useArchiveStore.getState().records.filter((r) => r.id !== recordId));
-      showToast('已删除记录');
+      showToast('已移入回收站');
     } catch (e: any) {
       showToast(e.message || '删除失败', 'info');
     }
@@ -2613,7 +2612,8 @@ const VolumeWorkspacePage: React.FC = () => {
       return r && isSourceDocument(r) && r.parentRecordId;
     }).length;
     if (attachedCount > 0
-        && !window.confirm(`选择集中含 ${attachedCount} 张随凭证挂接的原始凭证，将一并删除（不可恢复）。\n确认删除 ${ids.length} 条记录？`)) return;
+        && !window.confirm(`选择集中含 ${attachedCount} 张随凭证挂接的原始凭证，将一并移入回收站（可恢复）。\n确认删除 ${ids.length} 条记录？`)) return;
+    if (ids.length > 0 && !window.confirm(`确认将 ${ids.length} 条记录移入回收站？（可恢复）`)) return;
     const failedIds = new Set<string>();
     let firstErr = '';
     for (const id of ids) {
@@ -2629,9 +2629,9 @@ const VolumeWorkspacePage: React.FC = () => {
     ));
     setSelectedIds(new Set());
     if (failedIds.size === 0) {
-      showToast(`已批量删除 ${ids.length} 条记录`);
+      showToast(`已移入回收站 ${ids.length} 条记录`);
     } else {
-      showToast(`已删除 ${ids.length - failedIds.size} 条，${failedIds.size} 条失败（${firstErr}）`, 'info');
+      showToast(`已移入 ${ids.length - failedIds.size} 条，${failedIds.size} 条失败（${firstErr}）`, 'info');
     }
   }, [setRecords, records]);
 

@@ -132,7 +132,7 @@ export const ROLE_MENU_MATRIX: Record<RoleKey, string[]> = {
     // 收集
     'archive-rcv', 'archive-api-receive',
     // 整理
-    'volume-workspace',
+    'volume-workspace', 'recycle-bin',
     // 保管
     'view-finance', 'digital-warehouse',
     // 利用（管理侧：审批 + 借阅管理；「我的借阅」归检索门户，后台不保留）
@@ -151,7 +151,7 @@ export const ROLE_MENU_MATRIX: Record<RoleKey, string[]> = {
   archive_director: [
     ...PORTAL_MENU_KEYS,
     'voucher-search', 'matter-search', 'source-doc-search', 'volume-item-search', 'audit-trail',
-    'volume-workspace',
+    'volume-workspace', 'recycle-bin',
     'view-finance', 'digital-warehouse',
     'approval-center', 'borrow-manage', 'borrow-ledger', 'borrow-stats', 'transfer-manage',
     'stats-cockpit', 'stats-inventory', 'stats-lifecycle', 'stats-compliance',

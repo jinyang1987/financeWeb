@@ -64,6 +64,9 @@ export interface RecordDto {
   ocrText?: string;
   // ── v2.3 组件挂接（2026-08-20）：原始凭证件 → 所属记账凭证件 ──
   parentRecordId?: string;
+  // ── v2.6 回收站（2026-08-21）：仅回收站件有值 ──
+  deletedAt?: string;
+  deletedBy?: string;
 }
 
 export interface PoolResult {
@@ -231,9 +234,27 @@ export async function downloadRecord(nodeId: string, filename: string): Promise<
   URL.revokeObjectURL(url);
 }
 
-/** 删除收集池记录（服务端永久删除；仅「仅件数据」状态可删，已组卷须先拆件） */
+/** 删除收集池记录（v2.6 起为逻辑删除，入回收站可恢复；仅「仅件数据」状态可删，已组卷须先拆件） */
 export async function deleteRecord(nodeId: string): Promise<void> {
   await http.delete(`/records/${nodeId}`);
+}
+
+// ─── 回收站（v2.6：逻辑删除件列表 / 恢复 / 彻底删除） ───
+
+/** 回收站件列表（按删除时间倒序；不可搜索、不参与组卷） */
+export async function fetchRecycleItems(fondsCode: string): Promise<RecordDto[]> {
+  const qs = new URLSearchParams({ fondsCode });
+  return http.get<RecordDto[]>(`/records/recycle?${qs.toString()}`);
+}
+
+/** 恢复回收站件：移回收集池 + 清除删除标记（可重新组卷/检索） */
+export async function restoreRecycleItem(nodeId: string): Promise<void> {
+  await http.post(`/records/recycle/${nodeId}/restore`, {});
+}
+
+/** 彻底删除回收站件（不可恢复，物理删除；仅回收站内件） */
+export async function purgeRecycleItem(nodeId: string): Promise<void> {
+  await http.delete(`/records/recycle/${nodeId}`);
 }
 
 /** 组件挂接（2026-08-20 先组件再组卷）：原始凭证件 → 所属记账凭证件；parentRecordId=null 解挂 */
