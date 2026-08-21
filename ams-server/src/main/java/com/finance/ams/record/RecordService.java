@@ -153,7 +153,8 @@ public class RecordService {
    * 否则会破坏卷内引用完整性（2026-07-29 假删除 bug 修复配套端点）。
    *
    * 逻辑删除流程：置 finance:deleted/finance:deletedBy → 节点 move 到回收站目录
-   * （/{全宗}/_回收站/），数据与元数据完整保留，可从回收站恢复或彻底删除。
+   * （/{全宗}/_回收站/），数据与元数据完整保留，可从回收站恢复。
+   * v2.6.1 起回收站不提供彻底删除——物理销毁属档案鉴定业务，走鉴定销毁流程。
    */
   @SuppressWarnings("unchecked")
   public void delete(String ticket, String userId, String nodeId) {
@@ -259,35 +260,6 @@ public class RecordService {
       throw translate("恢复失败", e);
     }
     events.publishEvent(RecordsChangedEvent.refreshOne(nodeId)); // 重入读模型
-  }
-
-  /**
-   * 彻底删除回收站记录（不可恢复，物理删除）。
-   * 守卫：仅回收站内（finance:deleted 置位）的记录可彻底删除。
-   */
-  public void purgeRecycle(String ticket, String nodeId) {
-    Map<String, Object> entry;
-    try {
-      entry = nodes.getNodeWithPath(ticket, nodeId);
-    } catch (HttpClientErrorException e) {
-      throw BizException.badRequest("NOT_FOUND", "记录不存在: " + nodeId);
-    }
-    if (!"finance:record".equals(entry.get("nodeType"))) {
-      throw BizException.badRequest("NOT_RECORD", "目标不是档案记录节点: " + nodeId);
-    }
-    Object props = entry.get("properties");
-    String deletedAt = props instanceof Map<?, ?> p && p.get("finance:deleted") != null
-        ? String.valueOf(p.get("finance:deleted")) : "";
-    if (deletedAt.isEmpty()) {
-      throw BizException.badRequest("NOT_DELETED", "仅回收站内的记录可彻底删除，请先移入回收站");
-    }
-    try {
-      nodes.deleteNode(ticket, nodeId);
-      log.info("记录彻底删除（回收站）: {}", nodeId);
-    } catch (HttpClientErrorException e) {
-      throw translate("彻底删除失败", e);
-    }
-    events.publishEvent(RecordsChangedEvent.removed(nodeId));
   }
 
   /**

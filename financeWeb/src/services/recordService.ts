@@ -239,7 +239,7 @@ export async function deleteRecord(nodeId: string): Promise<void> {
   await http.delete(`/records/${nodeId}`);
 }
 
-// ─── 回收站（v2.6：逻辑删除件列表 / 恢复 / 彻底删除） ───
+// ─── 回收站（v2.6：逻辑删除件列表 / 恢复；不提供彻底删除——物理销毁走鉴定销毁流程） ───
 
 /** 回收站件列表（按删除时间倒序；不可搜索、不参与组卷） */
 export async function fetchRecycleItems(fondsCode: string): Promise<RecordDto[]> {
@@ -250,11 +250,6 @@ export async function fetchRecycleItems(fondsCode: string): Promise<RecordDto[]>
 /** 恢复回收站件：移回收集池 + 清除删除标记（可重新组卷/检索） */
 export async function restoreRecycleItem(nodeId: string): Promise<void> {
   await http.post(`/records/recycle/${nodeId}/restore`, {});
-}
-
-/** 彻底删除回收站件（不可恢复，物理删除；仅回收站内件） */
-export async function purgeRecycleItem(nodeId: string): Promise<void> {
-  await http.delete(`/records/recycle/${nodeId}`);
 }
 
 /** 组件挂接（2026-08-20 先组件再组卷）：原始凭证件 → 所属记账凭证件；parentRecordId=null 解挂 */

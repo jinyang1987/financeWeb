@@ -1,24 +1,26 @@
 ﻿/**
  * @license SPDX-License-Identifier: Apache-2.0
  *
- * RecycleBinPage — 回收站（v2.6）
+ * RecycleBinPage — 回收站（v2.6.1）
  *
  * 组卷工作台删除的记录不再物理删除，而是「逻辑删除」：置 finance:deleted 标记后
  * 移入 /{全宗}/_回收站/，数据与元数据完整保留。本页提供：
  *   1. 回收站件列表（按删除时间倒序）
- *   2. 恢复（移回收集池 + 清除删除标记，可重新组卷/检索）
- *   3. 彻底删除（不可恢复，物理删除，需二次确认）
+ *   2. 恢复（移回收集池 + 清除删除标记 + 刷新件域镜像，可重新组卷/检索）
+ *
+ * 本页不提供「彻底删除」：物理销毁属档案鉴定业务，须走「档案利用 → 鉴定销毁」
+ * 流程审批办理（2026-08-21 v2.6.1 移除彻底删除入口）。
  *
  * 权限：与组卷工作台一致，需 voucher-manager 功能码（后端校验）。
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Trash2, RotateCcw, AlertTriangle, Search, RefreshCw, FolderOpen,
+  RotateCcw, Search, RefreshCw, FolderOpen,
 } from 'lucide-react';
 import { useArchiveStore } from '../../stores/archiveStore';
 import {
-  fetchRecycleItems, restoreRecycleItem, purgeRecycleItem,
+  fetchRecycleItems, restoreRecycleItem,
   type RecordDto,
 } from '../../services/recordService';
 import { DataTable, type DataTableColumn } from '../../components/DataTable';
@@ -64,7 +66,6 @@ const RecycleBinPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(EMPTY_SEL);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
-  const [confirmPurge, setConfirmPurge] = useState<Set<string> | null>(null); // 二次确认集
 
   const showToast = useCallback((message: string, type: 'success' | 'info' = 'success') => {
     setToast({ message, type });
@@ -120,28 +121,11 @@ const RecycleBinPage: React.FC = () => {
     }
     setSelectedIds(new Set());
     void load();
-  }, [load, showToast]);
-
-  // ── 彻底删除（二次确认后物理删除，不可恢复） ──
-  const handlePurge = useCallback(async (ids: string[]) => {
-    const failedIds: string[] = [];
-    let firstErr = '';
-    for (const id of ids) {
-      try {
-        await purgeRecycleItem(id);
-      } catch (e: any) {
-        failedIds.push(id);
-        if (!firstErr) firstErr = e?.message || '删除失败';
-      }
+    // 恢复成功 → 刷新件域镜像：组卷工作台与读侧页面无需手动刷新即可见（v2.6.1 修复"恢复后工作台不见件"）
+    if (failedIds.length < ids.length) {
+      void useArchiveStore.getState().loadRecords();
+      void useArchiveStore.getState().loadAllRecords();
     }
-    if (failedIds.length === 0) {
-      showToast(`已彻底删除 ${ids.length} 条记录`);
-    } else {
-      showToast(`已删除 ${ids.length - failedIds.length} 条，${failedIds.length} 条失败（${firstErr}）`, 'info');
-    }
-    setSelectedIds(new Set());
-    setConfirmPurge(null);
-    void load();
   }, [load, showToast]);
 
   // ── 列定义 ──
@@ -208,39 +192,8 @@ const RecycleBinPage: React.FC = () => {
           >
             <RotateCcw className="h-4 w-4" /> 恢复{selectedCount > 0 ? `（${selectedCount}）` : ''}
           </button>
-          <button
-            onClick={() => { setConfirmPurge(new Set(selectedIds)); }}
-            disabled={selectedCount === 0}
-            className="inline-flex items-center gap-1 rounded border border-red-300 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <Trash2 className="h-4 w-4" /> 彻底删除{selectedCount > 0 ? `（${selectedCount}）` : ''}
-          </button>
         </div>
       </div>
-
-      {/* ── 二次确认条 ── */}
-      {confirmPurge && confirmPurge.size > 0 && (
-        <div className="flex items-center justify-between border-b border-red-200 bg-red-50 px-5 py-2.5">
-          <div className="flex items-center gap-2 text-sm text-red-700">
-            <AlertTriangle className="h-4 w-4" />
-            确认彻底删除 {confirmPurge.size} 条记录？<b>此操作不可恢复</b>，将永久清除数据与文件。
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => handlePurge([...confirmPurge])}
-              className="rounded bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700"
-            >
-              确认彻底删除
-            </button>
-            <button
-              onClick={() => setConfirmPurge(null)}
-              className="rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-white"
-            >
-              取消
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* ── 数据表格 ── */}
       <div className="flex-1 overflow-auto">
@@ -249,7 +202,7 @@ const RecycleBinPage: React.FC = () => {
         ) : items.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-slate-400">
             <FolderOpen className="h-10 w-10 opacity-40" />
-            <p className="text-sm">回收站为空。组卷工作台删除的记录会暂存于此，可恢复或彻底删除。</p>
+            <p className="text-sm">回收站为空。组卷工作台删除的记录会暂存于此，可随时恢复回待组卷池。</p>
           </div>
         ) : (
           <DataTable<RecycleRow>
@@ -268,16 +221,9 @@ const RecycleBinPage: React.FC = () => {
                 >
                   <RotateCcw className="h-4 w-4" />
                 </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setConfirmPurge(new Set([r.id])); }}
-                  title="彻底删除（不可恢复）"
-                  className="rounded p-1 text-red-500 hover:bg-red-50"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
               </div>
             )}
-            actionsWidth={90}
+            actionsWidth={60}
           />
         )}
       </div>
@@ -286,7 +232,7 @@ const RecycleBinPage: React.FC = () => {
       {items.length > 0 && (
         <div className="flex items-center gap-1.5 border-t border-slate-200 px-5 py-2 text-xs text-slate-400">
           <Search className="h-3.5 w-3.5" />
-          提示：恢复后记录回到「组卷工作台」待组卷池，可重新挂接/组卷；彻底删除后无法找回。
+          提示：恢复后记录回到「组卷工作台」待组卷池，可重新挂接/组卷。回收站不提供彻底删除——到期档案的物理销毁须走「档案利用 → 鉴定销毁」流程审批办理。
         </div>
       )}
       {toast && (

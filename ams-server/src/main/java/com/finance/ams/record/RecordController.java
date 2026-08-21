@@ -113,7 +113,7 @@ public class RecordController {
     return ResponseEntity.noContent().build();
   }
 
-  // ── 回收站（v2.6：逻辑删除件列表 / 恢复 / 彻底删除） ──
+  // ── 回收站（v2.6：逻辑删除件列表 / 恢复；v2.6.1 起移除彻底删除——物理销毁走鉴定销毁流程） ──
 
   /** GET /recycle?fondsCode= — 回收站件列表（按删除时间倒序；不可搜索、不参与组卷） */
   @GetMapping("/recycle")
@@ -137,18 +137,6 @@ public class RecordController {
     perm.requireFunction(me, "voucher-manager");
     service.restoreRecycle(ticket, nodeId);
     return Map.of("nodeId", nodeId, "restored", true);
-  }
-
-  /** DELETE /recycle/{nodeId} — 彻底删除（不可恢复，物理删除；仅回收站内件） */
-  @DeleteMapping("/recycle/{nodeId}")
-  public ResponseEntity<Void> purgeRecycle(
-      @RequestHeader(value = "X-User-Id", required = false) String userId,
-      @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
-      @PathVariable String nodeId) {
-    AuthUser me = perm.me(userId, ticket);
-    perm.requireFunction(me, "voucher-manager");
-    service.purgeRecycle(ticket, nodeId);
-    return ResponseEntity.noContent().build();
   }
 
   // ── 组件挂接（先组件再组卷，2026-08-20） ──
