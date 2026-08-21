@@ -40,8 +40,8 @@ import com.finance.ams.volume.VolumeService;
  * 去向路由（destination）：
  *   auto-archive 直接入库：建件 → 四性检测(可选) → 按类别自动组卷 → 确认取号
  *   to-volume   送组卷工作台：建件入收集池（仅件数据），人工组卷
- *   to-check    送核对工作台：建件入池 + 收集台账标记 pending，核对通过后流转
- *   to-review   送审核：建件入池 + recordStatus=待审核，审核通过后组卷
+ *   （2026-08-21 收敛：核对工作台已移除，抓取/推送/手动统一进组卷工作台；
+ *    历史遗留 to-check / to-review 一律归一为 to-volume 处理）
  *
  * 全链路日志：每步写 ams_push_log；收集台账：每条写 ams_collect_item。
  * 幂等：external_id + source_system 去重，重复推送自动 skipped。
@@ -1023,7 +1023,10 @@ public class OpenPushService {
   private static String destOrDefault(Object d) {
     String s = d == null ? "" : String.valueOf(d);
     return switch (s) {
-      case DEST_AUTO, DEST_CHECK, DEST_REVIEW -> s;
+      case DEST_AUTO -> s;
+      // 2026-08-21 收敛：核对工作台已移除，统一进组卷工作台——
+      // 历史遗留 to-check / to-review 归一为 to-volume，不再产生待核对台账/审核库孤儿数据
+      case DEST_CHECK, DEST_REVIEW -> DEST_VOLUME;
       default -> DEST_VOLUME;
     };
   }

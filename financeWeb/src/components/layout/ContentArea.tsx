@@ -28,11 +28,10 @@ import InventoryStatsPage from '../../pages/archive-stats/InventoryStatsPage';
 import LifecycleStatsPage from '../../pages/archive-stats/LifecycleStatsPage';
 import ComplianceStatsPage from '../../pages/archive-stats/ComplianceStatsPage';
 import CockpitConfigPage from '../../pages/system/CockpitConfigPage';
-import VoucherManagerPage from '../../pages/archive-arrange/VoucherManagerPage';
 import VolumeWorkspacePage from '../../pages/archive-arrange/VolumeWorkspacePage';
 import VolumeItemSearchPage from '../../pages/archive-preserve/VolumeItemSearchPage';
 import TransferManagePage from '../../pages/archive-utilization/TransferManagePage';
-import ArchiveCodeConfigPage from '../../pages/archive-config/ArchiveCodeConfigPage';
+import ArchiveManageConfigPage from '../../pages/archive-config/manage/ArchiveManageConfigPage';
 import RetentionConfigPage from '../../pages/archive-config/RetentionConfigPage';
 import ApiReceivePage from '../../pages/archive-rcv/ApiReceivePage';
 import OpenApiReceivePage from '../../pages/archive-rcv/OpenApiReceivePage';
@@ -127,8 +126,6 @@ const ContentArea: React.FC = () => {
     'archive-rcv',
     'report-config',
     'inspection-config',
-    'accounting-metadata',
-    'volume-grouping-config',
     'sys-unit',
     'sys-org',
     'sys-personnel',
@@ -236,10 +233,6 @@ const ContentArea: React.FC = () => {
     return <VolumeWorkspacePage />;
   }
 
-  if (activeMainMenu === 'voucher-manager') {
-    return <VoucherManagerPage />;
-  }
-
   if (activeMainMenu === 'sys-connection') {
     return <ConnectionConfigPage />;
   }
@@ -268,8 +261,8 @@ const ContentArea: React.FC = () => {
     return <AppraisalManagePage />;
   }
 
-  if (activeMainMenu === 'archive-code-config') {
-    return <ArchiveCodeConfigPage />;
+  if (activeMainMenu === 'archive-manage-config') {
+    return <ArchiveManageConfigPage />;
   }
 
   if (activeMainMenu === 'retention-config') {

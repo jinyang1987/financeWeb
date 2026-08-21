@@ -4,7 +4,7 @@
  * metadataContexts — 实体上下文定义 + 字段注册表
  *
  * 将元数据显示体系按实体上下文拆分：
- *   - voucher：      记账凭证（凭证核对工作台 / 组卷工作台未组卷池）
+ *   - voucher：      记账凭证（组卷工作台待组卷池）
  *   - archive-item： 会计档案条目（财务视图 / 项目视图 / 时间视图）
  *   - volume：       案卷（组卷工作台案卷卡片）
  *   - box：          档案盒（盒管理）
@@ -47,7 +47,7 @@ export const ENTITY_CONTEXTS: Record<EntityContextId, EntityContextDef> = {
   'voucher': {
     id: 'voucher',
     label: '记账凭证',
-    description: '凭证核对工作台 / 组卷工作台（未组卷池）中展示的凭证字段',
+    description: '组卷工作台（待组卷池）中展示的凭证字段',
   },
   'archive-item': {
     id: 'archive-item',
@@ -72,7 +72,7 @@ export const ENTITY_CONTEXTS: Record<EntityContextId, EntityContextDef> = {
 
 export const VOUCHER_FIELD_DEFS: MetadataFieldDef[] = [
   { id: 'VOUCHER_NO', label: '凭证号',   mandatory: true,  group: '标识' },
-  { id: 'DATE',       label: '日期',     mandatory: true,  group: '标识' },
+  { id: 'DATE',       label: '制单日期', mandatory: true,  group: '标识' },
   { id: 'SUMMARY',    label: '摘要',     mandatory: false, group: '内容' },
   { id: 'DEPARTMENT', label: '部门',     mandatory: true,  group: '标识' },
   { id: 'AMOUNT',     label: '金额',     mandatory: true,  group: '金额' },

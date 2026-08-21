@@ -132,7 +132,7 @@ export const ROLE_MENU_MATRIX: Record<RoleKey, string[]> = {
     // 收集
     'archive-rcv', 'archive-api-receive',
     // 整理
-    'voucher-manager', 'volume-workspace',
+    'volume-workspace',
     // 保管
     'view-finance', 'digital-warehouse',
     // 利用（管理侧：审批 + 借阅管理；「我的借阅」归检索门户，后台不保留）
@@ -142,8 +142,8 @@ export const ROLE_MENU_MATRIX: Record<RoleKey, string[]> = {
     // 移交
     'archive-package', 'archive-transfer', 'appraisal-manage',
     // 配置
-    'config-fanzong', 'directory-config', 'accounting-metadata', 'archive-code-config',
-    'retention-config', 'volume-grouping-config', 'inspection-config', 'report-config', 'watermark-config',
+    'config-fanzong', 'directory-config', 'archive-manage-config',
+    'retention-config', 'inspection-config', 'report-config', 'watermark-config',
     'config-workflow', 'sys-cockpit-config',
     // 系统
     'sys-connection', 'sys-storage',
@@ -151,7 +151,7 @@ export const ROLE_MENU_MATRIX: Record<RoleKey, string[]> = {
   archive_director: [
     ...PORTAL_MENU_KEYS,
     'voucher-search', 'matter-search', 'source-doc-search', 'volume-item-search', 'audit-trail',
-    'voucher-manager', 'volume-workspace',
+    'volume-workspace',
     'view-finance', 'digital-warehouse',
     'approval-center', 'borrow-manage', 'borrow-ledger', 'borrow-stats', 'transfer-manage',
     'stats-cockpit', 'stats-inventory', 'stats-lifecycle', 'stats-compliance',

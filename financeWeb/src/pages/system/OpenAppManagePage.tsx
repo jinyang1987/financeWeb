@@ -107,7 +107,7 @@ const CreateAppModal: React.FC<{ open: boolean; onClose: () => void; onCreated: 
               <p className="font-medium text-sky-700 mb-1">业务系统推送方式</p>
               <p className="font-mono">POST /api/ams/open/v1/token&nbsp;&nbsp;{'{ appKey, appSecret }'}</p>
               <p className="font-mono mt-1">POST /api/ams/open/v1/archives&nbsp;&nbsp;（Bearer 令牌）</p>
-              <p className="mt-1">推送数据入「{issued.fondsCode}」全宗收集池，可走审核库→组卷或直接组卷。</p>
+              <p className="mt-1">推送数据入「{issued.fondsCode}」全宗收集池，按应用默认去向送组卷工作台或直接入库·自动组卷。</p>
             </div>
             <div className="flex items-center gap-2 justify-end">
               <button type="button" onClick={copyAll}
@@ -159,8 +159,6 @@ const CreateAppModal: React.FC<{ open: boolean; onClose: () => void; onCreated: 
                 >
                   <option value="to-volume">送组卷工作台</option>
                   <option value="auto-archive">直接入库·自动组卷</option>
-                  <option value="to-check">送核对工作台 · 待核对</option>
-                  <option value="to-review">送核对工作台 · 待审核</option>
                 </select>
               </label>
             </div>
@@ -368,8 +366,6 @@ const OpenAppManagePage: React.FC = () => {
                       >
                         <option value="to-volume">送组卷工作台</option>
                         <option value="auto-archive">直接入库·自动组卷</option>
-                        <option value="to-check">送核对工作台</option>
-                        <option value="to-review">送审核</option>
                       </select>
                     </label>
                   )}
@@ -442,7 +438,7 @@ const OpenAppManagePage: React.FC = () => {
             <Clock className="w-4 h-4 text-sky-500 mt-0.5 shrink-0" />
             <div className="text-xs text-sky-800 space-y-1">
               <p className="font-medium">业务系统推送接入说明</p>
-              <p>① 在此签发 AppKey/AppSecret → ② 业务系统用凭据调 <span className="font-mono">POST /api/ams/open/v1/token</span> 换令牌 → ③ 携带 Bearer 令牌调 <span className="font-mono">POST /api/ams/open/v1/archives</span>（单件）或 <span className="font-mono">/archives/batch</span>（批量）推送电子会计资料 → ④ 数据入目标全宗收集池，走「审核库→组卷」或「直接组卷」。</p>
+              <p>① 在此签发 AppKey/AppSecret → ② 业务系统用凭据调 <span className="font-mono">POST /api/ams/open/v1/token</span> 换令牌 → ③ 携带 Bearer 令牌调 <span className="font-mono">POST /api/ams/open/v1/archives</span>（单件）或 <span className="font-mono">/archives/batch</span>（批量）推送电子会计资料 → ④ 数据入目标全宗收集池，按去向「送组卷工作台」或「直接入库·自动组卷」。</p>
               <p>幂等保障：以来源系统 externalId 去重，重复推送自动跳过。</p>
             </div>
           </div>

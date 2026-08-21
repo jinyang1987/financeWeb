@@ -9,6 +9,7 @@
 
 import React from 'react';
 import type { ArchiveRecord } from '../../types';
+import { voucherDateOf } from '../../utils/voucherSort';
 
 export interface ColumnDef {
   metaId: string;
@@ -26,9 +27,9 @@ export const VOUCHER_COLUMN_MAP: Record<string, ColumnDef> = {
     width: '80px', align: 'left',
   },
   DATE: {
-    metaId: 'DATE', label: '日期',
-    accessor: (r) => <span className="text-xs text-slate-500">{r.year}-{r.month}</span>,
-    width: '64px', align: 'left',
+    metaId: 'DATE', label: '制单日期',
+    accessor: (r) => <span className="text-xs text-slate-500">{voucherDateOf(r)}</span>,
+    width: '80px', align: 'left',
   },
   SUMMARY: {
     metaId: 'SUMMARY', label: '摘要',

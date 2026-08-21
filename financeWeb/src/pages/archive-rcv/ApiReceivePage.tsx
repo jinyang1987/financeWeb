@@ -6,7 +6,7 @@
  * 职责收敛：本页只做「抓取执行」——
  *   1. 选数据源（只读状态，来自 系统管理→连接配置）
  *   2. 选会计期间（真实期间 + 凭证数预览）
- *   3. 选去向：直接入库·自动组卷 / 送组卷工作台 / 送核对工作台 / 送审核
+ *   3. 选去向：送组卷工作台 / 直接入库·自动组卷（2026-08-21 收敛：统一进组卷工作台）
  *   4. 立即同步 + 批次历史日志
  *
  * 所有"配置"（连接参数、抓取计划、默认去向、AppKey、字段映射）
@@ -44,12 +44,10 @@ const ITEM_STATUS: Record<string, { label: string; cls: string }> = {
   failed: { label: '失败', cls: 'text-red-600' },
 };
 
-/** 抓取去向（与推送统一；核对/审核是「核对工作台」内的两个环节，见工作台 Tab） */
-const DEST_OPTIONS: { value: 'auto-archive' | 'to-volume' | 'to-check' | 'to-review'; label: string; desc: string }[] = [
+/** 抓取去向（2026-08-21 收敛：核对工作台已移除，抓取/推送/手动统一进组卷工作台） */
+const DEST_OPTIONS: { value: 'auto-archive' | 'to-volume'; label: string; desc: string }[] = [
+  { value: 'to-volume', label: '送组卷工作台', desc: '进入待组卷池，由整理人员人工组卷（默认）' },
   { value: 'auto-archive', label: '直接入库 · 自动组卷', desc: '四性检测后按期间自动建卷、赋号、归档（可信源）' },
-  { value: 'to-volume', label: '送组卷工作台', desc: '进入待组卷池，由整理人员人工组卷' },
-  { value: 'to-check', label: '送核对工作台 · 待核对', desc: '先核对凭证连续性/附件，通过后可送组卷或转审核' },
-  { value: 'to-review', label: '送核对工作台 · 待审核', desc: '跳过核对直接人工审核，通过后送组卷' },
 ];
 
 // ─── 子组件：批次明细表 ───
@@ -120,7 +118,7 @@ const ApiReceivePage: React.FC = () => {
   const [preview, setPreview] = useState<number | null>(null);
   const [previewing, setPreviewing] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [destination, setDestination] = useState<'auto-archive' | 'to-volume' | 'to-check' | 'to-review'>('to-check');
+  const [destination, setDestination] = useState<'auto-archive' | 'to-volume'>('to-volume');
   const [batches, setBatches] = useState<SyncBatch[]>([]);
   const [expandedBatch, setExpandedBatch] = useState<number | null>(null);
 
@@ -141,12 +139,12 @@ const ApiReceivePage: React.FC = () => {
     datasourceService.list().then(setSources).catch(() => setSources([]));
   }, [refresh]);
 
-  // 默认去向：取 yonyou 数据源配置的 defaultDestination
+  // 默认去向：取 yonyou 数据源配置的 defaultDestination（遗留 to-check/to-review 归一为送组卷）
   useEffect(() => {
     const yy = sources.find((s) => s.type === 'yonyou');
     const d = yy?.config?.defaultDestination;
     if (d === 'auto-archive' || d === 'to-volume' || d === 'to-check' || d === 'to-review') {
-      setDestination(d);
+      setDestination(d === 'auto-archive' ? 'auto-archive' : 'to-volume');
     }
   }, [sources]);
 
@@ -187,7 +185,7 @@ const ApiReceivePage: React.FC = () => {
         batch.fail_count > 0 ? 'warning' : 'success');
       setExpandedBatch(batch.id);
       await refresh();
-      // 抓取入池后刷新件域镜像：核对工作台/组卷工作台无需手动刷页面即可见（2026-08-16 贯通修复）
+      // 抓取入池后刷新件域镜像：组卷工作台无需手动刷页面即可见（2026-08-16 贯通修复）
       void useArchiveStore.getState().loadRecords();
       void useArchiveStore.getState().loadAllRecords();
     } catch (e) {

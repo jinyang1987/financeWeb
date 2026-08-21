@@ -19,10 +19,10 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Activity, RefreshCw, ChevronDown, ChevronRight, Loader2, KeyRound,
   ShieldCheck, PlugZap, FileJson, BookOpenText, ScrollText, FlaskConical,
-  Eye, CheckCircle2, AlertTriangle, XCircle, Layers, Send, Inbox,
+  Eye, CheckCircle2, AlertTriangle, XCircle, Layers, Inbox,
 } from 'lucide-react';
 import {
-  openPushService, CATEGORY_LABELS, DESTINATION_LABELS,
+  openPushService, CATEGORY_LABELS, DESTINATION_LABELS, ACTIVE_DESTINATIONS,
   type OpenPushBatch, type OpenPushBatchDetail, type OpenPushItem,
   type PushLogEntry, type PushCategory, type PushDestination,
 } from '../../services/openPushService';
@@ -94,15 +94,12 @@ const MonitorTab: React.FC<{ batches: OpenPushBatch[]; loading: boolean; refresh
     return { todayBatches, totalIn, totalSuccess, totalFail, byCat };
   }, [batches]);
 
-  const runAction = async (batchNo: string, action: 'fourchecks' | 'toreview' | 'autogroup') => {
+  const runAction = async (batchNo: string, action: 'fourchecks' | 'autogroup') => {
     setActioning(batchNo + action);
     try {
       if (action === 'fourchecks') {
         const r = await openPushService.batchFourChecks(batchNo);
         triggerToast(`四性检测完成：检测 ${r.checked} 件，通过 ${r.passed} 件，不通过 ${r.failed} 件`, 'success');
-      } else if (action === 'toreview') {
-        const r = await openPushService.batchToReview(batchNo);
-        triggerToast(`${r.routed} 条已转审核库（档案整理→核对工作台·待审核）`, 'success');
       } else {
         const r = await openPushService.batchAutoGroup(batchNo);
         triggerToast(`已自动组卷 ${r.volumes} 卷（${r.items} 件），完成入库`, 'success');
@@ -230,15 +227,6 @@ const MonitorTab: React.FC<{ batches: OpenPushBatch[]; loading: boolean; refresh
                         >
                           {actioning === b.batch_no + 'fourchecks' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Eye className="w-3 h-3" />}
                           四性检测
-                        </button>
-                        <button
-                          type="button" disabled={!hasSuccess || actioning !== null}
-                          onClick={() => runAction(b.batch_no, 'toreview')}
-                          title="转入核对工作台·待审核"
-                          className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-md hover:bg-amber-100 disabled:opacity-40"
-                        >
-                          {actioning === b.batch_no + 'toreview' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
-                          送审核
                         </button>
                         <button
                           type="button" disabled={!hasSuccess || actioning !== null}
@@ -413,7 +401,7 @@ const RETENTION_TABLE = [
 const SAMPLE_PAYLOAD = `{
   "period": "2026-07",
   "category": "voucher",            // voucher|ledger|report|other（混推时省略，按条目类型块识别）
-  "destination": "to-check",        // auto-archive|to-volume|to-check|to-review
+  "destination": "to-volume",       // auto-archive|to-volume
   "runFourChecks": true,
   "items": [
     {
@@ -508,7 +496,7 @@ const StandardTab: React.FC = () => (
             ['batchNo', '来源侧批次号（可选，缺省由档案系统生成）'],
             ['period', '会计期间 yyyy-MM'],
             ['category', 'voucher | ledger | report | other；混推时省略，按条目类型块识别'],
-            ['destination', '去向：auto-archive 直接入库 | to-volume 送组卷 | to-check 送核对工作台·待核对 | to-review 送核对工作台·待审核；缺省用应用默认去向'],
+            ['destination', '去向：to-volume 送组卷工作台（默认）| auto-archive 直接入库·自动组卷；缺省用应用默认去向'],
             ['runFourChecks', 'true 时入池后自动运行四性检测'],
             ['items[]', '条目数组（≤500 条/批）'],
           ].map(([f, d]) => (
@@ -732,12 +720,12 @@ const SimulateModal: React.FC<{ open: boolean; onClose: () => void; onDone: () =
   const triggerToast = useAppStore((s) => s.triggerToast);
   const [category, setCategory] = useState<PushCategory | 'all'>('all');
   const [count, setCount] = useState(3);
-  const [destination, setDestination] = useState<PushDestination>('to-check');
+  const [destination, setDestination] = useState<PushDestination>('to-volume');
   const [fourChecks, setFourChecks] = useState(true);
   const [running, setRunning] = useState(false);
 
   useEffect(() => {
-    if (open) { setRunning(false); setCategory('all'); setCount(3); setDestination('to-check'); setFourChecks(true); }
+    if (open) { setRunning(false); setCategory('all'); setCount(3); setDestination('to-volume'); setFourChecks(true); }
   }, [open]);
 
   if (!open) return null;
@@ -796,12 +784,12 @@ const SimulateModal: React.FC<{ open: boolean; onClose: () => void; onDone: () =
           <div>
             <span className="text-xs font-medium text-slate-600">推送去向</span>
             <div className="mt-1.5 grid grid-cols-2 gap-2">
-              {(Object.entries(DESTINATION_LABELS) as [PushDestination, string][]).map(([v, label]) => (
+              {ACTIVE_DESTINATIONS.map((v) => (
                 <label key={v} className={`flex items-center gap-2 p-2 border rounded-lg cursor-pointer text-xs ${
                   destination === v ? 'border-sky-300 bg-sky-50 text-sky-700' : 'border-slate-200 text-slate-600'
                 }`}>
                   <input type="radio" checked={destination === v} onChange={() => setDestination(v)} />
-                  {label}
+                  {DESTINATION_LABELS[v]}
                 </label>
               ))}
             </div>
@@ -842,8 +830,8 @@ const OpenApiReceivePage: React.FC = () => {
     try {
       setBatches(await openPushService.batches(50));
       setLoadErr(null);
-      // 推送/批次操作会改动收集池与案卷（入池/自动组卷/送审核），同步刷新件域镜像
-      // （核对工作台/组卷工作台/档案查询无需手动刷页面，2026-08-16 贯通修复）
+      // 推送/批次操作会改动收集池与案卷（入池/自动组卷），同步刷新件域镜像
+      // （组卷工作台/档案查询无需手动刷页面，2026-08-16 贯通修复）
       void useArchiveStore.getState().loadRecords();
       void useArchiveStore.getState().loadAllRecords();
     } catch (e) {

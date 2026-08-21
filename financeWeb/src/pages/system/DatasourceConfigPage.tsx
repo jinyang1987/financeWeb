@@ -11,7 +11,7 @@
  *   - secret 回显恒为 ********，留空保存 = 保持原值
  *   - 每个源支持 direction（抓取/推送/双向）与 enabled 开关
  *   - ★ 每个抓取源支持「抓取计划」（启用/cron）与「默认去向」
- *     （直接入库·自动组卷 / 送组卷工作台 / 送核对工作台 / 送审核），
+ *     （送组卷工作台 / 直接入库·自动组卷；2026-08-21 核对工作台移除后收敛为两项），
  *     抓取收集中台只做纯执行，所有配置收敛在这里
  */
 
@@ -27,13 +27,13 @@ import {
 import { useAppStore } from '../../stores/appStore';
 import { useAuthStore } from '../../stores/authStore';
 
-// ─── 去向标签 ───
+// ─── 去向标签（to-check/to-review 为历史遗留值，仅回显旧配置） ───
 
 const DEST_LABELS: Record<string, string> = {
   'auto-archive': '直接入库·自动组卷',
   'to-volume': '送组卷工作台',
-  'to-check': '送核对工作台·待核对',
-  'to-review': '送核对工作台·待审核',
+  'to-check': '送核对（历史去向，已并入组卷工作台）',
+  'to-review': '送审核（历史去向，已并入组卷工作台）',
 };
 
 // ─── 数据源模板 ───
@@ -280,10 +280,8 @@ const EditDrawer: React.FC<{
                   onChange={(e) => setForm({ ...form, defaultDestination: e.target.value })}
                   className="mt-1 w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg bg-white"
                 >
+                  <option value="to-volume">送组卷工作台（人工组卷，默认）</option>
                   <option value="auto-archive">直接入库 · 自动组卷归档</option>
-                  <option value="to-volume">送组卷工作台（人工组卷）</option>
-                  <option value="to-check">送核对工作台 · 待核对（先核对再组卷）</option>
-                  <option value="to-review">送核对工作台 · 待审核（人工审核后组卷）</option>
                 </select>
               </label>
             </div>

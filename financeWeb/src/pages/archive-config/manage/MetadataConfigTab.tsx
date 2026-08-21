@@ -1,18 +1,16 @@
 /**
  * @license SPDX-License-Identifier: Apache-2.0
  *
- * AccountingMetadataPage — 会计档案元数据配置（2026-08-16 左右主从重设计）
+ * MetadataConfigTab — 档案管理配置 · 元数据（2026-08-21 并入档案管理配置）
  *
  * 展示 DA/T 94-2022 电子会计档案元数据方案（附录A）的全部元数据项，
  * 以及 DA/T 39 纸质会计档案卷级元数据方案。
  *
- * 交互重设计（原"一屏滚 104 项"→ 左右主从）：
- *   左侧导航：概览 + 卷级/件级/盒级 12 个分组（含项数/必选数统计）+ 全局搜索 + 必选性筛选
- *   右侧内容：一次只展示一个分组的表格，一屏一个主题
+ * 交互：左侧导航（概览 + 卷级/件级/盒级 12 个分组 + 全局搜索 + 必选性筛选），
+ * 右侧一次只展示一个分组。"页面设置"配置详情页展示哪些元数据字段以及顺序。
  *
- * 会计档案统一按卷管理，件级元数据（M1-M49）与卷级元数据（V1-V20）
- * 及卷件关联（VA1-VA6）合并展示，不再区分纯电子/纸质数字化模式。
- * "页面设置"功能保留，用户可配置详情页展示哪些元数据字段以及顺序。
+ * 2026-08-21：页头标题/方案说明/来源注记等说教内容统一移至「原理说明」Tab，
+ * 本 Tab 只保留方案查阅与展示设置操作。
  */
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
@@ -22,16 +20,16 @@ import {
   BookOpen, Folders, GitBranch, FileSpreadsheet, Archive, Package, Star, ArrowUp,
   Search, LayoutGrid,
 } from 'lucide-react';
-import { useMetadataDisplayStore } from '../../stores/metadataDisplayStore';
-import type { ContextFieldConfig } from '../../stores/metadataDisplayStore';
+import { useMetadataDisplayStore } from '../../../stores/metadataDisplayStore';
+import type { ContextFieldConfig } from '../../../stores/metadataDisplayStore';
 import {
   ENTITY_CONTEXTS,
   getAllFieldDefs,
   getDefaultVisibleIds,
   getAllFieldIds,
-} from '../../config/metadataContexts';
-import type { EntityContextId } from '../../config/metadataContexts';
-import SourceDocMetadataPanel from './SourceDocMetadataPanel';
+} from '../../../config/metadataContexts';
+import type { EntityContextId } from '../../../config/metadataContexts';
+import SourceDocMetadataPanel from '../SourceDocMetadataPanel';
 import {
   type MetadataItem, type MetadataMode, MODE_OPTIONS,
   fileEntityRaw, agentEntityRaw, businessEntityRaw, relationRaw,
@@ -39,7 +37,7 @@ import {
   boxIdentificationRaw, boxClassificationRaw, boxContentRangeRaw,
   boxPhysicalLocationRaw, boxProcessManagementRaw, boxDualSystemRaw,
   computeStats, getAllMetadata,
-} from './metadataCatalog';
+} from '../metadataCatalog';
 // ============================================================
 // 页面设置抽屉（卡片预览式布局）
 // ============================================================
@@ -148,11 +146,6 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose, contextI
     return allMetadata.find((m) => m.id === id)?.name || id;
   };
 
-  // 获取字段所属实体类型
-  const fieldEntityType = (id: string): string => {
-    return allMetadata.find((m) => m.id === id)?.entityType || '';
-  };
-
   if (!open) return null;
 
   return (
@@ -256,7 +249,7 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose, contextI
                           {field.visible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
                         </button>
 
-                        {/* <Star className="w-3 h-3 inline mr-0.5" />推荐常用开关 */}
+                        {/* 推荐常用开关 */}
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); toggleRecommended(contextId, field.id); }}
@@ -547,8 +540,8 @@ const groupStats = (items: MetadataItem[]) => {
   return { total: flat.length, mandatory: flat.filter((m) => m.mandatory === '必选').length };
 };
 
-// ========== 主页面（左右主从布局，2026-08-16 重设计） ==========
-const AccountingMetadataPage: React.FC = () => {
+// ========== 主页面（左右主从布局） ==========
+const MetadataConfigTab: React.FC = () => {
   const [mode, setMode] = useState<MetadataMode>('accounting-archive');
   const [activeKey, setActiveKey] = useState<string>('volumeEntity');
   const [searchQuery, setSearchQuery] = useState('');
@@ -608,13 +601,30 @@ const AccountingMetadataPage: React.FC = () => {
   );
 
   return (
-    <div className="flex-1 overflow-auto animate-in fade-in duration-200 p-6">
+    <div className="flex-1 overflow-auto p-6">
       <div className="max-w-full">
-        {/* ── 页头：标题 + 详情页上下文 + 页面设置 ── */}
+        {/* ── 操作行：模式 Tab + 详情页上下文 + 页面设置（说教内容已移「原理说明」Tab） ── */}
         <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-          <div>
-            <h2 className="text-lg font-bold text-slate-800">元数据配置</h2>
-            <p className="text-sm text-slate-500 mt-1">依据《DA/T 94—2022》附录A（件级 M1-M49）·《DA/T 39》（卷级 V1-V20 · 盒级 B1-B29）·《DA/T 42—2022》装盒规范</p>
+          <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1 w-fit">
+            {MODE_OPTIONS.map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => setMode(opt.key)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all cursor-pointer ${
+                  mode === opt.key
+                    ? 'bg-white text-slate-800 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+                title={opt.description}
+              >
+                {opt.key === 'source-doc'
+                  ? <FileSpreadsheet className="w-4 h-4" />
+                  : <FileText className="w-4 h-4" />
+                }
+                {opt.label}
+              </button>
+            ))}
           </div>
           <div className="flex items-center gap-2">
             {mode === 'accounting-archive' && (
@@ -641,29 +651,6 @@ const AccountingMetadataPage: React.FC = () => {
               <span className="text-xs text-sky-400">（{visibleCount}/{totalCount}）</span>
             </button>
           </div>
-        </div>
-
-        {/* ── Tab 切换：会计档案元数据 | 原始凭证元数据 ── */}
-        <div className="mb-4 flex items-center gap-1 bg-slate-100 rounded-lg p-1 w-fit">
-          {MODE_OPTIONS.map((opt) => (
-            <button
-              key={opt.key}
-              type="button"
-              onClick={() => setMode(opt.key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all cursor-pointer ${
-                mode === opt.key
-                  ? 'bg-white text-slate-800 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
-              title={opt.description}
-            >
-              {opt.key === 'source-doc'
-                ? <FileSpreadsheet className="w-4 h-4" />
-                : <FileText className="w-4 h-4" />
-              }
-              {opt.label}
-            </button>
-          ))}
         </div>
 
         {/* ── 原始凭证元数据模式 ── */}
@@ -792,7 +779,7 @@ const AccountingMetadataPage: React.FC = () => {
                     </div>
 
                     {/* 实体类型分布 */}
-                    <div className="text-xs text-slate-500 bg-slate-50 rounded-lg p-3 leading-relaxed mb-3">
+                    <div className="text-xs text-slate-500 bg-slate-50 rounded-lg p-3 leading-relaxed">
                       <p className="font-bold text-slate-600 mb-1">实体类型分布：</p>
                       <div className="flex flex-wrap gap-2">
                         <span className="inline-block px-2 py-0.5 bg-sky-50 text-sky-700 border border-sky-200 rounded-full">件级文件实体 {stats.fileEntityCount} 项</span>
@@ -803,15 +790,6 @@ const AccountingMetadataPage: React.FC = () => {
                         <span className="inline-block px-2 py-0.5 bg-orange-50 text-orange-700 border border-orange-300 rounded-full font-bold">卷件关联 {stats.volumeAssociationCount} 项</span>
                         <span className="inline-block px-2 py-0.5 bg-teal-50 text-teal-700 border border-teal-300 rounded-full font-bold">盒级元数据 {stats.boxTotalCount} 项</span>
                       </div>
-                    </div>
-
-                    <div className="text-xs text-slate-500 bg-slate-50 rounded-lg p-3 leading-relaxed">
-                      <p className="font-bold text-slate-600 mb-1">方案说明：</p>
-                      本元数据方案参考 DA/T 46《文书类电子文件元数据方案》、DA/T 39《会计档案案卷格式》、
-                      DA/T 94《电子会计档案管理规范》、DA/T 42《会计档案整理规范》制定。件级元数据依据 DA/T 94-2022 附录A（M1~M49），
-                      卷级元数据依据 DA/T 39 卷皮格式要求（V1~V20），卷件关联元数据依据"纸质数字化副本与原件关联"实务要求（VA1~VA6），
-                      盒级元数据依据 DA/T 39-2008 卷盒封面脊背必填项 + DA/T 42-2022 装盒分类边界规范 + DA/T 94-2022 双套制关联扩展（B1~B29）。
-                      会计档案统一按卷管理，盒→卷→件→原始凭证四级数据自上而下穿透与自下而上溯源体系已完整构建。
                     </div>
                   </div>
                 </div>
@@ -830,13 +808,6 @@ const AccountingMetadataPage: React.FC = () => {
                   isBoxSection={activeGroup.tone === 'box'}
                 />
               ) : null}
-
-              {/* 来源注记 */}
-              <div className="text-xs text-slate-400 mt-4 text-right space-y-0.5">
-                <div>件级数据来源：《DA/T 94—2022 电子会计档案管理规范》附录A（规范性）电子会计档案元数据方案 · 国家档案局 2022-07-01 实施</div>
-                <div>卷级数据来源：《DA/T 39—2008 会计档案案卷格式》卷皮/卷盒格式 · 卷件关联依据"纸质数字化副本与原件关联"实务规范</div>
-                <div>盒级数据来源：《DA/T 39—2008》卷盒封面脊背必填项 +《DA/T 42—2022》装盒分类边界规则 +《DA/T 94—2022》双套制电子关联扩展</div>
-              </div>
             </div>
           </div>
         )}
@@ -848,4 +819,4 @@ const AccountingMetadataPage: React.FC = () => {
   );
 };
 
-export default AccountingMetadataPage;
+export default MetadataConfigTab;

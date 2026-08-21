@@ -23,13 +23,14 @@ import {
   ArrowUp, ArrowDown, FolderOutput, Split, Merge, Ungroup, ListChecks,
   MapPin, Warehouse,
 } from 'lucide-react';
-import { useAppStore } from '../../stores/appStore';
 import { useArchiveStore } from '../../stores/archiveStore';
 import { useSourceDocumentStore } from '../../stores/sourceDocumentStore';
 import { useVolumeStore, validateVoucherContinuity, inferTypeCode, inferRetentionCode, toCategoryCode } from '../../stores/volumeStore';
 import { useArchiveBoxStore } from '../../stores/archiveBoxStore';
 import { useMetadataDisplayStore } from '../../stores/metadataDisplayStore';
 import { getVoucherColumns, getVoucherDefaultColumns } from '../../config/metadataColumnMaps/voucherColumns';
+import { POOL_COLUMN_SETS, POOL_SORT_VALUES, POOL_SORTABLE_IDS } from '../../config/metadataColumnMaps/poolColumns';
+import { compareVoucherDateNo } from '../../utils/voucherSort';
 import {
   getAllFieldIds,
   getDefaultVisibleIds,
@@ -52,7 +53,6 @@ import type { ArchiveRecord } from '../../types';
 import VoucherUploadModal from './VoucherUploadModal';
 import VolumePrintModal from './VolumePrintModal';
 import { deleteRecord } from '../../services/recordService';
-import { openPushService } from '../../services/openPushService';
 import { runVolumeInspection, type InspectionIssue } from '../../services/inspectionService';
 import {
   fetchBoxes, shelveBoxApi, shelveBoxAutoApi, type ShelfPosition,
@@ -188,6 +188,8 @@ interface UnassignedPoolProps {
   onSelectAll: (ids: string[]) => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
+  /** 搜索框占位文案（随待组卷池类别联动，2026-08-21） */
+  searchPlaceholder: string;
   onAddToVolume: (volumeId: string) => void;
   onDeleteRecord: (id: string) => void;
   onBatchDelete: (ids: string[]) => void;
@@ -212,7 +214,7 @@ interface UnassignedPoolProps {
 
 const UnassignedPool: React.FC<UnassignedPoolProps> = ({
   records, allPoolRecords, selectedIds, onToggleSelect, onSelectAll,
-  searchQuery, onSearchChange, onAddToVolume, onDeleteRecord, onBatchDelete, volumes,
+  searchQuery, onSearchChange, searchPlaceholder, onAddToVolume, onDeleteRecord, onBatchDelete, volumes,
   onCreateAndAdd,
   attachmentCountMap, onViewDetail, tableColumns,
   linkableCount, unlinkableCount, onLinkSelection, onUnlinkSelection, expandedId,
@@ -248,7 +250,7 @@ const UnassignedPool: React.FC<UnassignedPoolProps> = ({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
-            placeholder="搜索凭证号/金额..."
+            placeholder={searchPlaceholder}
             className="w-full pl-9 pr-3 py-1.5 text-sm border border-slate-400 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-sky-300"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
@@ -1635,41 +1637,44 @@ const VolumeWorkspacePage: React.FC = () => {
 
   // 案卷数据由 AppLayout 按全宗全局加载（loadVolumes），本页直接消费 store 镜像
 
-  // ── 核对闸门（2026-08-16 贯通修复） ──
-  // 推送/抓取去向为「送核对」的件虽已入池（服务端统一建件），但核对通过前不得组卷。
-  // 从收集台账拉取 pending 件 nodeId 集合，待组卷池排除之并给出提示。
-  const [pendingCheckIds, setPendingCheckIds] = useState<Set<string>>(new Set());
-  useEffect(() => {
-    openPushService.collectPendingCheck()
-      .then((list) => setPendingCheckIds(new Set(list.map((c) => c.recordNodeId))))
-      .catch(() => setPendingCheckIds(new Set()));
-  }, [records]); // 池变化（核对通过/新采集入池）时同步重拉台账
+  // ── 待组卷池类别（2026-08-21 统一入池：抓取/推送/手动三路件全部入池，无核对闸门） ──
+  // 列随类别筛选联动：四类元数据不同，账簿/报告/其他不再套凭证列。
+  const poolCategory = useMemo((): 'KP' | 'ALL' | 'KB' | 'FB' | 'QT' => {
+    const t = filters.archiveType;
+    if (!t || t === '全部') return 'ALL';
+    if (t.includes('账簿')) return 'KB';
+    if (t.includes('报告') || t.includes('报表')) return 'FB';
+    if (t.includes('其他')) return 'QT';
+    return 'KP';
+  }, [filters.archiveType]);
 
   // ★ 将 columnDef 转为 DataTableColumn（接入排序 + 列缩放 + table-fixed）
+  //   凭证类列由 metadataDisplayStore 'voucher' 上下文驱动（元数据配置·页面设置可配）；
+  //   全部/账簿/报告/其他用 poolColumns 固定默认列（2026-08-21 四类分列）
   const tableColumns = useMemo((): DataTableColumn<ArchiveRecord>[] => {
-    const visibleIds = metaStore.getVisibleIds('voucher');
-    const rawCols = visibleIds.length === 0 ? getVoucherDefaultColumns() : getVoucherColumns(visibleIds);
-    const SORTABLE_IDS = new Set(['DATE', 'AMOUNT', 'VOUCHER_NO']);
-    const SORT_VALUES: Record<string, (r: ArchiveRecord) => string | number> = {
-      DATE: (r) => `${r.year}-${r.month}`,
-      AMOUNT: (r) => r.amount,
-      VOUCHER_NO: (r) => r.voucherNo,
-    };
+    const rawCols = poolCategory === 'KP'
+      ? (metaStore.getVisibleIds('voucher').length === 0
+          ? getVoucherDefaultColumns()
+          : getVoucherColumns(metaStore.getVisibleIds('voucher')))
+      : POOL_COLUMN_SETS[poolCategory];
+    const sortableIds = poolCategory === 'KP'
+      ? new Set(['DATE', 'AMOUNT', 'VOUCHER_NO'])
+      : POOL_SORTABLE_IDS;
     return rawCols.map(col => {
       const px = col.width ? parseInt(col.width) : 0;
       return {
         id: col.metaId,
         header: col.label,
         cell: (r: ArchiveRecord) => col.accessor(r),
-        sortValue: SORT_VALUES[col.metaId],
-        sortable: SORTABLE_IDS.has(col.metaId),
+        sortValue: POOL_SORT_VALUES[col.metaId],
+        sortable: sortableIds.has(col.metaId),
         align: col.align || 'left',
         size: px || 120,
         minSize: Math.max(40, (px || 120) - 30),
         maxSize: (px || 120) + 80,
       };
     });
-  }, [metaStore.contexts['voucher']?.fields]);
+  }, [poolCategory, metaStore.contexts['voucher']?.fields]);
 
   const {
     setFilters,
@@ -1774,8 +1779,8 @@ const VolumeWorkspacePage: React.FC = () => {
   };
 
   // ── 计算未组卷记录 ──
-  // 双重过滤：volumeItems 中的 + 已有 volumeId 的记录（mock数据预分配）
-  // + 核对闸门：收集台账待核对件核对通过前不入待组卷池（2026-08-16 贯通修复）
+  // 双重过滤：volumeItems 中的 + 已有 volumeId 的记录
+  // （2026-08-21 统一入池：抓取/推送/手动三路件全部直接进待组卷池，不再有核对闸门）
   const unassignedRecords = useMemo(() => {
     const volumeRecordIds = new Set<string>();
     for (const items of Object.values(volumeItems)) {
@@ -1783,17 +1788,8 @@ const VolumeWorkspacePage: React.FC = () => {
         volumeRecordIds.add(item.recordId);
       }
     }
-    return records.filter((r) => !volumeRecordIds.has(r.id) && !r.volumeId && !pendingCheckIds.has(r.id));
-  }, [records, volumeItems, pendingCheckIds]);
-
-  // 被核对闸门拦下的件数（提示条展示）
-  const gatedCount = useMemo(() => {
-    const volumeRecordIds = new Set<string>();
-    for (const items of Object.values(volumeItems)) {
-      for (const item of items) volumeRecordIds.add(item.recordId);
-    }
-    return records.filter((r) => !volumeRecordIds.has(r.id) && !r.volumeId && pendingCheckIds.has(r.id)).length;
-  }, [records, volumeItems, pendingCheckIds]);
+    return records.filter((r) => !volumeRecordIds.has(r.id) && !r.volumeId);
+  }, [records, volumeItems]);
 
   /** 当前选中的凭证记录 */
   const selectedRecords = useMemo(
@@ -1823,7 +1819,10 @@ const VolumeWorkspacePage: React.FC = () => {
       const matchSelf = (r: ArchiveRecord) =>
         r.voucherNo.toLowerCase().includes(q) ||
         r.archiveCode.toLowerCase().includes(q) ||
-        r.amount.toString().includes(q);
+        r.amount.toString().includes(q) ||
+        (r.remarks || '').toLowerCase().includes(q) ||
+        (r.summary || '').toLowerCase().includes(q) ||
+        (r.subType || '').toLowerCase().includes(q);
       // ★ 单元化搜索（2026-08-20）：附件命中时其所属凭证单元也要显示
       result = result.filter((r) =>
         matchSelf(r) ||
@@ -1833,14 +1832,9 @@ const VolumeWorkspacePage: React.FC = () => {
         })
       );
     }
-    // ★ 按凭证号升序排序（会计实操：装订唯一依据是记账凭证编号升序）
-    result.sort((a, b) => {
-      const pa = a.voucherNo.match(/^(.+?)-(\d+)$/);
-      const pb = b.voucherNo.match(/^(.+?)-(\d+)$/);
-      if (!pa || !pb) return a.voucherNo.localeCompare(b.voucherNo);
-      if (pa[1] !== pb[1]) return pa[1].localeCompare(pb[1]);
-      return parseInt(pa[2]) - parseInt(pb[2]);
-    });
+    // ★ 统一排序口径（2026-08-21）：制单日期 + 凭证号升序（会计实操装订顺序；
+    //   散件与已成「件」的凭证同序排列，该顺序即智能组卷凭证类的选取顺序）
+    result.sort(compareVoucherDateNo);
     return result;
   }, [unassignedRecords, filters, searchQuery]);
 
@@ -2687,8 +2681,9 @@ const VolumeWorkspacePage: React.FC = () => {
         }}
       />
 
-      {/* ★ 凭证号连续性状态条（会计实操：组卷核心依据） */}
-      {filteredUnassigned.length > 0 && (
+      {/* ★ 凭证号连续性状态条（会计实操：组卷核心依据；仅凭证类/混合视图显示，
+          账簿/报告/其他无凭证号连续概念，2026-08-21 四类分列配套） */}
+      {(poolCategory === 'KP' || poolCategory === 'ALL') && filteredUnassigned.length > 0 && (
         <div className={`px-6 py-2 text-xs flex items-center gap-3 border-b ${
           continuityCheck.isContinuous
             ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
@@ -2722,20 +2717,6 @@ const VolumeWorkspacePage: React.FC = () => {
         {/* 左侧：待分配条目池（min-h-0：grid 子项默认 min-height:auto 会被内容撑高，
             导致整行超高、底部推荐面板/分页栏被容器裁剪——2026-08-08 修复） */}
         <div className="border-r border-slate-200 bg-white flex flex-col overflow-hidden min-h-0">
-          {/* 核对闸门提示（有待核对件被拦截时显示） */}
-          {gatedCount > 0 && (
-            <div className="mx-3 mt-3 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2 text-xs text-amber-800 shrink-0">
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-              <span>{gatedCount} 件来自推送/抓取的档案尚未核对通过，已按核对闸门规则暂不进入待组卷池。</span>
-              <button
-                type="button"
-                onClick={() => useAppStore.getState().setActiveMainMenu('voucher-manager')}
-                className="ml-auto px-2 py-0.5 text-amber-700 border border-amber-300 rounded-md hover:bg-amber-100 font-medium"
-              >
-                去核对工作台
-              </button>
-            </div>
-          )}
           <UnassignedPool
             records={pagedUnassigned}
             allPoolRecords={unassignedRecords}
@@ -2744,6 +2725,11 @@ const VolumeWorkspacePage: React.FC = () => {
             onSelectAll={handleSelectAll}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
+            searchPlaceholder={poolCategory === 'KP' ? '搜索凭证号/摘要/金额…'
+              : poolCategory === 'KB' ? '搜索账簿名称/子类型/摘要…'
+              : poolCategory === 'FB' ? '搜索报告名称/摘要…'
+              : poolCategory === 'QT' ? '搜索资料名称/子类型/摘要…'
+              : '搜索凭证号/名称/摘要/金额…'}
             onAddToVolume={handleAddToVolume}
             onDeleteRecord={handleDeleteRecord}
             onBatchDelete={handleBatchDelete}

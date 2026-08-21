@@ -123,8 +123,9 @@ public class YonyouSyncService {
   /**
    * 执行一个期间的同步（v2：去向模型）。
    *
-   * @param destination auto-archive=直接入库（自动组卷）| to-volume=送组卷工作台 |
-   *                    to-check=送核对工作台 | to-review=进审核库；null=按 autoGroup/review 旧语义
+   * @param destination auto-archive=直接入库（自动组卷）| to-volume=送组卷工作台；
+   *                    历史遗留 to-check/to-review 归一为 to-volume（2026-08-21 核对工作台移除）；
+   *                    null=按 autoGroup/review 旧语义
    */
   public Map<String, Object> syncNow(String period, String trigger, String operator,
                                      String userTicket, Boolean autoGroup, Boolean review,
@@ -146,12 +147,12 @@ public class YonyouSyncService {
       boolean doGroup = autoGroup != null ? autoGroup : scheduleConfig().autoGroup();
       boolean toReview = review != null && review;
       // ── 去向模型（destination 优先于旧 autoGroup/review 语义） ──
+      // 2026-08-21 收敛：核对工作台已移除，抓取/推送/手动统一进组卷工作台——
+      // 历史遗留 to-check / to-review 一律按 to-volume 处理，不再进审核库
       String dest = destination == null ? "" : destination;
       switch (dest) {
         case "auto-archive" -> { doGroup = true; toReview = false; }
-        case "to-volume" -> { doGroup = false; toReview = false; }
-        case "to-check" -> { doGroup = false; toReview = false; }
-        case "to-review" -> { doGroup = false; toReview = true; }
+        case "to-volume", "to-check", "to-review" -> { doGroup = false; toReview = false; dest = "to-volume"; }
         default -> { /* 旧语义：autoGroup/review 参数 */ }
       }
       // 进审核库时不允许自动组卷（须审核通过后才能组卷）

@@ -101,6 +101,29 @@ const DEFAULT_SIZE = 150;
 const CHECKBOX_SIZE = 44;
 const EXTRA_COL_SIZE = 36;
 
+/**
+ * 单元格截断时悬浮显示全文（2026-08-21）
+ * 列宽有限，文本基本都被 ellipsis 截取；hover 时被截的格子挂原生 title 展示完整内容，
+ * 未截断的格子不挂（避免满屏 tooltip 噪音）。title 取 DOM textContent，对 JSX 单元格通用。
+ * 注意列渲染器常在内部 span 上再 truncate（内层截断父级量不到），需逐级向下探测。
+ */
+function handleTruncatedCellEnter(e: React.MouseEvent<HTMLDivElement>) {
+  const el = e.currentTarget;
+  const clipped = (node: HTMLElement) => node.scrollWidth > node.clientWidth + 1;
+  let truncated = clipped(el);
+  if (!truncated) {
+    for (const child of Array.from(el.querySelectorAll<HTMLElement>('*'))) {
+      if (clipped(child)) { truncated = true; break; }
+    }
+  }
+  const text = (el.textContent || '').trim();
+  if (text && truncated) {
+    el.title = text;
+  } else {
+    el.removeAttribute('title');
+  }
+}
+
 // ── 组件 ──
 
 export function DataTable<TData extends { id: string }>({
@@ -324,7 +347,7 @@ export function DataTable<TData extends { id: string }>({
                             : undefined
                         }
                       >
-                        <div className="truncate min-w-0">
+                        <div className="truncate min-w-0" onMouseEnter={handleTruncatedCellEnter}>
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </div>
                       </TableCell>

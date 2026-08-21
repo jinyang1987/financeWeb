@@ -22,7 +22,7 @@ import { useArchiveStore } from '../stores/archiveStore';
 import { useSourceDocumentStore } from '../stores/sourceDocumentStore';
 import { useMetadataDisplayStore } from '../stores/metadataDisplayStore';
 import { ARCHIVE_ITEM_COLUMN_MAP } from '../config/metadataColumnMaps/archiveItemColumns';
-import { VOUCHER_MANAGER_COLUMN_MAP } from '../config/metadataColumnMaps/voucherManagerColumns';
+import { VOUCHER_COLUMN_MAP } from '../config/metadataColumnMaps/voucherColumns';
 import { getExtFieldDefs } from '../types/sourceDocument';
 import { FieldGrid, DetailRows, type FieldItem } from './common/DetailTable';
 import { isSourceDocument } from '../utils/recordType';
@@ -272,9 +272,9 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
   // voucher 模式：固定 6 个凭证字段
   const voucherFields = useMemo(() => {
     if (!isVoucher) return [];
-    // 按核对工作台默认列顺序
+    // 按组卷工作台默认列顺序
     const ids = ['VOUCHER_NO', 'DATE', 'SUMMARY', 'DEPARTMENT', 'AMOUNT', 'ATTACHMENTS'];
-    return ids.filter(id => VOUCHER_MANAGER_COLUMN_MAP[id]).map(id => VOUCHER_MANAGER_COLUMN_MAP[id]);
+    return ids.filter(id => VOUCHER_COLUMN_MAP[id]).map(id => VOUCHER_COLUMN_MAP[id]);
   }, [isVoucher]);
 
   // 直接从 store 选数据，避免选函数引用导致的稳定性问题

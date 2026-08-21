@@ -53,7 +53,7 @@ export function useAppHandlers(
     (newRecord: ArchiveRecord) => {
       const currentRecords = useArchiveStore.getState().records;
       setRecords([newRecord, ...currentRecords]);
-      onTriggerToast(`凭证 [${newRecord.voucherNo}] 已上传入收集池（临时档号 ${newRecord.archiveCode}），可前往核对工作台核对`, 'success');
+      onTriggerToast(`凭证 [${newRecord.voucherNo}] 已上传入收集池（临时档号 ${newRecord.archiveCode}），可前往组卷工作台组卷`, 'success');
     },
     [setRecords, onTriggerToast],
   );

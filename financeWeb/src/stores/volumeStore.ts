@@ -35,6 +35,7 @@ import { fetchVolumeRecords } from '../services/recordService';
 import { useSourceDocumentStore } from './sourceDocumentStore';
 import type { SourceDocument } from '../types/sourceDocument';
 import { isSourceDocument } from '../utils/recordType';
+import { compareVoucherDateNo } from '../utils/voucherSort';
 
 // ── 档案类别代码 → 中文名称 ──
 const ARCHIVE_TYPE_LABELS: Record<string, string> = {
@@ -797,6 +798,11 @@ export const useVolumeStore = create<VolumeState>((set, get) => ({
         for (const r of periodRecords) {
           const parts: string[] = [];
 
+          // ★ 凭证类：按收/付/转子类型分段归集（机关/行政事业单位财政资金监管要求；
+          //   企业默认关闭直接按月+号组卷，2026-08-21 对齐组卷业务详报）
+          if (rule.separateByVoucherCategory) {
+            parts.push(r.voucherCategory || '通用记账凭证');
+          }
           // ★ 账簿类：按子类型独立组卷（总账/明细账/日记账/辅助账簿各独立）
           if (rule.separateByBookType) {
             const bookType = inferBookSubType(r);
@@ -832,13 +838,9 @@ export const useVolumeStore = create<VolumeState>((set, get) => ({
                 return a.voucherNo.localeCompare(b.voucherNo, 'zh-CN');
               }
               case 'voucherNo':
-              default: {
-                const pa = parseVoucherNo(a.voucherNo);
-                const pb = parseVoucherNo(b.voucherNo);
-                if (!pa || !pb) return a.voucherNo.localeCompare(b.voucherNo);
-                if (pa.prefix !== pb.prefix) return pa.prefix.localeCompare(pb.prefix);
-                return pa.number - pb.number;
-              }
+              default:
+                // ★ 凭证类统一口径（2026-08-21）：制单日期 + 凭证号升序
+                return compareVoucherDateNo(a, b);
             }
           });
 

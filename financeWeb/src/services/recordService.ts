@@ -300,7 +300,7 @@ export function dtoToRecord(dto: RecordDto): ArchiveRecord {
       timestamp: (dto.createdAt || '').replace('T', ' ').slice(0, 19),
       action: '上传入库',
       operator: dto.createdBy || '',
-      details: `文件 ${dto.name}（${formatSize(dto.sizeInBytes)}）上传至收集池，等待核对与组卷`,
+      details: `文件 ${dto.name}（${formatSize(dto.sizeInBytes)}）上传至收集池，等待组卷`,
       ipAddress: '',
     }],
     numbered: dto.numbered,

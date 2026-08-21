@@ -10,12 +10,11 @@
  *     PUT  /open/v1/apps/{id}/destination       修改应用默认去向
  *     GET  /open/v1/batches                     推送批次历史
  *     POST /open/v1/batches/{batchNo}/four-checks 批次运行四性检测
- *     POST /open/v1/batches/{batchNo}/to-review   批次转审核库
  *     POST /open/v1/batches/{batchNo}/auto-group  批次自动组卷
  *     GET  /open/v1/logs                        推送全链路日志
  *     POST /open/v1/simulate                    模拟推送（演示）
- *     GET  /open/v1/collect/pending-check       收集池待核对列表
- *     POST /open/v1/collect/{id}/pass           核对通过（送组卷/送审核）
+ *     （2026-08-21 收敛：核对工作台已移除；collect/pending-check、to-review 等
+ *      历史端点服务端仍在但前端不再消费，遗留去向归一为送组卷工作台）
  *     GET/PUT /open/v1/field-maps/{sourceSystem} 字段映射（低代码集成）
  *     POST /open/v1/field-maps/test             试映射
  *
@@ -30,7 +29,8 @@ import { http } from './http';
 /** 四大类（79号令第六条）：凭证/账簿/报表/其他 */
 export type PushCategory = 'voucher' | 'ledger' | 'report' | 'other';
 
-/** 去向：直接入库 | 送组卷工作台 | 送核对工作台（待核对环节） | 送核对工作台（待审核环节） */
+/** 去向：直接入库 | 送组卷工作台（2026-08-21 收敛：核对工作台已移除，
+ *  to-check/to-review 为历史遗留值，服务端归一为 to-volume 处理，仅用于历史批次展示） */
 export type PushDestination = 'auto-archive' | 'to-volume' | 'to-check' | 'to-review';
 
 export const CATEGORY_LABELS: Record<PushCategory, string> = {
@@ -43,9 +43,12 @@ export const CATEGORY_LABELS: Record<PushCategory, string> = {
 export const DESTINATION_LABELS: Record<PushDestination, string> = {
   'auto-archive': '直接入库·自动组卷',
   'to-volume': '送组卷工作台',
-  'to-check': '送核对工作台·待核对',
-  'to-review': '送核对工作台·待审核',
+  'to-check': '送核对（历史去向，已并入组卷工作台）',
+  'to-review': '送审核（历史去向，已并入组卷工作台）',
 };
+
+/** 当前可选的推送去向（UI 选择器只提供这两项；历史 to-check/to-review 仅用于批次回显） */
+export const ACTIVE_DESTINATIONS: PushDestination[] = ['to-volume', 'auto-archive'];
 
 export interface OpenApp {
   id: number;

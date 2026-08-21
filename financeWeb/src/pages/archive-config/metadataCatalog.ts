@@ -1,7 +1,7 @@
 /**
  * @license SPDX-License-Identifier: Apache-2.0
  *
- * metadataCatalog — 会计档案元数据标准目录（2026-08-16 自 AccountingMetadataPage 抽取）
+ * metadataCatalog — 会计档案元数据标准目录（2026-08-21 起由档案管理配置·元数据 Tab 消费）
  *
  * DA/T 94-2022 附录A 件级（M1-M49）· DA/T 39 卷级（V1-V20）·
  * 卷件关联（VA1-VA6）· DA/T 39/42/94 盒级（B1-B29）全部元数据项定义。

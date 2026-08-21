@@ -20,7 +20,7 @@ import { createApiPersistStorage } from '../services/configStorage';
 export type SortField = 'month' | 'voucherNo' | 'amount';
 export const SORT_OPTIONS: { value: SortField; label: string }[] = [
   { value: 'month', label: '按月份排序' },
-  { value: 'voucherNo', label: '按凭证号排序' },
+  { value: 'voucherNo', label: '按制单日期+凭证号' },
   { value: 'amount', label: '按金额排序' },
 ];
 
@@ -48,6 +48,9 @@ export interface PerTypeRule {
   /** 每卷最多件数 */
   maxItemsPerVolume: number;
 
+  /** ★ 凭证类：是否按凭证子类型（收款/付款/转账）分段归集——机关/行政事业单位
+   *  财政资金监管要求同册按类型分段；企业可直接按月+凭证号组卷（默认 false） */
+  separateByVoucherCategory?: boolean;
   /** ★ 账簿类：是否按子类型（总账/明细账/日记账等）独立组卷 */
   separateByBookType?: boolean;
   /** ★ 报告类：是否将年度报告(永久)与中期报告(10年)分开组卷 */

@@ -6,9 +6,7 @@ import { MenuId } from '../stores/appStore';
 import { FanzongManager } from './FanzongManager';
 import ReportConfigPage from '../pages/archive-config/ReportConfigPage';
 import InspectionConfigPage from '../pages/archive-config/InspectionConfigPage';
-import AccountingMetadataPage from '../pages/archive-config/AccountingMetadataPage';
 import DirectoryConfigPage from '../pages/archive-config/DirectoryConfigPage';
-import VolumeGroupingConfigPage from '../pages/archive-config/VolumeGroupingConfigPage';
 
 import UnitManagePage from '../pages/system/UnitManagePage';
 import OrgManagePage from '../pages/system/OrgManagePage';
@@ -38,12 +36,8 @@ const PageRouter: React.FC<PageRouterProps> = (props) => {
       return <ReportConfigPage />;
     case 'inspection-config':
       return <InspectionConfigPage />;
-    case 'accounting-metadata':
-      return <AccountingMetadataPage />;
     case 'directory-config':
       return <DirectoryConfigPage />;
-    case 'volume-grouping-config':
-      return <VolumeGroupingConfigPage />;
     case 'sys-unit':
       return <UnitManagePage />;
     case 'sys-org':
