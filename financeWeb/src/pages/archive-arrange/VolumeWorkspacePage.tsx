@@ -165,7 +165,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
       <button
         type="button"
         onClick={onQuickComponent}
-        title="快速组件：拖拽/点选原始凭证到记账凭证，先组件再组卷"
+        title="快速组件：点记账凭证选色，再点原始凭证即配对成件"
         className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium text-sky-700 bg-sky-50 border border-sky-200 rounded-lg hover:bg-sky-100 transition-colors"
       >
         <Link2 className="w-4 h-4" />
@@ -2064,23 +2064,21 @@ const VolumeWorkspacePage: React.FC = () => {
     }
   }, [unlinkableSelection]);
 
-  // ★ 快速组件确认（2026-08：把弹窗内临时配对批量落库 + 自动刷新列表，
-  //   保证关闭后看到的一定是已组好件的状态）
+  // ★ 快速组件确认（2026-08-22 凭证优先重设计：把弹窗内临时配对批量落库 +
+  //   await 刷新列表——弹窗确认后保持打开可继续配，关闭后工作台呈现的
+  //   一定是已组好件的状态；反馈由弹窗内闪光承接，不再在此 toast）
   const handleQuickComponentConfirm = useCallback(
     async (pairs: Map<string, string>) => {
       const actions = collectPairActions(pairs);
-      let total = 0;
       for (const action of actions) {
         for (const sid of action.sourceIds) {
           await linkRecordParent(sid, action.voucherId);
-          total += 1;
         }
       }
       // 清空当前选择 + 刷新（先组件再组卷，列表立刻呈现已挂接的「件」单元）
       setSelectedIds(new Set());
-      useArchiveStore.getState().loadRecords();
+      await useArchiveStore.getState().loadRecords();
       void useArchiveStore.getState().loadAllRecords();
-      showToast(`快速组件完成：${total} 张原始凭证已配对到记账凭证`);
     },
     [],
   );

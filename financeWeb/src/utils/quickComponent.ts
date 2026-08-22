@@ -1,14 +1,16 @@
 /**
  * @license SPDX-License-Identifier: Apache-2.0
  *
- * quickComponent — 「快速组件」交互核心纯函数（2026-08 智能组卷左侧·快速组件）
+ * quickComponent — 「快速组件」交互核心纯函数（2026-08）
  *
- * 快速组件 = 一种更"放松"的配对交互：把右侧未挂接的原始凭证，通过
- *   · 拖拽：原始凭证卡片 → 记账凭证卡片
- *   · 点击：先点选原始凭证，再点记账凭证
- * 两种方式配对到左侧记账凭证上，形成「件」单元。确认后批量调用 linkRecordParent 落库。
+ * 快速组件 = 一种更"放松"的配对交互，**凭证优先**：
+ *   1. 点一下左侧记账凭证 → 它成为"激活"凭证，染上专属颜色；
+ *   2. 逐个点右侧原始凭证 → 立刻配到激活凭证上、跟随同色
+ *      （再点一下取消配对；切到别的凭证后再点则直接"搬家"）；
+ *   3. 也可以直接把原始凭证拖拽到凭证上配对；
+ *   4. 【确认组件】批量调用 linkRecordParent 落库，形成「件」单元。
  *
- * 本模块只承载与 UI 无关的纯逻辑（颜色分配 / 选中切换 / 配对 / 校验），
+ * 本模块只承载与 UI 无关的纯逻辑（颜色分配 / 激活 / 配对 / 校验），
  * 便于单测且不侵染既有 VolumeWorkspacePage 逻辑。
  */
 
@@ -19,25 +21,29 @@ import { isSourceDocument } from './recordType';
 export interface VoucherColor {
   key: string;
   name: string;
-  /** 主题色 hex（右侧原始凭证跟随同色的主色） */
+  /** 主题色 hex（渐变/内联样式用） */
   hex: string;
-  /** Tailwind 浅底 class（凭证/原始凭证卡片底色） */
+  /** Tailwind 浅底 class（已配对原始凭证卡片底色） */
   bgSoft: string;
-  /** Tailwind 深边 class（当前配对中边框） */
+  /** Tailwind 深底 class（激活凭证卡片底色，比 bgSoft 深一档） */
+  bgActive: string;
+  /** Tailwind 边框 class（激活/已配对） */
   border: string;
+  /** 激活光晕 ring class */
+  ring: string;
   /** 文字色 */
   text: string;
-  /** 左侧凭证卡片左侧色条 class */
+  /** 左侧凭证卡片左侧色条 / 圆点 class */
   bar: string;
 }
 
 export const VOUCHER_COLORS: VoucherColor[] = [
-  { key: 'blue',   name: '蓝', hex: '#0284c7', bgSoft: 'bg-sky-50',   border: 'border-sky-400',   text: 'text-sky-700',   bar: 'bg-sky-500' },
-  { key: 'green',  name: '绿', hex: '#059669', bgSoft: 'bg-emerald-50', border: 'border-emerald-400', text: 'text-emerald-700', bar: 'bg-emerald-500' },
-  { key: 'purple', name: '紫', hex: '#7c3aed', bgSoft: 'bg-violet-50',  border: 'border-violet-400',  text: 'text-violet-700',  bar: 'bg-violet-500' },
-  { key: 'orange', name: '橙', hex: '#ea580c', bgSoft: 'bg-orange-50',  border: 'border-orange-400',  text: 'text-orange-700',  bar: 'bg-orange-500' },
-  { key: 'rose',   name: '玫红', hex: '#e11d48', bgSoft: 'bg-rose-50',  border: 'border-rose-400',    text: 'text-rose-700',    bar: 'bg-rose-500' },
-  { key: 'teal',   name: '青', hex: '#0d9488', bgSoft: 'bg-teal-50',   border: 'border-teal-400',   text: 'text-teal-700',   bar: 'bg-teal-500' },
+  { key: 'blue',   name: '蓝',   hex: '#0284c7', bgSoft: 'bg-sky-50',     bgActive: 'bg-sky-100/70',     border: 'border-sky-400',     ring: 'ring-sky-200',     text: 'text-sky-700',     bar: 'bg-sky-500' },
+  { key: 'green',  name: '绿',   hex: '#059669', bgSoft: 'bg-emerald-50', bgActive: 'bg-emerald-100/70', border: 'border-emerald-400', ring: 'ring-emerald-200', text: 'text-emerald-700', bar: 'bg-emerald-500' },
+  { key: 'purple', name: '紫',   hex: '#7c3aed', bgSoft: 'bg-violet-50',  bgActive: 'bg-violet-100/70',  border: 'border-violet-400',  ring: 'ring-violet-200',  text: 'text-violet-700',  bar: 'bg-violet-500' },
+  { key: 'orange', name: '橙',   hex: '#ea580c', bgSoft: 'bg-orange-50',  bgActive: 'bg-orange-100/70',  border: 'border-orange-400',  ring: 'ring-orange-200',  text: 'text-orange-700',  bar: 'bg-orange-500' },
+  { key: 'rose',   name: '玫红', hex: '#e11d48', bgSoft: 'bg-rose-50',    bgActive: 'bg-rose-100/70',    border: 'border-rose-400',    ring: 'ring-rose-200',    text: 'text-rose-700',    bar: 'bg-rose-500' },
+  { key: 'teal',   name: '青',   hex: '#0d9488', bgSoft: 'bg-teal-50',    bgActive: 'bg-teal-100/70',    border: 'border-teal-400',    ring: 'ring-teal-200',    text: 'text-teal-700',    bar: 'bg-teal-500' },
 ];
 
 /** 按凭证在待配对列表中的顺序分配颜色（index 取模复用，保证每组至少蓝/绿/紫打头） */
@@ -55,47 +61,70 @@ export function isPairableSource(r: ArchiveRecord): boolean {
   return isSourceDocument(r) && !r.parentRecordId;
 }
 
-// ── 状态模型 ──
+// ── 状态模型（凭证优先） ──
 export interface QuickComponentState {
-  /** 右侧已点选的原始凭证 id 集 */
-  selectedSourceIds: Set<string>;
+  /** 当前激活的记账凭证：先点左侧选中，之后点右侧原始凭证都配到它上面；再点一次取消激活 */
+  activeVoucherId: string | null;
   /** 已配对关系：原始凭证 id → 记账凭证 id（未落库，仅弹窗内临时预览） */
   pairs: Map<string, string>;
 }
 
 export const emptyQuickComponentState = (): QuickComponentState => ({
-  selectedSourceIds: new Set(),
+  activeVoucherId: null,
   pairs: new Map(),
 });
 
-/** 切换某原始凭证的"点选"态（未挂接的才允许点选；已配对的不参与点选） */
-export function toggleSourceSelection(
+/**
+ * 激活/切换记账凭证。
+ * 点击已激活的凭证 = 取消激活（放松式交互，随时可反悔）。
+ */
+export function activateVoucher(
   state: QuickComponentState,
-  sourceId: string,
-  pairedSourceIds: Set<string>,
+  voucherId: string,
 ): QuickComponentState {
-  if (pairedSourceIds.has(sourceId)) return state; // 已配对的由"取消配对"管理
-  const next = new Set(state.selectedSourceIds);
-  if (next.has(sourceId)) next.delete(sourceId);
-  else next.add(sourceId);
-  return { ...state, selectedSourceIds: next };
+  const next = state.activeVoucherId === voucherId ? null : voucherId;
+  if (next === state.activeVoucherId) return state;
+  return { ...state, activeVoucherId: next };
 }
 
 /**
- * 把"当前点选的原始凭证"配对到某记账凭证。
- * 约束：①至少 1 张已点选原始凭证；②这些原始凭证须未挂接（未配对）。
- * 返回新状态；若无可配对（点选为空/含已配对）返回原状态。
+ * 点按右侧原始凭证的配对切换（凭证优先模型的核心）：
+ *   · 已配给当前激活凭证 → 再点一下取消配对；
+ *   · 未配对 / 配给了别的凭证，且存在激活凭证 → 配对 / 搬家到激活凭证；
+ *   · 无激活凭证但已配对 → 点按取消配对；
+ *   · 无激活凭证且未配对 → 无操作（UI 层给出"先选凭证"引导）。
  */
-export function pairSelectedSourcesToVoucher(
+export function toggleSourcePair(
   state: QuickComponentState,
-  voucherId: string,
-  pairedSourceIds: Set<string>,
+  sourceId: string,
 ): QuickComponentState {
-  const sources = [...state.selectedSourceIds].filter((id) => !pairedSourceIds.has(id));
-  if (sources.length === 0) return state;
+  const pairedTo = state.pairs.get(sourceId);
   const pairs = new Map(state.pairs);
-  for (const sid of sources) pairs.set(sid, voucherId);
-  return { ...state, pairs, selectedSourceIds: new Set() };
+  if (pairedTo && pairedTo === state.activeVoucherId) {
+    pairs.delete(sourceId);
+    return { ...state, pairs };
+  }
+  if (state.activeVoucherId) {
+    pairs.set(sourceId, state.activeVoucherId);
+    return { ...state, pairs };
+  }
+  if (pairedTo) {
+    pairs.delete(sourceId);
+    return { ...state, pairs };
+  }
+  return state;
+}
+
+/** 把某原始凭证直接配到指定凭证（拖拽配对；已配到同一目标时无操作） */
+export function pairSourceToVoucher(
+  state: QuickComponentState,
+  sourceId: string,
+  voucherId: string,
+): QuickComponentState {
+  if (state.pairs.get(sourceId) === voucherId) return state;
+  const pairs = new Map(state.pairs);
+  pairs.set(sourceId, voucherId);
+  return { ...state, pairs };
 }
 
 /** 取消某原始凭证的配对（回到未配对态） */
@@ -103,6 +132,7 @@ export function unpairSource(
   state: QuickComponentState,
   sourceId: string,
 ): QuickComponentState {
+  if (!state.pairs.has(sourceId)) return state;
   const pairs = new Map(state.pairs);
   pairs.delete(sourceId);
   return { ...state, pairs };
@@ -110,13 +140,13 @@ export function unpairSource(
 
 /** 批量确认前的校验：返回错误文案（null = 可确认）。规则：配对关系不得为空。 */
 export function validateQuickPairs(pairs: Map<string, string>): string | null {
-  if (pairs.size === 0) return '请先拖拽或点选原始凭证到记账凭证上，再确认组件';
+  if (pairs.size === 0) return '还没有配对哦——先点一张记账凭证，再点右侧原始凭证试试';
   return null;
 }
 
 /**
- * 收集待落库的配对动作：原始凭证 id → 记账凭证 id 数组（按 voucherId 聚合，
- * 便于逐凭证批量调用 linkRecordParent）。返回顺序稳定的 { voucherId, sourceIds[] } 列表。
+ * 收集待落库的配对动作：按 voucherId 聚合，
+ * 便于逐凭证批量调用 linkRecordParent。返回顺序稳定的 { voucherId, sourceIds[] } 列表。
  */
 export function collectPairActions(pairs: Map<string, string>): Array<{ voucherId: string; sourceIds: string[] }> {
   const byVoucher = new Map<string, string[]>();
