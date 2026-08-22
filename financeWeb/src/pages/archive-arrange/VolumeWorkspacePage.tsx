@@ -44,6 +44,7 @@ import {
   attachedSourceIds,
 } from '../../utils/unitSelection';
 import { linkRecordParent } from '../../services/recordService';
+import { collectPairActions } from '../../utils/quickComponent';
 import { DataTable, type DataTableColumn } from '../../components/DataTable';
 import PaginationBar from '../../components/PaginationBar';
 import { usePagination } from '../../hooks/usePagination';
@@ -52,6 +53,7 @@ import type { ArchiveBox } from '../../types/archiveBox';
 import type { ArchiveRecord } from '../../types';
 import VoucherUploadModal from './VoucherUploadModal';
 import VolumePrintModal from './VolumePrintModal';
+import QuickComponentModal from '../../components/QuickComponentModal';
 import { deleteRecord } from '../../services/recordService';
 import { runVolumeInspection, type InspectionIssue } from '../../services/inspectionService';
 import {
@@ -95,6 +97,8 @@ interface FilterBarProps {
   onChange: (f: { year?: number | null; month?: string | null; archiveType?: string | null; retention?: string | null }) => void;
   onRecommend: () => void;
   onUploadMaterial: () => void;
+  /** 快速组件：在智能组卷左侧新增的放松式配对入口（2026-08） */
+  onQuickComponent: () => void;
 }
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'));
@@ -102,7 +106,7 @@ const MONTHS = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0
 const FilterBar: React.FC<FilterBarProps> = ({
   year, month, archiveType, retention,
   unassignedCount, volumeCount,
-  onChange, onRecommend, onUploadMaterial,
+  onChange, onRecommend, onUploadMaterial, onQuickComponent,
 }) => {
   return (
     <div className="flex items-center gap-4 px-6 py-3 bg-white border-b border-slate-200 flex-wrap">
@@ -156,6 +160,16 @@ const FilterBar: React.FC<FilterBarProps> = ({
       </span>
 
       <div className="flex-1" />
+
+      <button
+        type="button"
+        onClick={onQuickComponent}
+        title="快速组件：拖拽/点选原始凭证到记账凭证，先组件再组卷"
+        className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium text-sky-700 bg-sky-50 border border-sky-200 rounded-lg hover:bg-sky-100 transition-colors"
+      >
+        <Link2 className="w-4 h-4" />
+        快速组件
+      </button>
 
       <button
         type="button"
@@ -1702,6 +1716,8 @@ const VolumeWorkspacePage: React.FC = () => {
   const [decomposeTarget, setDecomposeTarget] = useState<string | null>(null); // 拆卷确认目标
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
+  /** ★ 快速组件配对弹窗（2026-08：智能组卷左侧的放松式配对入口） */
+  const [showQuickComponent, setShowQuickComponent] = useState(false);
   const [preselectedPrintVolumeId, setPreselectedPrintVolumeId] = useState<string | null>(null);
   const [volumeChecks, setVolumeChecks] = useState<Record<string, VolumeChecks>>({});
   const [detailRecord, setDetailRecord] = useState<ArchiveRecord | null>(null);
@@ -1798,6 +1814,17 @@ const VolumeWorkspacePage: React.FC = () => {
   );
   /** 所选是否全为原始凭证（无记账凭证主体，2026-08-19 组卷规则） */
   const pureSourceSelected = selectedRecords.length > 0 && selectedRecords.every(isSourceDocument);
+
+  // ★ 快速组件弹窗数据源（2026-08）：
+  //   左列 = 未组卷的记账凭证/主体件（配对目标）；右列 = 未组卷且未挂接的原始凭证（配对源）
+  const quickVouchers = useMemo(
+    () => unassignedRecords.filter((r) => !isSourceDocument(r)),
+    [unassignedRecords],
+  );
+  const quickSources = useMemo(
+    () => unassignedRecords.filter((r) => isSourceDocument(r) && !r.parentRecordId),
+    [unassignedRecords],
+  );
 
   // 应用筛选 + ★ 按凭证号排序（会计实操：组卷唯一排序依据）
   const filteredUnassigned = useMemo(() => {
@@ -2030,6 +2057,27 @@ const VolumeWorkspacePage: React.FC = () => {
       showToast(e.message || '解挂失败', 'info');
     }
   }, [unlinkableSelection]);
+
+  // ★ 快速组件确认（2026-08：把弹窗内临时配对批量落库 + 自动刷新列表，
+  //   保证关闭后看到的一定是已组好件的状态）
+  const handleQuickComponentConfirm = useCallback(
+    async (pairs: Map<string, string>) => {
+      const actions = collectPairActions(pairs);
+      let total = 0;
+      for (const action of actions) {
+        for (const sid of action.sourceIds) {
+          await linkRecordParent(sid, action.voucherId);
+          total += 1;
+        }
+      }
+      // 清空当前选择 + 刷新（先组件再组卷，列表立刻呈现已挂接的「件」单元）
+      setSelectedIds(new Set());
+      useArchiveStore.getState().loadRecords();
+      void useArchiveStore.getState().loadAllRecords();
+      showToast(`快速组件完成：${total} 张原始凭证已配对到记账凭证`);
+    },
+    [],
+  );
 
   const doAddToVolume = useCallback(
     async (volumeId: string) => {
@@ -2671,6 +2719,7 @@ const VolumeWorkspacePage: React.FC = () => {
         volumeCount={volumes.length}
         onChange={(f) => setFilters(f)}
         onRecommend={handleRecommend}
+        onQuickComponent={() => setShowQuickComponent(true)}
         onUploadMaterial={() => {
           // 若无选中案卷，自动选中第一个草稿案卷
           if (!activeVolumeId) {
@@ -2953,6 +3002,15 @@ const VolumeWorkspacePage: React.FC = () => {
         </div>
       </div>
     </div>
+
+      {/* ★ 快速组件配对弹窗（2026-08：智能组卷左侧的放松式配对入口） */}
+      <QuickComponentModal
+        open={showQuickComponent}
+        vouchers={quickVouchers}
+        sources={quickSources}
+        onClose={() => setShowQuickComponent(false)}
+        onConfirm={handleQuickComponentConfirm}
+      />
 
       {/* 凭证归档上传弹窗 */}
       <VoucherUploadModal
