@@ -8,6 +8,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.stream.Collectors;
 
@@ -33,6 +34,13 @@ public class ApiExceptionHandler {
         .map(FieldError::getField)
         .collect(Collectors.joining(", ")) + " 参数不合法";
     return ResponseEntity.badRequest().body(ApiError.of("VALIDATION_FAILED", msg));
+  }
+
+  /** 未映射路径（含已下线端点）→ 404，不再落兜底 500 刷错误日志（2026-08-21） */
+  @ExceptionHandler(NoResourceFoundException.class)
+  public ResponseEntity<ApiError> handleNoResource(NoResourceFoundException e) {
+    return ResponseEntity.status(HttpStatus.NOT_FOUND)
+        .body(ApiError.of("NOT_FOUND", "接口不存在: " + e.getResourcePath()));
   }
 
   /** 兜底 */

@@ -100,7 +100,7 @@ public class RecordController {
     return service.create(userId, ticket, cmd, filename, mime, file.getBytes());
   }
 
-  // ── 删除（仅收集池「仅件数据」记录；已组卷须先拆件） ──
+  // ── 删除（仅收集池「仅件数据」记录；已组卷须先拆件；v2.6 起逻辑删除入回收站） ──
 
   @DeleteMapping("/{nodeId}")
   public ResponseEntity<Void> delete(
@@ -109,8 +109,34 @@ public class RecordController {
       @PathVariable String nodeId) {
     AuthUser me = perm.me(userId, ticket);
     perm.requireFunction(me, "voucher-manager");
-    service.delete(ticket, nodeId);
+    service.delete(ticket, me.account(), nodeId);
     return ResponseEntity.noContent().build();
+  }
+
+  // ── 回收站（v2.6：逻辑删除件列表 / 恢复；v2.6.1 起移除彻底删除——物理销毁走鉴定销毁流程） ──
+
+  /** GET /recycle?fondsCode= — 回收站件列表（按删除时间倒序；不可搜索、不参与组卷） */
+  @GetMapping("/recycle")
+  public List<Map<String, Object>> listRecycle(
+      @RequestHeader(value = "X-User-Id", required = false) String userId,
+      @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
+      @RequestParam String fondsCode) {
+    AuthUser me = perm.me(userId, ticket);
+    perm.requireFunction(me, "voucher-manager");
+    perm.checkFonds(me, fondsCode);
+    return service.listRecycle(ticket, fondsCode);
+  }
+
+  /** POST /recycle/{nodeId}/restore — 恢复：移回收集池 + 清除删除标记（可重新组卷/检索） */
+  @PostMapping("/recycle/{nodeId}/restore")
+  public Map<String, Object> restoreRecycle(
+      @RequestHeader(value = "X-User-Id", required = false) String userId,
+      @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
+      @PathVariable String nodeId) {
+    AuthUser me = perm.me(userId, ticket);
+    perm.requireFunction(me, "voucher-manager");
+    service.restoreRecycle(ticket, nodeId);
+    return Map.of("nodeId", nodeId, "restored", true);
   }
 
   // ── 组件挂接（先组件再组卷，2026-08-20） ──

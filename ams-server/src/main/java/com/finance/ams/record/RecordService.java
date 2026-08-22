@@ -41,6 +41,8 @@ public class RecordService {
   static final String ROOT_NAME = "会计档案管理";
   /** 收集池目录名（每个全宗下一个） */
   static final String POOL_NAME = "_收集池";
+  /** 回收站目录名（每个全宗下一个；逻辑删除件移入，可恢复） */
+  static final String RECYCLE_NAME = "_回收站";
   /** 件级临时档号标记（未赋号）：全宗号 + 此后缀 + uuid8 */
   static final String PENDING_CODE_SUFFIX = "-PEND-";
 
@@ -146,12 +148,16 @@ public class RecordService {
   }
 
   /**
-   * 删除收集池记录（永久删除）。
+   * 删除收集池记录（v2.6 起为「逻辑删除」，不再物理删除）。
    * 守卫：仅「仅件数据」状态可删——已组卷/已归档记录须先在组卷工作台拆件，
    * 否则会破坏卷内引用完整性（2026-07-29 假删除 bug 修复配套端点）。
+   *
+   * 逻辑删除流程：置 finance:deleted/finance:deletedBy → 节点 move 到回收站目录
+   * （/{全宗}/_回收站/），数据与元数据完整保留，可从回收站恢复。
+   * v2.6.1 起回收站不提供彻底删除——物理销毁属档案鉴定业务，走鉴定销毁流程。
    */
   @SuppressWarnings("unchecked")
-  public void delete(String ticket, String nodeId) {
+  public void delete(String ticket, String userId, String nodeId) {
     Map<String, Object> entry;
     try {
       entry = nodes.getNodeWithPath(ticket, nodeId);
@@ -168,13 +174,136 @@ public class RecordService {
       throw new BizException(HttpStatus.CONFLICT, "NOT_DELETABLE",
           "仅「仅件数据」状态的记录可删除（当前: " + status + "）；已组卷请先在组卷工作台拆件");
     }
+    // 已在回收站（防重复入站）
+    String deletedAt = props instanceof Map<?, ?> p2 && p2.get("finance:deleted") != null
+        ? String.valueOf(p2.get("finance:deleted")) : "";
+    if (!deletedAt.isEmpty()) {
+      throw BizException.badRequest("ALREADY_DELETED", "该记录已在回收站，无需重复删除");
+    }
+
     try {
-      nodes.deleteNode(ticket, nodeId);
-      log.info("删除记录: {}（recordStatus {}，永久删除）", nodeId, status);
+      // ① 打删除标记（置位 finance:deleted + 删除人）
+      nodes.updateNode(ticket, nodeId, Map.of(
+          "finance:deleted", java.time.OffsetDateTime.now().toString(),
+          "finance:deletedBy", userId == null ? "" : userId));
+      // ② 移入回收站目录（数据/元数据完整保留）
+      String fondsId = str(layout.findFondsOf(ticket, nodeId).get("id"));
+      String recycleId = recycleDir(ticket, fondsId);
+      moveNodeTo(ticket, nodeId, recycleId);
+      log.info("记录移入回收站: {}（{}，操作人 {}）", nodeId, status, userId);
     } catch (HttpClientErrorException e) {
+      // 回滚删除标记（移入失败时保持原状，避免"标删未移"的悬空件）
+      try { nodes.updateNode(ticket, nodeId, Map.of("finance:deleted", "", "finance:deletedBy", "")); } catch (Exception ignored) { /* 尽力而为 */ }
       throw translate("删除失败", e);
     }
-    events.publishEvent(RecordsChangedEvent.removed(nodeId)); // V10 读模型同步
+    events.publishEvent(RecordsChangedEvent.removed(nodeId)); // 回收站件不再参与检索/组卷
+  }
+
+  /**
+   * 回收站列表（/{全宗}/_回收站/ 下 finance:record 件，按删除时间倒序）。
+   * 直接走 children 事务读，不依赖 Solr 索引；空回收站目录返回空列表。
+   */
+  @SuppressWarnings("unchecked")
+  public List<Map<String, Object>> listRecycle(String ticket, String fondsCode) {
+    if (!notBlank(fondsCode)) throw BizException.badRequest("VALIDATION_FAILED", "fondsCode 不能为空");
+    String fondsId = resolveFonds(ticket, fondsCode);
+    String recycleId;
+    try {
+      String found = nodes.findChildId(ticket, fondsId, RECYCLE_NAME);
+      if (found == null) return new ArrayList<>(); // 从未删过 → 回收站目录尚不存在
+      recycleId = found;
+    } catch (HttpClientErrorException e) {
+      throw translate("回收站解析失败", e);
+    }
+    List<Map<String, Object>> views = new ArrayList<>();
+    for (Map<String, Object> e : childrenOfType(ticket, recycleId, "finance:record")) {
+      views.add(toView(e, null, -1));
+    }
+    views.sort(Comparator.comparing(v -> str(v.get("deletedAt")), Comparator.reverseOrder()));
+    return views;
+  }
+
+  /**
+   * 恢复回收站记录：清除删除标记 → 移回收集池，重入组卷池/检索。
+   * 守卫：仅回收站内（finance:deleted 置位）的记录可恢复。
+   */
+  public void restoreRecycle(String ticket, String nodeId) {
+    Map<String, Object> entry;
+    try {
+      entry = nodes.getNodeWithPath(ticket, nodeId);
+    } catch (HttpClientErrorException e) {
+      throw BizException.badRequest("NOT_FOUND", "记录不存在: " + nodeId);
+    }
+    if (!"finance:record".equals(entry.get("nodeType"))) {
+      throw BizException.badRequest("NOT_RECORD", "目标不是档案记录节点: " + nodeId);
+    }
+    Object props = entry.get("properties");
+    String deletedAt = props instanceof Map<?, ?> p && p.get("finance:deleted") != null
+        ? String.valueOf(p.get("finance:deleted")) : "";
+    if (deletedAt.isEmpty()) {
+      throw BizException.badRequest("NOT_DELETED", "该记录不在回收站，无需恢复");
+    }
+    try {
+      String fondsId = str(layout.findFondsOf(ticket, nodeId).get("id"));
+      String poolId = ensurePool(ticket, fondsId);
+      moveNodeTo(ticket, nodeId, poolId);
+      nodes.updateNode(ticket, nodeId, Map.of("finance:deleted", "", "finance:deletedBy", ""));
+      log.info("记录从回收站恢复: {}", nodeId);
+    } catch (HttpClientErrorException e) {
+      // 恢复失败时尽量回滚：若已移回池但清标失败，把件重新标记并移回回收站，保持回收站态一致
+      try {
+        String fondsId = str(layout.findFondsOf(ticket, nodeId).get("id"));
+        String recycleId = recycleDir(ticket, fondsId);
+        nodes.updateNode(ticket, nodeId, Map.of("finance:deleted", java.time.OffsetDateTime.now().toString()));
+        moveNodeTo(ticket, nodeId, recycleId);
+      } catch (Exception ignored) { /* 尽力而为 */ }
+      throw translate("恢复失败", e);
+    }
+    events.publishEvent(RecordsChangedEvent.refreshOne(nodeId)); // 重入读模型
+  }
+
+  /**
+   * 回收站目录 id（不存在则以当前用户身份创建；目录缓存与收集池同策略）。
+   */
+  private String recycleDir(String ticket, String fondsId) {
+    String key = "recycle:" + fondsId;
+    String cached = poolCache.get(key);
+    if (cached != null) return cached;
+    synchronized (poolCache) {
+      if (poolCache.containsKey(key)) return poolCache.get(key);
+      String recycleId;
+      try {
+        recycleId = nodes.findChildId(ticket, fondsId, RECYCLE_NAME);
+        if (recycleId == null) {
+          recycleId = String.valueOf(nodes.createFolder(ticket, fondsId, RECYCLE_NAME).get("id"));
+          log.info("创建回收站目录: 全宗 {} → {}", fondsId, recycleId);
+        }
+      } catch (HttpClientErrorException e) {
+        throw translate("回收站目录解析失败", e);
+      }
+      poolCache.put(key, recycleId);
+      return recycleId;
+    }
+  }
+
+  /**
+   * 移动节点到目标目录，同名冲突时自动追加 (2)(3)... 后缀（与建件同名重试同策略）。
+   * nodeRef 不变，仅改主父关联。
+   */
+  private void moveNodeTo(String ticket, String nodeId, String targetParentId) {
+    String name = str(nodes.getNode(ticket, nodeId).get("name"));
+    String candidate = name;
+    for (int i = 2; ; i++) {
+      try {
+        nodes.moveNode(ticket, nodeId, targetParentId);
+        return;
+      } catch (HttpClientErrorException.Conflict e) {
+        // 目标目录已存在同名子节点：先改名再移动，避免重名冲突
+        candidate = appendSuffix(name, i);
+        nodes.updateNode(ticket, nodeId, Map.of("cm:name", candidate));
+        if (i > 20) throw BizException.badRequest("NAME_CONFLICT", "回收站同名文件过多，请清理后重试: " + name);
+      }
+    }
   }
 
   private void validate(CreateCmd cmd, String filename, byte[] bytes) {
@@ -376,6 +505,8 @@ public class RecordService {
                                 Predicate<Map<String, Object>> rowFilter) {
     String kw = q.keyword() == null ? "" : q.keyword().trim().toLowerCase();
     List<GatheredEntry> filtered = gathered.stream()
+        // 回收站件（finance:deleted 置位）不参与任何正常列表/组卷/检索（v2.6 安全兜底）
+        .filter(g -> str(prop(g.entry(), "finance:deleted")).isEmpty())
         .filter(g -> q.archiveType() == null || q.archiveType().equals(prop(g.entry(), "finance:archiveType")))
         .filter(g -> q.year() == null || q.year().equals(intProp(g.entry(), "finance:year")))
         .filter(g -> q.month() == null || q.month().equals(intProp(g.entry(), "finance:month")))
@@ -657,6 +788,9 @@ public class RecordService {
     view.put("remarks", prop(entry, "finance:recordRemark"));
     // 组件挂接（finance-model v2.3，2026-08-20）：原始凭证件 → 所属记账凭证件
     view.put("parentRecordId", prop(entry, "finance:parentRecordId"));
+    // v2.6 回收站：删除标记（仅回收站件有值）
+    view.put("deletedAt", prop(entry, "finance:deleted"));
+    view.put("deletedBy", prop(entry, "finance:deletedBy"));
     // V10 全文检索读模型补字段（2026-08-18）：科目/往来单位/单据号/正文（OCR 双通道回写）
     view.put("accountSubject", prop(entry, "finance:accountSubject"));
     view.put("counterpartyName", prop(entry, "finance:counterpartyName"));
