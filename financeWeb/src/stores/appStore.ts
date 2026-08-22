@@ -13,7 +13,7 @@ export type MenuId =
   | 'archive-rcv' | 'wf-control'
   | 'approval-center' | 'borrow-manage' | 'borrow-ledger' | 'borrow-stats' | 'search-stats'
   | 'digital-warehouse'
-  | 'volume-workspace' | 'volume-dir-print' | 'voucher-upload' | 'archive-api-receive'
+  | 'volume-workspace' | 'recycle-bin' | 'volume-dir-print' | 'voucher-upload' | 'archive-api-receive'
   | 'volume-item-search' | 'transfer-manage'
   | 'retention-config'
   | 'source-doc-search' | 'voucher-query' | 'fuzzy-query'

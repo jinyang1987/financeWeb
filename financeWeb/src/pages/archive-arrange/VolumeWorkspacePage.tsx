@@ -45,6 +45,7 @@ import {
 } from '../../utils/unitSelection';
 import { linkRecordParent } from '../../services/recordService';
 import { DataTable, type DataTableColumn } from '../../components/DataTable';
+import { ConfirmModal } from '../../components/common';
 import PaginationBar from '../../components/PaginationBar';
 import { usePagination } from '../../hooks/usePagination';
 import type { Volume, VolumeItem } from '../../types/volume';
@@ -1874,10 +1875,25 @@ const VolumeWorkspacePage: React.FC = () => {
   /** 池列表凭证单元展开态（所附原始凭证查看，2026-08-20） */
   const [expandedPoolId, setExpandedPoolId] = useState<string | null>(null);
 
-  // ★ 凭证号列包装（2026-08-20）：[单元展开钮|占位] + 凭证号 + 原始凭证归属徽标（附于/待挂接）
+  // ★ 凭证号列包装（2026-08-20）：凭证号 + [单元展开钮] + 原始凭证归属徽标（附于/待挂接）
+  //   2026-08-22 重排：展开钮移到凭证号【后】（尾随），去掉行首 18px 占位——
+  //   凭证号文字与表头/其他列左对齐，不再整列后移空出一块。
   //   ⚠ 依赖 unassignedRecords，声明位置必须在其后（TDZ）
   const poolColumns = useMemo((): DataTableColumn<ArchiveRecord>[] => {
     return tableColumns.map((col) => {
+      // ★ 附件列计数修复（2026-08-22）：列映射里的默认实现读历史遗留字段 sourceDocumentIds
+      //   （DTO 从不下发 → 恒显 0/无）；真实附件数必须按组件挂接关系统计（原始凭证 parentRecordId → 本凭证）
+      if (col.id === 'ATTACHMENTS') {
+        return {
+          ...col,
+          cell: (r: ArchiveRecord) => {
+            const n = isSourceDocument(r) ? 0 : attachedSourceIds(unassignedRecords, r.id).length;
+            return n > 0
+              ? <span className="text-amber-600 font-medium text-xs" title={`${n} 张所附原始凭证`}>{n} 份</span>
+              : <span className="text-slate-400 text-xs">无</span>;
+          },
+        };
+      }
       if (col.id !== 'VOUCHER_NO') return col;
       return {
         ...col,
@@ -1886,20 +1902,18 @@ const VolumeWorkspacePage: React.FC = () => {
           const attCount = isSrc ? 0 : attachedSourceIds(unassignedRecords, r.id).length;
           const parentNo = isSrc && r.parentRecordId ? voucherNoById.get(r.parentRecordId) : undefined;
           return (
-            <span className="inline-flex items-center gap-1">
-              {attCount > 0 ? (
+            <span className="flex items-center gap-1 min-w-0 w-full">
+              <span className="truncate min-w-0">{col.cell?.(r)}</span>
+              {attCount > 0 && (
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); setExpandedPoolId((prev) => (prev === r.id ? null : r.id)); }}
-                  className="p-0.5 text-slate-400 hover:text-sky-600 rounded transition-colors shrink-0"
+                  className="ml-auto p-0.5 text-slate-400 hover:text-sky-600 rounded transition-colors shrink-0"
                   title={`展开查看 ${attCount} 张所附原始凭证`}
                 >
                   {expandedPoolId === r.id ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                 </button>
-              ) : (
-                <span className="w-[18px] shrink-0" aria-hidden="true" />
               )}
-              <span className="truncate">{col.cell?.(r)}</span>
               {isSrc && (r.parentRecordId ? (
                 <span className="shrink-0 px-1 py-px text-[10px] rounded bg-sky-100 text-sky-700" title="所属记账凭证（随其整体组卷）">
                   附于 {parentNo || r.parentRecordId!.slice(0, 8)}
@@ -2587,33 +2601,43 @@ const VolumeWorkspacePage: React.FC = () => {
     setShowPrintModal(true);
   }, []);
 
-  // ── 删除未组卷记录（真删除：调 DELETE /records/{id} 服务端永久删除；
-  // 旧版只 filter 前端状态 → 下次 loadRecords 复活，2026-07-29 用户报障修复） ──
-  const handleDeleteRecord = useCallback(async (recordId: string) => {
-    // ★ 删除有附件的凭证前确认：附件将变「待挂接」（2026-08-20 先组件再组卷）
-    const rec = records.find((r) => r.id === recordId);
-    if (rec && !isSourceDocument(rec)) {
-      const n = attachedSourceIds(records, recordId).length;
-      if (n > 0 && !window.confirm(`该凭证挂有 ${n} 张原始凭证；删除后它们将变为「待挂接」状态。\n确认删除该凭证？`)) return;
-    }
-    try {
-      await deleteRecord(recordId);
-      setRecords(useArchiveStore.getState().records.filter((r) => r.id !== recordId));
-      showToast('已删除记录');
-    } catch (e: any) {
-      showToast(e.message || '删除失败', 'info');
-    }
-  }, [setRecords, records]);
+  // ── 删除未组卷记录（v2.6 起逻辑删除：移入回收站，可恢复；已删件不再出现于列表） ──
+  // 删除确认（2026-08-22 重做）：站内 ConfirmModal 替代 window.confirm（原生弹窗与整站风格不符），
+  // 单个/批量统一只询问一次；凭证的已挂接原始凭证随凭证一并入站
+  // （「原始凭证随所属记账凭证」铁律在删除侧的体现，恢复时整件还原）。
+  const [deleteConfirm, setDeleteConfirm] = useState<{ ids: string[]; attachCount: number } | null>(null);
 
-  // ── 批量删除未组卷记录（逐件独立成败，失败件保留并提示） ──
-  const handleBatchDelete = useCallback(async (ids: string[]) => {
-    // ★ 连带确认：选择集含随凭证挂接的原始凭证时先声明（2026-08-20）
-    const attachedCount = ids.filter((id) => {
+  /** 待删 id 集的单元闭包：凭证自动带上其已挂接原始凭证（单元化勾选通常已含，此处兜底） */
+  const closeUnitIds = useCallback((ids: string[]): { all: string[]; attachCount: number } => {
+    const set = new Set(ids);
+    for (const id of ids) {
       const r = records.find((x) => x.id === id);
-      return r && isSourceDocument(r) && r.parentRecordId;
+      if (r && !isSourceDocument(r)) {
+        for (const sid of attachedSourceIds(records, id)) set.add(sid);
+      }
+    }
+    const attachCount = [...set].filter((id) => {
+      const r = records.find((x) => x.id === id);
+      return !!r && isSourceDocument(r) && !!r.parentRecordId;
     }).length;
-    if (attachedCount > 0
-        && !window.confirm(`选择集中含 ${attachedCount} 张随凭证挂接的原始凭证，将一并删除（不可恢复）。\n确认删除 ${ids.length} 条记录？`)) return;
+    return { all: [...set], attachCount };
+  }, [records]);
+
+  // ── 删除单个未组卷记录（行内垃圾桶；含附件时一并移入） ──
+  const handleDeleteRecord = useCallback((recordId: string) => {
+    const { all, attachCount } = closeUnitIds([recordId]);
+    setDeleteConfirm({ ids: all, attachCount });
+  }, [closeUnitIds]);
+
+  // ── 批量删除未组卷记录（工具栏；单元闭包后一次确认） ──
+  const handleBatchDelete = useCallback((ids: string[]) => {
+    if (ids.length === 0) return;
+    const { all, attachCount } = closeUnitIds(ids);
+    setDeleteConfirm({ ids: all, attachCount });
+  }, [closeUnitIds]);
+
+  /** 确认后执行删除（逐件独立成败，失败件保留并提示） */
+  const executeDelete = useCallback(async (ids: string[]) => {
     const failedIds = new Set<string>();
     let firstErr = '';
     for (const id of ids) {
@@ -2624,16 +2648,19 @@ const VolumeWorkspacePage: React.FC = () => {
         if (!firstErr) firstErr = e?.message || '删除失败';
       }
     }
-    setRecords(useArchiveStore.getState().records.filter(
-      (r) => !ids.includes(r.id) || failedIds.has(r.id),
-    ));
-    setSelectedIds(new Set());
+    const okIds = ids.filter((id) => !failedIds.has(id));
+    setRecords(useArchiveStore.getState().records.filter((r) => !okIds.includes(r.id)));
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      okIds.forEach((id) => next.delete(id));
+      return next;
+    });
     if (failedIds.size === 0) {
-      showToast(`已批量删除 ${ids.length} 条记录`);
+      showToast(ids.length === 1 ? '已移入回收站' : `已移入回收站 ${ids.length} 条记录`);
     } else {
-      showToast(`已删除 ${ids.length - failedIds.size} 条，${failedIds.size} 条失败（${firstErr}）`, 'info');
+      showToast(`已移入 ${okIds.length} 条，${failedIds.size} 条失败（${firstErr}）`, 'info');
     }
-  }, [setRecords, records]);
+  }, [setRecords]);
 
   // ── 获取案卷的四性检测状态 ──
   const getChecks = (volumeId: string): VolumeChecks => {
@@ -2959,6 +2986,33 @@ const VolumeWorkspacePage: React.FC = () => {
         open={showUploadModal}
         onClose={() => setShowUploadModal(false)}
         targetVolumeId={activeVolumeId || undefined}
+      />
+
+      {/* 删除确认弹窗（替代 window.confirm；单个/批量统一只问一次） */}
+      <ConfirmModal
+        open={!!deleteConfirm}
+        danger
+        title="移入回收站"
+        message={deleteConfirm && (
+          <>
+            <p>
+              将把 <b className="text-slate-800">{deleteConfirm.ids.length}</b> 条记录移入回收站，
+              数据与文件完整保留，可随时在「回收站」恢复。
+            </p>
+            {deleteConfirm.attachCount > 0 && (
+              <p className="mt-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-amber-700 text-[13px]">
+                其中含 {deleteConfirm.attachCount} 张随凭证挂接的原始凭证，将随凭证一并移入（恢复时整件还原）。
+              </p>
+            )}
+          </>
+        )}
+        confirmLabel="移入回收站"
+        onCancel={() => setDeleteConfirm(null)}
+        onConfirm={() => {
+          const ids = deleteConfirm?.ids;
+          setDeleteConfirm(null);
+          if (ids?.length) void executeDelete(ids);
+        }}
       />
 
       {/* 卷内目录打印弹窗 */}

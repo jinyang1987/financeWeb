@@ -70,6 +70,7 @@ export const menuGroups: MenuGroupDef[] = [
     toggleable: true,
     items: [
       { key: 'volume-workspace', label: '组卷工作台', Icon: Layers, depth: 1 },
+      { key: 'recycle-bin', label: '回收站', Icon: Trash2, depth: 1 },
     ],
   },
   {

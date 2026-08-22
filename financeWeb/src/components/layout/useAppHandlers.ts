@@ -33,15 +33,15 @@ export function useAppHandlers(
   const handleDeleteRecord = useCallback(
     async (id: string, e: React.MouseEvent) => {
       e.stopPropagation();
-      if (!confirm('是否确认删除该电子会计档案记录？该操作不可恢复')) return;
+      if (!confirm('是否确认删除该电子会计档案记录？删除后将移入回收站，可恢复')) return;
       try {
-        // 真删除：DELETE /records/{id}（旧版只删前端状态 → loadRecords 后复活）
+        // 逻辑删除：DELETE /records/{id}（移入回收站，可恢复；v2.6）
         await deleteRecord(id);
         const currentRecords = useArchiveStore.getState().records;
         setRecords(currentRecords.filter(r => r.id !== id));
         // 同步全量件镜像（读侧页面口径一致）
         void useArchiveStore.getState().loadAllRecords();
-        onTriggerToast('记录已删除', 'warning');
+        onTriggerToast('记录已移入回收站', 'warning');
       } catch (err: any) {
         onTriggerToast(err?.message || '删除失败', 'warning');
       }
