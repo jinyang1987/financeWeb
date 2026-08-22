@@ -24,12 +24,13 @@ export const VOUCHER_COLUMN_MAP: Record<string, ColumnDef> = {
   VOUCHER_NO: {
     metaId: 'VOUCHER_NO', label: '凭证号',
     accessor: (r) => <span className="font-mono font-bold text-slate-800 text-xs">{r.voucherNo}</span>,
-    width: '80px', align: 'left',
+    width: '96px', align: 'left',
   },
   DATE: {
     metaId: 'DATE', label: '制单日期',
     accessor: (r) => <span className="text-xs text-slate-500">{voucherDateOf(r)}</span>,
-    width: '80px', align: 'left',
+    // 104px：4 字表头 + 排序图标 + 单元格内边距刚好不裁切（2026-08-22 排序图标修复配套）
+    width: '104px', align: 'left',
   },
   SUMMARY: {
     metaId: 'SUMMARY', label: '摘要',
@@ -50,17 +51,19 @@ export const VOUCHER_COLUMN_MAP: Record<string, ColumnDef> = {
         {'¥'}{r.amount.toLocaleString('zh-CN', { minimumFractionDigits: 2 })}
       </span>
     ),
-    width: '100px', align: 'right',
+    width: '104px', align: 'right',
   },
   ATTACHMENTS: {
     metaId: 'ATTACHMENTS', label: '附件',
+    // ⚠ 此默认实现读历史遗留字段 sourceDocumentIds（DTO 不下发，恒 0）；
+    //   工作台页面会按组件挂接关系（parentRecordId）覆盖本列，见 VolumeWorkspacePage.poolColumns
     accessor: (r) => {
       const count = r.sourceDocumentIds?.length || 0;
       return count > 0
         ? <span className="text-amber-600 font-medium text-xs">{count} 份</span>
         : <span className="text-slate-400 text-xs">无</span>;
     },
-    width: '48px', align: 'left',
+    width: '64px', align: 'left',
   },
 };
 

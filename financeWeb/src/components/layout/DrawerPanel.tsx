@@ -7,6 +7,7 @@ import { ARCHIVE_ITEM_COLUMN_MAP } from '../../config/metadataColumnMaps/archive
 import { FieldGrid, DetailRows, type FieldItem } from '../common/DetailTable';
 import { InteractivePreview } from '../InteractivePreview';
 import { AuditTimeline } from '../AuditTimeline';
+import { normalizeDateDay } from '../../utils/voucherSort';
 import type { ArchiveRecord } from '../../types';
 
 // ── 凭证分录（finance-model v2.2，用友BIP同步件） ──
@@ -223,7 +224,7 @@ const DrawerPanel: React.FC<DrawerPanelProps> = ({ triggerToast }) => {
             // v2.2 凭证扩展字段（用友BIP同步件具备）
             if (activeRecord.voucherWord) fields.push({ label: '凭证字', value: activeRecord.voucherWord });
             if (activeRecord.period) fields.push({ label: '会计期间', value: activeRecord.period, mono: true });
-            if (activeRecord.voucherDate) fields.push({ label: '凭证日期', value: activeRecord.voucherDate, mono: true });
+            if (activeRecord.voucherDate) fields.push({ label: '凭证日期', value: normalizeDateDay(activeRecord.voucherDate), mono: true });
             if (activeRecord.preparer) fields.push({ label: '制单人', value: activeRecord.preparer });
             if (activeRecord.auditor) fields.push({ label: '审核人', value: activeRecord.auditor });
             if (activeRecord.tallyMan) fields.push({ label: '记账人', value: activeRecord.tallyMan });

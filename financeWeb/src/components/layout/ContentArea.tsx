@@ -29,6 +29,7 @@ import LifecycleStatsPage from '../../pages/archive-stats/LifecycleStatsPage';
 import ComplianceStatsPage from '../../pages/archive-stats/ComplianceStatsPage';
 import CockpitConfigPage from '../../pages/system/CockpitConfigPage';
 import VolumeWorkspacePage from '../../pages/archive-arrange/VolumeWorkspacePage';
+import RecycleBinPage from '../../pages/archive-arrange/RecycleBinPage';
 import VolumeItemSearchPage from '../../pages/archive-preserve/VolumeItemSearchPage';
 import TransferManagePage from '../../pages/archive-utilization/TransferManagePage';
 import ArchiveManageConfigPage from '../../pages/archive-config/manage/ArchiveManageConfigPage';
@@ -231,6 +232,10 @@ const ContentArea: React.FC = () => {
 
   if (activeMainMenu === 'volume-workspace') {
     return <VolumeWorkspacePage />;
+  }
+
+  if (activeMainMenu === 'recycle-bin') {
+    return <RecycleBinPage />;
   }
 
   if (activeMainMenu === 'sys-connection') {

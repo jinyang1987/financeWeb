@@ -77,9 +77,11 @@ export interface DataTableProps<TData extends { id: string }> {
 // ── 排序图标 ──
 
 function SortIcon({ sorted }: { sorted: 'asc' | 'desc' | false }) {
-  if (sorted === 'asc') return <ArrowUp className="w-3.5 h-3.5 text-sky-500" />;
-  if (sorted === 'desc') return <ArrowDown className="w-3.5 h-3.5 text-sky-500" />;
-  return <ArrowUpDown className="w-3.5 h-3.5 text-slate-300" />;
+  // 图标永不裁切（shrink-0）：列窄时让位于文本截断，图标必须常显（2026-08-22 修复「可排序但无箭头」）
+  if (sorted === 'asc') return <ArrowUp className="w-3.5 h-3.5 shrink-0 text-sky-500" />;
+  if (sorted === 'desc') return <ArrowDown className="w-3.5 h-3.5 shrink-0 text-sky-500" />;
+  // 未排序态也要清晰可见（slate-300 落在 bg-slate-100 表头上近乎隐形，2026-08-22 修复）
+  return <ArrowUpDown className="w-3.5 h-3.5 shrink-0 text-slate-400" />;
 }
 
 // ── 对齐映射 ──
@@ -212,11 +214,13 @@ export function DataTable<TData extends { id: string }>({
             <button
               type="button"
               onClick={col.sortable ? () => column.toggleSorting(column.getIsSorted() === 'asc') : undefined}
-              className={`inline-flex items-center gap-1 truncate ${
+              className={`inline-flex min-w-0 items-center gap-1 ${
                 col.sortable ? 'cursor-pointer hover:text-foreground select-none' : ''
               }`}
             >
-              {col.header}
+              {/* 窄列截断先裁文本、图标常显（旧 truncate 在按钮上会把图标整体裁掉）；
+                  表头悬浮显示完整列名（2026-08-22：列名截断时 hover 见全名） */}
+              <span className="truncate" title={col.header}>{col.header}</span>
               {col.sortable && <SortIcon sorted={column.getIsSorted() as 'asc' | 'desc' | false} />}
             </button>
           </div>
