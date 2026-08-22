@@ -206,7 +206,6 @@ interface UnassignedPoolProps {
   /** 搜索框占位文案（随待组卷池类别联动，2026-08-21） */
   searchPlaceholder: string;
   onAddToVolume: (volumeId: string) => void;
-  onDeleteRecord: (id: string) => void;
   onBatchDelete: (ids: string[]) => void;
   volumes: Volume[];
   /** 一键创建案卷并加入选中凭证 */
@@ -229,7 +228,7 @@ interface UnassignedPoolProps {
 
 const UnassignedPool: React.FC<UnassignedPoolProps> = ({
   records, allPoolRecords, selectedIds, onToggleSelect, onSelectAll,
-  searchQuery, onSearchChange, searchPlaceholder, onAddToVolume, onDeleteRecord, onBatchDelete, volumes,
+  searchQuery, onSearchChange, searchPlaceholder, onAddToVolume, onBatchDelete, volumes,
   onCreateAndAdd,
   attachmentCountMap, onViewDetail, tableColumns,
   linkableCount, unlinkableCount, onLinkSelection, onUnlinkSelection, expandedId,
@@ -416,6 +415,7 @@ const UnassignedPool: React.FC<UnassignedPoolProps> = ({
             );
           }}
           renderActions={(r) => (
+            // 行内仅保留「详情」；删除走顶部工具栏批量删除（避免每行都带危险操作，2026-08-22）
             <span className="flex items-center gap-0.5">
               <button
                 type="button"
@@ -425,17 +425,9 @@ const UnassignedPool: React.FC<UnassignedPoolProps> = ({
               >
                 <Eye className="w-3.5 h-3.5" />
               </button>
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); onDeleteRecord(r.id); }}
-                className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
-                title="删除此记录"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
             </span>
           )}
-          actionsWidth={64}
+          actionsWidth={40}
           emptyLabel="暂无未组卷条目"
           selectedClassName="bg-sky-100 hover:bg-sky-200/70"
         />
@@ -2671,13 +2663,8 @@ const VolumeWorkspacePage: React.FC = () => {
     return { all: [...set], attachCount };
   }, [records]);
 
-  // ── 删除单个未组卷记录（行内垃圾桶；含附件时一并移入） ──
-  const handleDeleteRecord = useCallback((recordId: string) => {
-    const { all, attachCount } = closeUnitIds([recordId]);
-    setDeleteConfirm({ ids: all, attachCount });
-  }, [closeUnitIds]);
-
   // ── 批量删除未组卷记录（工具栏；单元闭包后一次确认） ──
+  // （行内单删按钮已于 2026-08-22 移除：删除统一走勾选 + 工具栏「删除」）
   const handleBatchDelete = useCallback((ids: string[]) => {
     if (ids.length === 0) return;
     const { all, attachCount } = closeUnitIds(ids);
@@ -2807,7 +2794,6 @@ const VolumeWorkspacePage: React.FC = () => {
               : poolCategory === 'QT' ? '搜索资料名称/子类型/摘要…'
               : '搜索凭证号/名称/摘要/金额…'}
             onAddToVolume={handleAddToVolume}
-            onDeleteRecord={handleDeleteRecord}
             onBatchDelete={handleBatchDelete}
             volumes={draftVolumes}
             onCreateAndAdd={handleCreateAndAdd}
