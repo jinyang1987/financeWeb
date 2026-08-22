@@ -26,6 +26,7 @@ import { VOUCHER_COLUMN_MAP } from '../config/metadataColumnMaps/voucherColumns'
 import { getExtFieldDefs } from '../types/sourceDocument';
 import { FieldGrid, DetailRows, type FieldItem } from './common/DetailTable';
 import { isSourceDocument } from '../utils/recordType';
+import { voucherDateOf, normalizeDateDay } from '../utils/voucherSort';
 import type { ArchiveRecord } from '../types';
 import type { SourceDocument } from '../types/sourceDocument';
 
@@ -331,7 +332,8 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
       if (record.counterpartyName) out.push({ label: '往来单位', value: record.counterpartyName });
       out.push({
         label: '业务日期',
-        value: record.voucherDate || (record.year ? `${record.year}-${record.month ? record.month.padStart(2, '0') : '01'}` : ''),
+        // 归一化到日：截去时间分量；无 voucherDate 时回退 年-月/仅年（不编造 01 月）
+        value: voucherDateOf(record),
         mono: true,
       });
       out.push({ label: '小写金额', value: `¥${fmt(record.amount)}`, mono: true, valueClassName: 'text-emerald-700 font-medium' });
@@ -346,7 +348,14 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
       return out;
     }
     if (isVoucher) {
-      voucherFields.forEach(col => out.push({ label: col.label, value: col.accessor(record) }));
+      voucherFields.forEach(col => {
+        // ★ 附件数按组件挂接关系实算（列映射默认实现读遗留字段 sourceDocumentIds，DTO 不下发恒为 0，2026-08-22 修复）
+        if (col.metaId === 'ATTACHMENTS') {
+          out.push({ label: col.label, value: linkedSourceRecords.length > 0 ? `${linkedSourceRecords.length} 份` : '无' });
+          return;
+        }
+        out.push({ label: col.label, value: col.accessor(record) });
+      });
     } else {
       visibleArchiveFields.forEach(col => out.push({ label: col.label, value: col.accessor(record) }));
       out.push({ label: '组卷状态', value: record.status });
@@ -356,7 +365,7 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
     // v2.2 凭证扩展字段（有值才显示；用友BIP同步件全量具备）
     if (record.voucherWord) out.push({ label: '凭证字', value: record.voucherWord });
     if (record.period) out.push({ label: '会计期间', value: record.period, mono: true });
-    if (record.voucherDate) out.push({ label: '凭证日期', value: record.voucherDate, mono: true });
+    if (record.voucherDate) out.push({ label: '凭证日期', value: normalizeDateDay(record.voucherDate), mono: true });
     if (record.preparer) out.push({ label: '制单人', value: record.preparer });
     if (record.auditor) out.push({ label: '审核人', value: record.auditor });
     if (record.tallyMan) out.push({ label: '记账人', value: record.tallyMan });
@@ -364,7 +373,7 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
     if (record.sourceSystem) out.push({ label: '来源系统', value: record.sourceSystem });
     if (record.summary) out.push({ label: '摘要', value: record.summary, span: 2 });
     return out;
-  }, [isVoucher, isSourceDoc, voucherFields, visibleArchiveFields, record]);
+  }, [isVoucher, isSourceDoc, voucherFields, visibleArchiveFields, record, linkedSourceRecords]);
 
   return (
     <div className="flex-1 h-full bg-white border-l border-slate-200 overflow-y-auto">

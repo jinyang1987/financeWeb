@@ -41,6 +41,7 @@ const amountCell = (r: ArchiveRecord) => (
 );
 
 const attachCell = (r: ArchiveRecord) => {
+  // ⚠ 同 voucherColumns：默认实现读遗留字段（恒 0）；工作台按挂接关系覆盖，见 VolumeWorkspacePage.poolColumns
   const count = r.sourceDocumentIds?.length || 0;
   return count > 0
     ? <span className="text-amber-600 font-medium text-xs">{count} 份</span>
@@ -80,40 +81,42 @@ const typeBadgeCell = (r: ArchiveRecord) => {
 // 四套列定义
 // ═══════════════════════════════════════════════════════════
 
-/** 全部（混合视图）：通用列 + 类别徽标 */
+/** 全部（混合视图）：通用列 + 类别徽标。
+ *  列宽口径（2026-08-22 重排）：表头全显优先——宽 ≥ 表头字数×13 + 排序图标 18 + 内边距 32，
+ *  截断时 hover 悬浮见全名（DataTable 表头/单元格均已挂 title）。 */
 const ALL_COLUMNS: ColumnDef[] = [
-  { metaId: 'VOUCHER_NO', label: '凭证号/名称', accessor: nameCell, width: '110px', align: 'left' },
+  { metaId: 'VOUCHER_NO', label: '凭证号/名称', accessor: nameCell, width: '134px', align: 'left' },
   { metaId: 'ARCHIVE_TYPE', label: '类别', accessor: typeBadgeCell, width: '72px', align: 'left' },
-  { metaId: 'DATE', label: '制单日期', accessor: (r) => text(voucherDateOf(r), 'text-xs text-slate-500'), width: '80px', align: 'left' },
+  { metaId: 'DATE', label: '制单日期', accessor: (r) => text(voucherDateOf(r), 'text-xs text-slate-500'), width: '104px', align: 'left' },
   { metaId: 'SUMMARY', label: '摘要', accessor: summaryCell, width: '130px', align: 'left' },
-  { metaId: 'AMOUNT', label: '金额', accessor: amountCell, width: '90px', align: 'right' },
-  { metaId: 'ATTACHMENTS', label: '附件', accessor: attachCell, width: '48px', align: 'left' },
+  { metaId: 'AMOUNT', label: '金额', accessor: amountCell, width: '104px', align: 'right' },
+  { metaId: 'ATTACHMENTS', label: '附件', accessor: attachCell, width: '64px', align: 'left' },
 ];
 
 /** 会计账簿：名称 + 子类型（总账/明细账/日记账…）+ 年度/期限 */
 const KB_COLUMNS: ColumnDef[] = [
   { metaId: 'VOUCHER_NO', label: '账簿名称', accessor: nameCell, width: '130px', align: 'left' },
-  { metaId: 'SUB_TYPE', label: '账簿子类型', accessor: (r) => text(r.subType || '—'), width: '80px', align: 'left' },
-  { metaId: 'YEAR', label: '年度', accessor: (r) => text(r.year, 'text-xs text-slate-500'), width: '56px', align: 'left' },
-  { metaId: 'RETENTION', label: '保管期限', accessor: (r) => text(r.retention || '—'), width: '64px', align: 'left' },
+  { metaId: 'SUB_TYPE', label: '账簿子类型', accessor: (r) => text(r.subType || '—'), width: '100px', align: 'left' },
+  { metaId: 'YEAR', label: '年度', accessor: (r) => text(r.year, 'text-xs text-slate-500'), width: '84px', align: 'left' },
+  { metaId: 'RETENTION', label: '保管期限', accessor: (r) => text(r.retention || '—'), width: '88px', align: 'left' },
   { metaId: 'SUMMARY', label: '摘要', accessor: summaryCell, width: '120px', align: 'left' },
 ];
 
 /** 财务报告：名称 + 期间/报表分类 + 年度/期限 */
 const FB_COLUMNS: ColumnDef[] = [
   { metaId: 'VOUCHER_NO', label: '报告名称', accessor: nameCell, width: '130px', align: 'left' },
-  { metaId: 'REPORT_PERIOD', label: '报告期间', accessor: (r) => text(r.reportPeriod || '—'), width: '64px', align: 'left' },
-  { metaId: 'REPORT_CATEGORY', label: '报表分类', accessor: (r) => text(r.reportCategory || '—'), width: '72px', align: 'left' },
-  { metaId: 'YEAR', label: '年度', accessor: (r) => text(r.year, 'text-xs text-slate-500'), width: '56px', align: 'left' },
-  { metaId: 'RETENTION', label: '保管期限', accessor: (r) => text(r.retention || '—'), width: '64px', align: 'left' },
+  { metaId: 'REPORT_PERIOD', label: '报告期间', accessor: (r) => text(r.reportPeriod || '—'), width: '88px', align: 'left' },
+  { metaId: 'REPORT_CATEGORY', label: '报表分类', accessor: (r) => text(r.reportCategory || '—'), width: '88px', align: 'left' },
+  { metaId: 'YEAR', label: '年度', accessor: (r) => text(r.year, 'text-xs text-slate-500'), width: '84px', align: 'left' },
+  { metaId: 'RETENTION', label: '保管期限', accessor: (r) => text(r.retention || '—'), width: '88px', align: 'left' },
 ];
 
 /** 其他会计资料：名称 + 子类型 + 日期/期限 */
 const QT_COLUMNS: ColumnDef[] = [
   { metaId: 'VOUCHER_NO', label: '资料名称', accessor: nameCell, width: '120px', align: 'left' },
-  { metaId: 'SUB_TYPE', label: '资料子类型', accessor: (r) => text(r.subType || '—'), width: '84px', align: 'left' },
-  { metaId: 'DATE', label: '日期', accessor: (r) => text(voucherDateOf(r), 'text-xs text-slate-500'), width: '80px', align: 'left' },
-  { metaId: 'RETENTION', label: '保管期限', accessor: (r) => text(r.retention || '—'), width: '64px', align: 'left' },
+  { metaId: 'SUB_TYPE', label: '资料子类型', accessor: (r) => text(r.subType || '—'), width: '100px', align: 'left' },
+  { metaId: 'DATE', label: '日期', accessor: (r) => text(voucherDateOf(r), 'text-xs text-slate-500'), width: '104px', align: 'left' },
+  { metaId: 'RETENTION', label: '保管期限', accessor: (r) => text(r.retention || '—'), width: '88px', align: 'left' },
   { metaId: 'SUMMARY', label: '摘要', accessor: summaryCell, width: '110px', align: 'left' },
 ];
 
