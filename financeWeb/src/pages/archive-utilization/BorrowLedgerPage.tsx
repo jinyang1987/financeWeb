@@ -80,7 +80,6 @@ const BorrowLedgerPage: React.FC = () => {
         <div className="flex items-center gap-3">
           <Notebook className="w-5 h-5 text-slate-600" />
           <h1 className="text-base font-bold text-slate-800">借阅台账</h1>
-          <span className="text-xs text-slate-400">全生命周期借阅记录追溯 · 谁/何时/借了什么/应还/实还</span>
         </div>
       </div>
 

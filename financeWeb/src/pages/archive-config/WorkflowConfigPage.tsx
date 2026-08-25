@@ -286,12 +286,6 @@ const BorrowChainRulesPanel: React.FC<{ wf: BusinessWorkflow }> = ({ wf }) => {
         <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
           <Info className="w-3 h-3" />动态审批人约定
         </div>
-        <div className="text-[10px] text-slate-400 leading-relaxed space-y-0.5">
-          <p><span className="font-mono text-slate-500">基础链/终审</span> = 固定角色必经节点；</p>
-          <p><span className="font-mono text-slate-500">extended_perms</span> = 按申请数据动态判定（下载/打印/实体）；</p>
-          <p><span className="font-mono text-slate-500">sensitive</span> = 按档案密级动态判定（秘密/机密）；</p>
-          <p>同一角色重复出现时自动去重，保持顺序。</p>
-        </div>
       </div>
 
       {/* 生效语义 */}

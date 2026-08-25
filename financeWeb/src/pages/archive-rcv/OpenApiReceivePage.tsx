@@ -8,21 +8,22 @@
  * 四大类会计资料（79号令第六条）：凭证 / 账簿 / 报表 / 其他。
  *
  * 页面三 Tab：
- *   ① 推送监控 —— 批次总览、四性检测、去向操作（送组卷/自动组卷/送审核）、明细
+ *   ① 推送监控 —— 批次总览、去向操作（自动组卷直接入库）、明细
  *   ② 接口标准 —— 统一契约文档：鉴权、端点、四类字段契约、示例、错误码、期限速查
- *   ③ 推送日志 —— 受理→校验→映射→建件→四性→去向 全链路日志
+ *   ③ 推送日志 —— 受理→校验→映射→建件→去向 全链路日志
  *
- * 「模拟推送」：无真实外部系统时，一键生成四类样例数据走真实推送管道演示。
+ * 2026-08-25：移除「模拟推送」演示入口（正式系统不提供模拟）；
+ * 四性检测统一在移交（推送至保管库）环节执行，采集环节不再提供检测按钮。
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Activity, RefreshCw, ChevronDown, ChevronRight, Loader2, KeyRound,
-  ShieldCheck, PlugZap, FileJson, BookOpenText, ScrollText, FlaskConical,
-  Eye, CheckCircle2, AlertTriangle, XCircle, Layers, Inbox,
+  ShieldCheck, PlugZap, FileJson, BookOpenText, ScrollText,
+  CheckCircle2, AlertTriangle, XCircle, Layers, Inbox,
 } from 'lucide-react';
 import {
-  openPushService, CATEGORY_LABELS, DESTINATION_LABELS, ACTIVE_DESTINATIONS,
+  openPushService, CATEGORY_LABELS, DESTINATION_LABELS,
   type OpenPushBatch, type OpenPushBatchDetail, type OpenPushItem,
   type PushLogEntry, type PushCategory, type PushDestination,
 } from '../../services/openPushService';
@@ -51,7 +52,7 @@ const CATEGORY_BADGE: Record<string, string> = {
 const STEP_LABELS: Record<string, string> = {
   auth: '接入认证', accept: '批次受理', validate: '入口校验', map: '字段映射',
   create: '建件入池', fourchecks: '四性检测', route: '去向路由', group: '自动组卷',
-  receipt: '批次回执', simulate: '模拟推送',
+  receipt: '批次回执',
 };
 
 const catLabel = (c?: string) => (c && CATEGORY_LABELS[c as PushCategory]) || (c === '' ? '混合' : c || '—');
@@ -94,16 +95,11 @@ const MonitorTab: React.FC<{ batches: OpenPushBatch[]; loading: boolean; refresh
     return { todayBatches, totalIn, totalSuccess, totalFail, byCat };
   }, [batches]);
 
-  const runAction = async (batchNo: string, action: 'fourchecks' | 'autogroup') => {
+  const runAction = async (batchNo: string, action: 'autogroup') => {
     setActioning(batchNo + action);
     try {
-      if (action === 'fourchecks') {
-        const r = await openPushService.batchFourChecks(batchNo);
-        triggerToast(`四性检测完成：检测 ${r.checked} 件，通过 ${r.passed} 件，不通过 ${r.failed} 件`, 'success');
-      } else {
-        const r = await openPushService.batchAutoGroup(batchNo);
-        triggerToast(`已自动组卷 ${r.volumes} 卷（${r.items} 件），完成入库`, 'success');
-      }
+      const r = await openPushService.batchAutoGroup(batchNo);
+      triggerToast(`已自动组卷 ${r.volumes} 卷（${r.items} 件），完成入库`, 'success');
       refresh();
     } catch (e) {
       triggerToast('操作失败：' + (e instanceof Error ? e.message : ''), 'warning');
@@ -156,20 +152,22 @@ const MonitorTab: React.FC<{ batches: OpenPushBatch[]; loading: boolean; refresh
             <Inbox className="w-4 h-4 text-sky-600" />
             推送批次
           </h3>
-          <span className="text-xs text-slate-400">{batches.length} 个批次 · 点行展开明细，右侧按钮执行四性/去向操作</span>
+          <span className="text-xs text-slate-400">{batches.length} 个批次</span>
         </div>
-        <table className="w-full text-sm">
+        {/* 横向滚动兜底：列宽不足时滚动而不是把内容挤成竖排（2026-08-25） */}
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[1150px]">
           <thead>
             <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-              <th className="px-4 py-3 text-left text-[13px] font-semibold w-40">批次号</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold w-36">来源应用</th>
-              <th className="px-4 py-3 text-center text-[13px] font-semibold w-20">期间</th>
-              <th className="px-4 py-3 text-center text-[13px] font-semibold w-28">类别</th>
-              <th className="px-4 py-3 text-center text-[13px] font-semibold w-32">去向</th>
-              <th className="px-4 py-3 text-center text-[13px] font-semibold w-20">状态</th>
-              <th className="px-4 py-3 text-right text-[13px] font-semibold w-24">收/成/败</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold w-36">推送时间</th>
-              <th className="px-4 py-3 text-right text-[13px] font-semibold w-64">操作</th>
+              <th className="px-4 py-3 text-left text-[13px] font-semibold w-48 whitespace-nowrap">批次号</th>
+              <th className="px-4 py-3 text-left text-[13px] font-semibold w-40 whitespace-nowrap">来源应用</th>
+              <th className="px-4 py-3 text-center text-[13px] font-semibold w-24 whitespace-nowrap">期间</th>
+              <th className="px-4 py-3 text-center text-[13px] font-semibold w-28 whitespace-nowrap">类别</th>
+              <th className="px-4 py-3 text-center text-[13px] font-semibold w-32 whitespace-nowrap">去向</th>
+              <th className="px-4 py-3 text-center text-[13px] font-semibold w-24 whitespace-nowrap">状态</th>
+              <th className="px-4 py-3 text-right text-[13px] font-semibold w-28 whitespace-nowrap">收/成/败</th>
+              <th className="px-4 py-3 text-left text-[13px] font-semibold w-40 whitespace-nowrap">推送时间</th>
+              <th className="px-4 py-3 text-right text-[13px] font-semibold w-40 whitespace-nowrap">操作</th>
               <th className="px-4 py-3 w-8"></th>
             </tr>
           </thead>
@@ -181,7 +179,7 @@ const MonitorTab: React.FC<{ batches: OpenPushBatch[]; loading: boolean; refresh
             )}
             {!loading && batches.length === 0 && (
               <tr><td colSpan={10} className="px-4 py-12 text-center text-sm text-slate-400">
-                暂无推送批次 — 业务系统持 AppKey 调用 <span className="font-mono">POST /api/ams/open/v1/archives/batch</span> 推送，或点右上角「模拟推送」演示
+                暂无推送批次 — 业务系统持 AppKey 调用 <span className="font-mono">POST /api/ams/open/v1/archives/batch</span> 推送
               </td></tr>
             )}
             {batches.map((b) => {
@@ -192,12 +190,12 @@ const MonitorTab: React.FC<{ batches: OpenPushBatch[]; loading: boolean; refresh
                 <React.Fragment key={b.batch_no}>
                   <tr className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors cursor-pointer"
                     onClick={() => setExpanded(isOpen ? null : b.batch_no)}>
-                    <td className="px-4 py-3 font-mono text-[13px] text-slate-800">{b.batch_no}</td>
+                    <td className="px-4 py-3 font-mono text-[13px] text-slate-800 whitespace-nowrap">{b.batch_no}</td>
                     <td className="px-4 py-3 text-sm text-slate-800">
                       {b.app_name || '—'}
                       {b.source_system && <div className="text-[10px] text-slate-400 font-mono">{b.source_system}</div>}
                     </td>
-                    <td className="px-4 py-3 text-center font-mono text-[13px] text-slate-600">{b.period || '—'}</td>
+                    <td className="px-4 py-3 text-center font-mono text-[13px] text-slate-600 whitespace-nowrap">{b.period || '—'}</td>
                     <td className="px-4 py-3 text-center">
                       <span className={`px-2 py-0.5 text-[11px] font-medium rounded-full border ${CATEGORY_BADGE[b.category || ''] || 'bg-slate-50 text-slate-500 border-slate-200'}`}>
                         {catLabel(b.category)}
@@ -216,23 +214,15 @@ const MonitorTab: React.FC<{ batches: OpenPushBatch[]; loading: boolean; refresh
                       <span className="text-slate-300">/</span>
                       <span className="text-red-500">{b.fail_count}</span>
                     </td>
-                    <td className="px-4 py-3 font-mono text-[13px] text-slate-600">{fmtTime(b.created_at)}</td>
+                    <td className="px-4 py-3 font-mono text-[13px] text-slate-600 whitespace-nowrap">{fmtTime(b.created_at)}</td>
+                    {/* 去向操作：四性检测统一在移交（推送至保管库）环节执行，采集环节不再提供（2026-08-25） */}
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           type="button" disabled={!hasSuccess || actioning !== null}
-                          onClick={() => runAction(b.batch_no, 'fourchecks')}
-                          title="对本批次成功入池的记录运行四性检测"
-                          className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-sky-700 bg-sky-50 border border-sky-200 rounded-md hover:bg-sky-100 disabled:opacity-40"
-                        >
-                          {actioning === b.batch_no + 'fourchecks' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Eye className="w-3 h-3" />}
-                          四性检测
-                        </button>
-                        <button
-                          type="button" disabled={!hasSuccess || actioning !== null}
                           onClick={() => runAction(b.batch_no, 'autogroup')}
                           title="按类别自动组卷并确认，直接入库"
-                          className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md hover:bg-emerald-100 disabled:opacity-40"
+                          className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md hover:bg-emerald-100 disabled:opacity-40 whitespace-nowrap"
                         >
                           {actioning === b.batch_no + 'autogroup' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Layers className="w-3 h-3" />}
                           自动组卷
@@ -256,18 +246,18 @@ const MonitorTab: React.FC<{ batches: OpenPushBatch[]; loading: boolean; refresh
                         ) : !detail || detail.items.length === 0 ? (
                           <div className="px-5 py-4 text-xs text-slate-400">本批次无明细记录</div>
                         ) : (
-                          <div className="px-5 py-3">
+                          <div className="px-5 py-3 overflow-x-auto">
                             <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
-                              <table className="w-full">
+                              <table className="w-full min-w-[960px]">
                                 <thead>
                                   <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-                                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-24">类别</th>
-                                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-32">凭证/资料号</th>
-                                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-36">来源单号</th>
-                                    <th className="px-4 py-3 text-left text-[13px] font-semibold">摘要</th>
-                                    <th className="px-4 py-3 text-right text-[13px] font-semibold w-28">金额</th>
-                                    <th className="px-4 py-3 text-center text-[13px] font-semibold w-20">状态</th>
-                                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-44">档号 / 错误</th>
+                                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-28 whitespace-nowrap">类别</th>
+                                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-36 whitespace-nowrap">凭证/资料号</th>
+                                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-40 whitespace-nowrap">来源单号</th>
+                                    <th className="px-4 py-3 text-left text-[13px] font-semibold min-w-[200px]">摘要</th>
+                                    <th className="px-4 py-3 text-right text-[13px] font-semibold w-32 whitespace-nowrap">金额</th>
+                                    <th className="px-4 py-3 text-center text-[13px] font-semibold w-24 whitespace-nowrap">状态</th>
+                                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-48 whitespace-nowrap">档号 / 错误</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -310,6 +300,7 @@ const MonitorTab: React.FC<{ batches: OpenPushBatch[]; loading: boolean; refresh
             })}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );
@@ -402,7 +393,6 @@ const SAMPLE_PAYLOAD = `{
   "period": "2026-07",
   "category": "voucher",            // voucher|ledger|report|other（混推时省略，按条目类型块识别）
   "destination": "to-volume",       // auto-archive|to-volume
-  "runFourChecks": true,
   "items": [
     {
       "externalId": "ERP-V-20260716-0001",
@@ -459,13 +449,14 @@ const StandardTab: React.FC = () => (
         </h3>
         <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">已上线</span>
       </div>
-      <table className="w-full text-sm">
+      <div className="overflow-x-auto">
+      <table className="w-full text-sm min-w-[760px]">
         <thead>
           <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-            <th className="px-4 py-3 text-left text-[13px] font-semibold w-20">方法</th>
-            <th className="px-4 py-3 text-left text-[13px] font-semibold w-80">路径</th>
-            <th className="px-4 py-3 text-left text-[13px] font-semibold w-28">名称</th>
-            <th className="px-4 py-3 text-left text-[13px] font-semibold">说明</th>
+            <th className="px-4 py-3 text-left text-[13px] font-semibold w-20 whitespace-nowrap">方法</th>
+            <th className="px-4 py-3 text-left text-[13px] font-semibold w-80 whitespace-nowrap">路径</th>
+            <th className="px-4 py-3 text-left text-[13px] font-semibold w-28 whitespace-nowrap">名称</th>
+            <th className="px-4 py-3 text-left text-[13px] font-semibold min-w-[200px]">说明</th>
           </tr>
         </thead>
         <tbody>
@@ -476,13 +467,14 @@ const StandardTab: React.FC = () => (
                   e.method === 'POST' ? 'bg-emerald-50 text-emerald-700' : 'bg-sky-50 text-sky-700'
                 }`}>{e.method}</span>
               </td>
-              <td className="px-4 py-3 font-mono text-[13px] text-slate-800">{e.path}</td>
-              <td className="px-4 py-3 text-sm font-medium text-slate-800">{e.name}</td>
+              <td className="px-4 py-3 font-mono text-[13px] text-slate-800 whitespace-nowrap">{e.path}</td>
+              <td className="px-4 py-3 text-sm font-medium text-slate-800 whitespace-nowrap">{e.name}</td>
               <td className="px-4 py-3 text-[13px] text-slate-600">{e.desc}</td>
             </tr>
           ))}
         </tbody>
       </table>
+      </div>
     </div>
 
     {/* 数据契约 */}
@@ -497,7 +489,7 @@ const StandardTab: React.FC = () => (
             ['period', '会计期间 yyyy-MM'],
             ['category', 'voucher | ledger | report | other；混推时省略，按条目类型块识别'],
             ['destination', '去向：to-volume 送组卷工作台（默认）| auto-archive 直接入库·自动组卷；缺省用应用默认去向'],
-            ['runFourChecks', 'true 时入池后自动运行四性检测'],
+            ['runFourChecks', '保留字段（兼容旧契约）。按规定四性检测统一在移交（推送至保管库）环节自动执行'],
             ['items[]', '条目数组（≤500 条/批）'],
           ].map(([f, d]) => (
             <div key={f} className="flex gap-2">
@@ -509,21 +501,22 @@ const StandardTab: React.FC = () => (
         <div className="px-5 py-3 border-t border-slate-200">
           <h3 className="text-sm font-semibold text-slate-700 mb-2">契约字段 · 条目公共</h3>
         </div>
-        <table className="w-full">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[520px]">
           <thead>
             <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-              <th className="px-4 py-3 text-left text-[13px] font-semibold">字段</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold w-16">类型</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold w-14">必选</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold">说明</th>
+              <th className="px-4 py-3 text-left text-[13px] font-semibold whitespace-nowrap">字段</th>
+              <th className="px-4 py-3 text-left text-[13px] font-semibold w-16 whitespace-nowrap">类型</th>
+              <th className="px-4 py-3 text-left text-[13px] font-semibold w-14 whitespace-nowrap">必选</th>
+              <th className="px-4 py-3 text-left text-[13px] font-semibold min-w-[160px]">说明</th>
             </tr>
           </thead>
           <tbody>
             {CONTRACT_COMMON.map((f) => (
               <tr key={f.field} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
-                <td className="px-4 py-3 font-mono text-[13px] text-slate-800">{f.field}</td>
-                <td className="px-4 py-3 font-mono text-[13px] text-slate-600">{f.type}</td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3 font-mono text-[13px] text-slate-800 whitespace-nowrap">{f.field}</td>
+                <td className="px-4 py-3 font-mono text-[13px] text-slate-600 whitespace-nowrap">{f.type}</td>
+                <td className="px-4 py-3 whitespace-nowrap">
                   <span className={f.required === '必选' ? 'text-red-500 font-medium' : 'text-slate-400'}>{f.required}</span>
                 </td>
                 <td className="px-4 py-3 text-[13px] text-slate-600">{f.desc}</td>
@@ -531,6 +524,7 @@ const StandardTab: React.FC = () => (
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
@@ -576,7 +570,6 @@ const StandardTab: React.FC = () => (
           <h3 className="text-sm font-semibold text-slate-700">幂等与错误码</h3>
         </div>
         <div className="p-4 text-xs text-slate-500 space-y-2">
-          <p>以 <span className="font-mono bg-slate-100 px-1 rounded">sourceSystem + externalId</span> 为幂等键，重复推送自动跳过（状态 skipped），业务系统可安全重发整个批次。</p>
           <table className="w-full">
             <tbody>
               {ERROR_CODES.map((e) => (
@@ -653,7 +646,6 @@ const LogsTab: React.FC = () => {
           <ScrollText className="w-4 h-4 text-sky-600" />
           推送全链路日志
         </h3>
-        <span className="text-xs text-slate-400">受理 → 校验 → 映射 → 建件 → 四性 → 去向路由 → 组卷</span>
         <div className="flex-1" />
         <input
           type="text" placeholder="按批次号筛选…" value={batchFilter}
@@ -680,23 +672,24 @@ const LogsTab: React.FC = () => {
       ) : logs.length === 0 ? (
         <div className="px-5 py-12 text-center text-sm text-slate-400">暂无日志</div>
       ) : (
-        <table className="w-full">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[880px]">
           <thead>
             <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-              <th className="px-4 py-3 text-left text-[13px] font-semibold w-40">时间</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold w-16">级别</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold w-40">批次</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold w-24">环节</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold">内容</th>
+              <th className="px-4 py-3 text-left text-[13px] font-semibold w-44 whitespace-nowrap">时间</th>
+              <th className="px-4 py-3 text-left text-[13px] font-semibold w-20 whitespace-nowrap">级别</th>
+              <th className="px-4 py-3 text-left text-[13px] font-semibold w-48 whitespace-nowrap">批次</th>
+              <th className="px-4 py-3 text-left text-[13px] font-semibold w-28 whitespace-nowrap">环节</th>
+              <th className="px-4 py-3 text-left text-[13px] font-semibold min-w-[280px]">内容</th>
             </tr>
           </thead>
           <tbody>
             {logs.map((l) => (
               <tr key={l.id} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
-                <td className="px-4 py-3 font-mono text-[13px] text-slate-600">{fmtTime(l.createdAt)}</td>
+                <td className="px-4 py-3 font-mono text-[13px] text-slate-600 whitespace-nowrap">{fmtTime(l.createdAt)}</td>
                 <td className="px-4 py-3">{levelBadge(l.level)}</td>
-                <td className="px-4 py-3 font-mono text-[13px] text-slate-600">{l.batchNo || '—'}</td>
-                <td className="px-4 py-3 text-[13px] text-slate-600">{STEP_LABELS[l.step] || l.step}</td>
+                <td className="px-4 py-3 font-mono text-[13px] text-slate-600 whitespace-nowrap">{l.batchNo || '—'}</td>
+                <td className="px-4 py-3 text-[13px] text-slate-600 whitespace-nowrap">{STEP_LABELS[l.step] || l.step}</td>
                 <td className="px-4 py-3 text-[13px] text-slate-600">
                   {l.message}
                   {l.detail && <span className="text-slate-400 ml-2" title={l.detail}>{l.detail}</span>}
@@ -705,114 +698,16 @@ const LogsTab: React.FC = () => {
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   );
 };
 
 // ═══════════════════════════════════════════════════════════
-// 模拟推送弹窗
+// 模拟推送弹窗已移除（2026-08-25：正式系统不提供模拟入口，
+// 业务系统经 /open/v1 推送管道真实接入）
 // ═══════════════════════════════════════════════════════════
-
-const SimulateModal: React.FC<{ open: boolean; onClose: () => void; onDone: () => void }> = ({
-  open, onClose, onDone,
-}) => {
-  const triggerToast = useAppStore((s) => s.triggerToast);
-  const [category, setCategory] = useState<PushCategory | 'all'>('all');
-  const [count, setCount] = useState(3);
-  const [destination, setDestination] = useState<PushDestination>('to-volume');
-  const [fourChecks, setFourChecks] = useState(true);
-  const [running, setRunning] = useState(false);
-
-  useEffect(() => {
-    if (open) { setRunning(false); setCategory('all'); setCount(3); setDestination('to-volume'); setFourChecks(true); }
-  }, [open]);
-
-  if (!open) return null;
-
-  const run = async () => {
-    setRunning(true);
-    try {
-      const r = await openPushService.simulate({ category, count, destination, runFourChecks: fourChecks });
-      triggerToast(
-        `模拟推送完成：成功 ${r.success} 条、跳过 ${r.skipped ?? 0} 条、失败 ${r.failed} 条${r.route ? '；' + r.route : ''}`,
-        r.failed > 0 ? 'warning' : 'success');
-      onDone();
-      onClose();
-    } catch (e) {
-      triggerToast('模拟推送失败：' + (e instanceof Error ? e.message : ''), 'warning');
-    } finally {
-      setRunning(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div className="w-[520px] bg-white rounded-2xl shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-          <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-            <FlaskConical className="w-4 h-4 text-emerald-600" />
-            模拟推送（演示）
-          </h3>
-          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg">×</button>
-        </div>
-        <div className="p-6 space-y-4">
-          <p className="text-xs text-slate-500 leading-relaxed bg-emerald-50 border border-emerald-100 rounded-lg p-3">
-            按会计档案规则生成四类仿真样例（记账凭证含分录、账簿四种、报表带期间、其他资料），
-            走<span className="font-semibold text-emerald-700">真实的 /open/v1 推送管道</span>入档——
-            批次、四性检测、日志、去向流转全部真实可演示。
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block">
-              <span className="text-xs font-medium text-slate-600">推送类别</span>
-              <select value={category} onChange={(e) => setCategory(e.target.value as PushCategory | 'all')}
-                className="mt-1 w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg bg-white">
-                <option value="all">四类混合</option>
-                <option value="voucher">会计凭证</option>
-                <option value="ledger">会计账簿</option>
-                <option value="report">财务会计报告</option>
-                <option value="other">其他会计资料</option>
-              </select>
-            </label>
-            <label className="block">
-              <span className="text-xs font-medium text-slate-600">每类条数（1-10）</span>
-              <input type="number" min={1} max={10} value={count}
-                onChange={(e) => setCount(Math.min(Math.max(Number(e.target.value) || 1, 1), 10))}
-                className="mt-1 w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg" />
-            </label>
-          </div>
-          <div>
-            <span className="text-xs font-medium text-slate-600">推送去向</span>
-            <div className="mt-1.5 grid grid-cols-2 gap-2">
-              {ACTIVE_DESTINATIONS.map((v) => (
-                <label key={v} className={`flex items-center gap-2 p-2 border rounded-lg cursor-pointer text-xs ${
-                  destination === v ? 'border-sky-300 bg-sky-50 text-sky-700' : 'border-slate-200 text-slate-600'
-                }`}>
-                  <input type="radio" checked={destination === v} onChange={() => setDestination(v)} />
-                  {DESTINATION_LABELS[v]}
-                </label>
-              ))}
-            </div>
-          </div>
-          <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
-            <input type="checkbox" checked={fourChecks} onChange={(e) => setFourChecks(e.target.checked)}
-              className="rounded border-slate-300" />
-            入池后自动运行四性检测
-          </label>
-        </div>
-        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200">
-          <button type="button" onClick={onClose}
-            className="px-3 py-1.5 text-sm text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50">取消</button>
-          <button type="button" onClick={run} disabled={running}
-            className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50">
-            {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <FlaskConical className="w-4 h-4" />}
-            {running ? '推送中…' : '开始模拟推送'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // ═══════════════════════════════════════════════════════════
 // 主页面
@@ -823,7 +718,6 @@ const OpenApiReceivePage: React.FC = () => {
   const [batches, setBatches] = useState<OpenPushBatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadErr, setLoadErr] = useState<string | null>(null);
-  const [simOpen, setSimOpen] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -855,17 +749,7 @@ const OpenApiReceivePage: React.FC = () => {
       <div className="flex items-center gap-3 px-6 py-3 bg-white border-b border-slate-200 shrink-0">
         <Activity className="w-5 h-5 text-slate-600" />
         <h1 className="text-base font-bold text-slate-800">集成接口采集</h1>
-        <span className="text-xs text-slate-400">业务系统推送接入（Push）· 统一四类契约：凭证/账簿/报表/其他</span>
-        <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700">已上线</span>
         <div className="flex-1" />
-        <button
-          type="button" onClick={() => setSimOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100"
-          title="生成四类样例数据，走真实推送管道演示"
-        >
-          <FlaskConical className="w-3.5 h-3.5" />
-          模拟推送
-        </button>
         <button
           type="button" onClick={refresh}
           className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50"
@@ -900,8 +784,6 @@ const OpenApiReceivePage: React.FC = () => {
         {tab === 'standard' && <StandardTab />}
         {tab === 'logs' && <LogsTab />}
       </div>
-
-      <SimulateModal open={simOpen} onClose={() => setSimOpen(false)} onDone={refresh} />
     </div>
   );
 };

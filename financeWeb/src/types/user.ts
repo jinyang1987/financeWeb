@@ -132,7 +132,7 @@ export const ROLE_MENU_MATRIX: Record<RoleKey, string[]> = {
     // 收集
     'archive-rcv', 'archive-api-receive',
     // 整理
-    'volume-workspace', 'recycle-bin',
+    'volume-workspace', 'quick-check', 'recycle-bin',
     // 保管
     'view-finance', 'digital-warehouse',
     // 利用（管理侧：审批 + 借阅管理；「我的借阅」归检索门户，后台不保留）
@@ -151,7 +151,7 @@ export const ROLE_MENU_MATRIX: Record<RoleKey, string[]> = {
   archive_director: [
     ...PORTAL_MENU_KEYS,
     'voucher-search', 'matter-search', 'source-doc-search', 'volume-item-search', 'audit-trail',
-    'volume-workspace', 'recycle-bin',
+    'volume-workspace', 'quick-check', 'recycle-bin',
     'view-finance', 'digital-warehouse',
     'approval-center', 'borrow-manage', 'borrow-ledger', 'borrow-stats', 'transfer-manage',
     'stats-cockpit', 'stats-inventory', 'stats-lifecycle', 'stats-compliance',
@@ -160,8 +160,8 @@ export const ROLE_MENU_MATRIX: Record<RoleKey, string[]> = {
   ],
   // 安全保密员：人员管理（密级）+ 检索核查密级标定（三员分立）
   security_officer: ['voucher-search', 'volume-item-search', 'sys-personnel'],
-  // 安全审计员：仅安全审计日志（硬分立）
-  security_auditor: [SYS_LOG_KEY],
+  // 安全审计员：安全审计日志（硬分立）+ 操作日志
+  security_auditor: [SYS_LOG_KEY, 'sys-oplog'],
   admin: ['*'],
 };
 

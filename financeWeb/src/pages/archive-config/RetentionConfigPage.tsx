@@ -1,26 +1,20 @@
 /**
  * @license SPDX-License-Identifier: Apache-2.0
  *
- * RetentionConfigPage — 档案三合一表配置（分类体系 · 归档范围 · 保管期限）
- * 2026-08-16 左右主从重设计：左侧导航（概览+四大类+排除范围+期限规则）+ 搜索，
- * 右侧一次只展示一个主题，交互与数据完全保留。
+ * RetentionConfigPage — 档案三合一表（分类体系 · 归档范围 · 保管期限）
  *
- * 核心基础规则模块，所有规则严格遵循：
- *   《会计档案管理办法》（财政部、国家档案局令第 79 号）
- *   《会计档案整理规范》（DA/T 42-2022）
+ * 左右主从布局：左侧导航（概览+四大类+排除范围+期限规则）+ 搜索，右侧单主题展示。
+ * 法定依据：《会计档案管理办法》（财政部、国家档案局令第 79 号）、
+ * 《会计档案整理规范》（DA/T 42-2022）。只读法定口径。
  *
- * 用于统一定义系统内会计档案的分类体系、法定归档范围、
- * 对应保管期限映射逻辑，保障全平台档案管理的合规性、统一性与可追溯性。
- *
- * 系统规则默认按法定标准内置，支持单位级权限内的补充扩展，
- * 但所有调整不得突破法定底线，且操作全程留痕可审计。
+ * embedded=true 时作为「档案管理配置」Tab 嵌入（隐藏自身顶栏）。
  */
 
 import React, { useState, useMemo } from 'react';
 import {
   Clock, Shield, BookOpen, FileText, FolderTree,
   Building2, ChevronDown, ChevronRight, AlertTriangle,
-  CheckCircle2, Ban, Lock, History, Calendar,
+  Ban, Lock,
   Search, LayoutGrid,
 } from 'lucide-react';
 // ============================================================
@@ -390,7 +384,7 @@ const CategoryDetailTable: React.FC<{ category: ArchiveCategory }> = ({ category
 // 主页面（左右主从布局，2026-08-16 重设计）
 // ============================================================
 
-const RetentionConfigPage: React.FC = () => {
+const RetentionConfigPage: React.FC<{ embedded?: boolean }> = ({ embedded = false }) => {
   const [activeKey, setActiveKey] = useState<string>('overview');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -442,29 +436,13 @@ const RetentionConfigPage: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full bg-slate-100">
-      {/* ═══ 顶栏 ═══ */}
-      <div className="flex items-center gap-3 px-6 py-3 bg-white border-b border-slate-200 shrink-0">
-        <Shield className="w-5 h-5 text-sky-600" />
-        <h1 className="text-base font-bold text-slate-800">档案三合一表配置</h1>
-        <span className="text-xs text-slate-400 ml-1">| 分类体系 · 归档范围 · 保管期限</span>
-        <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium">
-          法定口径 · 只读标准 · 已生效
-        </span>
-        <div className="flex-1" />
-        <span className="flex items-center gap-1.5 text-[11px] text-slate-400">
-          <History className="w-3 h-3" />
-          最后修订：系统内置（2026-01-01）· 所有操作留痕可审计
-        </span>
-      </div>
-
-      {/* 生效口径明示（2026-08-16 贯通修复：消除「配置了却不生效」的误导） */}
-      <div className="px-6 pt-3 shrink-0">
-        <div className="max-w-7xl mx-auto px-3 py-2 bg-sky-50/70 border border-sky-100 rounded-lg text-[11px] text-sky-800 leading-relaxed">
-          本页为 79号令/DA/T 标准的法定口径展示（只读，不随编辑变动）。同口径由服务端自动执行：
-          抓取/推送缺省期限（凭证·账簿 30年、年度报告 永久、中期报告 10年、其他 10年）、
-          组卷期限推荐、保管期满鉴定测算，均按本表口径在服务端落实。
+      {/* ═══ 顶栏（嵌入模式隐藏） ═══ */}
+      {!embedded && (
+        <div className="flex items-center gap-3 px-6 py-3 bg-white border-b border-slate-200 shrink-0">
+          <Shield className="w-5 h-5 text-sky-600" />
+          <h1 className="text-base font-bold text-slate-800">档案三合一表</h1>
         </div>
-      </div>
+      )}
 
       {/* ═══ 主体：左右主从 ═══ */}
       <div className="flex-1 overflow-y-auto p-6 w-full">
@@ -487,7 +465,7 @@ const RetentionConfigPage: React.FC = () => {
                 active={!searchQuery.trim() && activeKey === 'overview'}
                 onClick={() => { setActiveKey('overview'); setSearchQuery(''); }}
                 icon={<LayoutGrid className="w-3.5 h-3.5 text-slate-400" />}
-                label="概览 · 法定依据与架构"
+                label="概览"
                 badge={<span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500">{totalDetailCount} 项</span>}
               />
               <div className="px-2 pt-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">归档范围 · 保管期限</div>
@@ -567,7 +545,6 @@ const RetentionConfigPage: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <Ban className="w-4 h-4 text-red-500" />
                     <h2 className="text-sm font-bold text-slate-800">排除范围（非会计档案）</h2>
-                    <span className="text-[11px] text-slate-400">以下材料不纳入本模块归档范围，系统著录时自动校验排除</span>
                   </div>
                 </div>
                 <div className="overflow-x-auto">
@@ -610,8 +587,7 @@ const RetentionConfigPage: React.FC = () => {
                           <span className="text-xs font-bold text-red-700">永久保管</span>
                         </div>
                         <p className="text-xs text-amber-800">
-                          年度财务报告、会计档案保管清册、销毁清册、鉴定意见书。<br />
-                          <strong>系统标注专属永久标识，不纳入到期销毁筛查范围。</strong>
+                          年度财务报告、会计档案保管清册、销毁清册、鉴定意见书
                         </p>
                       </div>
 
@@ -621,8 +597,7 @@ const RetentionConfigPage: React.FC = () => {
                           <span className="text-xs font-bold text-amber-700">定期 30 年</span>
                         </div>
                         <p className="text-xs text-amber-800">
-                          会计凭证（全部明细）、总账、明细账、日记账、辅助账簿、移交清册。<br />
-                          自会计年度终了后第一天起算。
+                          会计凭证（全部明细）、总账、明细账、日记账、辅助账簿、移交清册
                         </p>
                       </div>
 
@@ -632,8 +607,7 @@ const RetentionConfigPage: React.FC = () => {
                           <span className="text-xs font-bold text-sky-700">定期 10 年</span>
                         </div>
                         <p className="text-xs text-amber-800">
-                          月度/季度/半年度财务报告、银行存款余额调节表、银行对账单、纳税申报表。<br />
-                          自会计年度终了后第一天起算。
+                          月度/季度/半年度财务报告、银行存款余额调节表、银行对账单、纳税申报表
                         </p>
                       </div>
 
@@ -643,47 +617,23 @@ const RetentionConfigPage: React.FC = () => {
                           <span className="text-xs font-bold text-emerald-700">定期 5 年</span>
                         </div>
                         <p className="text-xs text-amber-800">
-                          固定资产卡片（仅此一项）。<br />
-                          <strong>自固定资产报废清理后起算，系统关联资产报废日期自动计算。</strong>
+                          固定资产卡片（仅此一项），自固定资产报废清理后起算
                         </p>
                       </div>
                     </div>
 
-                    <div className="border-t border-amber-200 pt-3 space-y-1">
-                      <p className="text-xs font-bold">关键规则</p>
-                      <ul className="text-xs space-y-0.5 list-disc list-inside">
-                        <li>所有保管期限均从<strong>会计年度终了后第一天</strong>算起，系统自动计算到期日期</li>
-                        <li>默认法定保管期限<strong>不可随意修改</strong>，仅支持经审批后<strong>延长</strong>，禁止以任何形式缩短</li>
-                        <li>系统基于保管期限自动生成<strong>到期预警清单</strong>，支持自定义提醒周期，临期档案自动触发鉴定流程</li>
-                        <li>电子档案与纸质档案的分类、归档范围、保管期限规则<strong>完全统一</strong></li>
-                        <li>所有保管期限调整操作均需<strong>留存完整操作日志与审批记录</strong>，确保全流程可追溯</li>
-                      </ul>
-                    </div>
                   </div>
                 </div>
               </div>
             ) : (
               /* ── 概览：法定依据 + 分类架构 ── */
               <div className="space-y-4">
-                {/* 法规依据横幅 */}
-                <div className="bg-sky-50 border border-sky-200 rounded-xl p-5">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-sky-100 flex items-center justify-center shrink-0">
-                      <BookOpen className="w-5 h-5 text-sky-600" />
-                    </div>
-                    <div className="text-sm text-sky-900 space-y-1.5">
-                      <p className="font-bold text-base">法定依据</p>
-                      <p className="leading-relaxed">
-                        本模块严格遵循<strong>《会计档案管理办法》</strong>（财政部、国家档案局令第 79 号，2016 年 1 月 1 日起施行）
-                        及<strong>《会计档案整理规范》</strong>（DA/T 42-2022），用于统一定义系统内会计档案的分类体系、法定归档范围、
-                        对应保管期限映射逻辑。
-                      </p>
-                      <p className="text-sky-600 text-xs flex items-center gap-1.5">
-                        <Lock className="w-3 h-3" />
-                        系统规则默认按法定标准内置，支持单位级权限内的补充扩展，但所有调整不得突破法定底线
-                      </p>
-                    </div>
-                  </div>
+                {/* 法规依据 */}
+                <div className="bg-sky-50 border border-sky-200 rounded-xl px-5 py-3 flex items-center gap-3">
+                  <BookOpen className="w-4 h-4 text-sky-600 shrink-0" />
+                  <span className="text-[13px] font-medium text-sky-900">
+                    法定依据：《会计档案管理办法》（财政部、国家档案局令第 79 号）·《会计档案整理规范》（DA/T 42-2022）
+                  </span>
                 </div>
 
                 {/* 分类架构说明 */}
@@ -721,34 +671,6 @@ const RetentionConfigPage: React.FC = () => {
                         <span className="text-slate-300">→</span>
                         <span className="px-3 py-2 bg-amber-50 rounded-lg font-bold text-amber-700 border border-amber-200">档案明细</span>
                       </div>
-                      <p className="text-xs text-slate-400 mt-2">
-                        针对多核算主体的集团型用户，组织机构维度可与企业组织架构数据同步，每个独立核算单元单独维护档案分类目录，分类规则与总部标准保持统一
-                      </p>
-                    </div>
-
-                    {/* 关键规则 */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div className="flex items-start gap-2 p-3 bg-slate-50 rounded-lg">
-                        <Calendar className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-xs font-bold text-slate-700">年度校验</p>
-                          <p className="text-[11px] text-slate-500 mt-0.5">公历自然年度（1/1–12/31）为划分依据，强制校验归属年度，禁止跨年度归集</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-2 p-3 bg-slate-50 rounded-lg">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-xs font-bold text-slate-700">类别唯一</p>
-                          <p className="text-[11px] text-slate-500 mt-0.5">单份档案仅可归属一个明细分类，禁止重复归类；凭证附件随记账凭证统一归档</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-2 p-3 bg-slate-50 rounded-lg">
-                        <Lock className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-xs font-bold text-slate-700">分类锁定</p>
-                          <p className="text-[11px] text-slate-500 mt-0.5">规则一经正式启用即锁定体系结构，变更需专属权限审批并留存完整操作日志</p>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -758,7 +680,7 @@ const RetentionConfigPage: React.FC = () => {
                   <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
                     <FileText className="w-4 h-4 text-slate-600" />
                     <h2 className="text-sm font-bold text-slate-800">法定归档范围 · 保管期限映射</h2>
-                    <span className="text-[11px] text-slate-400">共 4 大类 {totalDetailCount} 项明细，选定明细后系统自动填充对应保管期限 · 点左侧类别查看明细</span>
+                    <span className="text-[11px] text-slate-400">共 4 大类 {totalDetailCount} 项明细</span>
                   </div>
                   <div className="grid grid-cols-2 gap-3 p-4">
                     {ARCHIVE_CATEGORIES.map((cat) => (
@@ -783,12 +705,6 @@ const RetentionConfigPage: React.FC = () => {
                       </button>
                     ))}
                   </div>
-                </div>
-
-                {/* 页脚 */}
-                <div className="text-xs text-slate-400 text-right space-y-0.5 pb-2">
-                  <p>法定依据：《会计档案管理办法》（财政部、国家档案局令第 79 号）·《会计档案整理规范》（DA/T 42-2022）</p>
-                  <p>系统默认按法定标准内置 · 操作全程留痕可审计 · 所有调整不得突破法定底线</p>
                 </div>
               </div>
             )}

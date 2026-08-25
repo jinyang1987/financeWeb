@@ -27,7 +27,10 @@ import com.finance.ams.auth.AuthUser;
 import com.finance.ams.auth.PermissionService;
 import com.finance.ams.watermark.WatermarkService;
 import com.finance.ams.ocr.OcrService;
+import com.finance.ams.oplog.OperationLogService;
 import com.finance.ams.alfresco.AlfrescoNodeClient;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * 件域端点（P1-①）
@@ -52,11 +55,12 @@ public class RecordController {
   private final AlfrescoNodeClient nodes;
   private final PermissionService perm;
   private final RecordIndexService index;
+  private final OperationLogService oplog;
   private final org.springframework.context.ApplicationEventPublisher events;
 
   public RecordController(RecordService service, WatermarkService watermarks,
                           OcrService ocr, AlfrescoNodeClient nodes, PermissionService perm,
-                          RecordIndexService index,
+                          RecordIndexService index, OperationLogService oplog,
                           org.springframework.context.ApplicationEventPublisher events) {
     this.service = service;
     this.watermarks = watermarks;
@@ -64,6 +68,7 @@ public class RecordController {
     this.nodes = nodes;
     this.perm = perm;
     this.index = index;
+    this.oplog = oplog;
     this.events = events;
   }
 
@@ -74,11 +79,24 @@ public class RecordController {
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
       @RequestPart("file") MultipartFile file,
-      @RequestParam Map<String, String> f) throws Exception {
+      @RequestParam Map<String, String> f,
+      HttpServletRequest request) throws Exception {
     AuthUser me = perm.me(userId, ticket);
     // 上传建件 = 收集/整理动作：核对工作台或收集中台功能码 + 全宗准入
     perm.requireFunction(me, "voucher-manager", "archive-rcv", "volume-workspace");
     perm.checkFonds(me, f.get("fondsCode"));
+
+    // v2.7 原始凭证富元数据（方案A）：voucherCategory='原始凭证' 的件携带类型与票据信息
+    var sourceDocMeta = new RecordService.SourceDocMeta(
+        f.get("docTypeCode"),
+        f.get("docTypeName"),
+        f.get("documentNo"),
+        f.get("counterpartyName"),
+        f.get("counterpartyTaxId"),
+        f.get("summary"),
+        f.get("amountUpper"),
+        f.get("businessCategory"),
+        f.get("extFields"));
 
     var cmd = new RecordService.CreateCmd(
         f.get("fondsCode"),
@@ -93,11 +111,16 @@ public class RecordController {
         defaultIfBlank(f.get("carrierType"), "electronic"),
         f.get("preparer"),
         f.get("voucherCategory"),
-        f.get("remarks"));
+        f.get("remarks"),
+        null,
+        sourceDocMeta);
 
     String filename = file.getOriginalFilename() == null ? "未命名文件" : file.getOriginalFilename();
     String mime = file.getContentType() == null ? "application/octet-stream" : file.getContentType();
-    return service.create(userId, ticket, cmd, filename, mime, file.getBytes());
+    Map<String, Object> view = service.create(userId, ticket, cmd, filename, mime, file.getBytes());
+    oplog.append(me.account(), me.name(), "上传建件", strOf(view.get("voucherNo")),
+        null, "文件：" + filename, OperationLogService.clientIp(request));
+    return view;
   }
 
   // ── 删除（仅收集池「仅件数据」记录；已组卷须先拆件；v2.6 起逻辑删除入回收站） ──
@@ -106,14 +129,17 @@ public class RecordController {
   public ResponseEntity<Void> delete(
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
-      @PathVariable String nodeId) {
+      @PathVariable String nodeId,
+      HttpServletRequest request) {
     AuthUser me = perm.me(userId, ticket);
     perm.requireFunction(me, "voucher-manager");
     service.delete(ticket, me.account(), nodeId);
+    oplog.append(me.account(), me.name(), "删除入回收站", nodeId, null,
+        "逻辑删除，可在回收站恢复", OperationLogService.clientIp(request));
     return ResponseEntity.noContent().build();
   }
 
-  // ── 回收站（v2.6：逻辑删除件列表 / 恢复；v2.6.1 起移除彻底删除——物理销毁走鉴定销毁流程） ──
+  // ── 回收站（逻辑删除件列表 / 恢复 / 彻底删除） ──
 
   /** GET /recycle?fondsCode= — 回收站件列表（按删除时间倒序；不可搜索、不参与组卷） */
   @GetMapping("/recycle")
@@ -132,11 +158,32 @@ public class RecordController {
   public Map<String, Object> restoreRecycle(
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
-      @PathVariable String nodeId) {
+      @PathVariable String nodeId,
+      HttpServletRequest request) {
     AuthUser me = perm.me(userId, ticket);
     perm.requireFunction(me, "voucher-manager");
     service.restoreRecycle(ticket, nodeId);
+    oplog.append(me.account(), me.name(), "回收站恢复", nodeId, null,
+        "恢复回收集池", OperationLogService.clientIp(request));
     return Map.of("nodeId", nodeId, "restored", true);
+  }
+
+  /**
+   * DELETE /recycle/{nodeId} — 彻底删除（2026-08-25 恢复）：物理删除回收站内的未归档记录。
+   * 仅「仅件数据」（未组卷/未归档）件可彻底删除；已归档档案的物理销毁仍走鉴定销毁流程。
+   */
+  @DeleteMapping("/recycle/{nodeId}")
+  public Map<String, Object> purgeRecycle(
+      @RequestHeader(value = "X-User-Id", required = false) String userId,
+      @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
+      @PathVariable String nodeId,
+      HttpServletRequest request) {
+    AuthUser me = perm.me(userId, ticket);
+    perm.requireFunction(me, "voucher-manager");
+    service.purgeRecycle(ticket, me.account(), nodeId);
+    oplog.append(me.account(), me.name(), "彻底删除", nodeId, null,
+        "回收站记录物理删除（未归档件）", OperationLogService.clientIp(request));
+    return Map.of("nodeId", nodeId, "purged", true);
   }
 
   // ── 组件挂接（先组件再组卷，2026-08-20） ──
@@ -188,6 +235,21 @@ public class RecordController {
     return "all".equalsIgnoreCase(scope)
         ? service.listAll(ticket, q, rowFilter)
         : service.listPool(ticket, q, rowFilter);
+  }
+
+  /**
+   * 件级元数据录入/修改（组卷工作台「元数据录入」，2026-08-25）。
+   * 白名单字段；仅收集池件/草稿卷内件可编辑。
+   */
+  @PutMapping("/{nodeId}/metadata")
+  public Map<String, Object> updateMetadata(
+      @RequestHeader(value = "X-User-Id", required = false) String userId,
+      @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
+      @PathVariable String nodeId,
+      @RequestBody Map<String, Object> body) {
+    AuthUser me = perm.me(userId, ticket);
+    perm.requireFunction(me, "volume-workspace", "quick-check");
+    return service.updateMetadata(ticket, nodeId, body);
   }
 
   // ── 卷内件全量读取（P1-③ 读视图） ──
@@ -400,6 +462,10 @@ public class RecordController {
 
   private static String defaultIfBlank(String s, String def) {
     return s == null || s.isBlank() ? def : s;
+  }
+
+  private static String strOf(Object o) {
+    return o == null ? "" : String.valueOf(o);
   }
 }
 

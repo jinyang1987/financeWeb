@@ -23,6 +23,7 @@ import {
   ArrowUp, ArrowDown, FolderOutput, Split, Merge, Ungroup, ListChecks,
   MapPin, Warehouse,
 } from 'lucide-react';
+import { useAppStore } from '../../stores/appStore';
 import { useArchiveStore } from '../../stores/archiveStore';
 import { useSourceDocumentStore } from '../../stores/sourceDocumentStore';
 import { useVolumeStore, validateVoucherContinuity, inferTypeCode, inferRetentionCode, toCategoryCode } from '../../stores/volumeStore';
@@ -54,9 +55,13 @@ import type { ArchiveBox } from '../../types/archiveBox';
 import type { ArchiveRecord } from '../../types';
 import VoucherUploadModal from './VoucherUploadModal';
 import VolumePrintModal from './VolumePrintModal';
+import MetadataEntryModal from './MetadataEntryModal';
 import QuickComponentModal from '../../components/QuickComponentModal';
 import { deleteRecord } from '../../services/recordService';
-import { runVolumeInspection, type InspectionIssue } from '../../services/inspectionService';
+import {
+  fetchInspectionReports, parseReportDetail,
+  type InspectionIssue,
+} from '../../services/inspectionService';
 import {
   fetchBoxes, shelveBoxApi, shelveBoxAutoApi, type ShelfPosition,
 } from '../../services/boxService';
@@ -436,13 +441,15 @@ const UnassignedPool: React.FC<UnassignedPoolProps> = ({
   );
 };
 
-// ── 四性检测结果类型 ──
-type CheckStatus = 'pending' | 'running' | 'passed' | 'failed';
-interface VolumeChecks {
-  real: CheckStatus;
-  complete: CheckStatus;
-  usable: CheckStatus;
-  safe: CheckStatus;
+// ── 四性检测状态（2026-08-25：检测统一在移交时自动执行；工作台只读展示最近结果） ──
+export interface VolumeLastCheck {
+  allPass: boolean;
+  real: boolean;
+  complete: boolean;
+  usable: boolean;
+  safe: boolean;
+  checkedAt: string;
+  issueCount: number;
 }
 
 // ── 子组件：案卷卡片（右面板） ──
@@ -455,16 +462,16 @@ interface VolumeCardProps {
   onRemoveItem: (recordId: string) => void;
   onConfirm: (volumeId: string) => void;
   onDelete: (volumeId: string) => void;
-  onRunChecks: (volumeId: string) => void;
   onTransfer: (volumeId: string) => void;
   onPrint: (volumeId: string) => void;
   onUpdateTitle: (volumeId: string, title: string) => void;
   onDecompose: (volumeId: string) => void;
   onUnconfirm: (volumeId: string) => void;
   onInsertAtPosition: (position: number) => void;
-  checks: VolumeChecks;
-  /** 四性检测问题明细（最近一次 run-volume 的未通过项） */
-  issues: InspectionIssue[];
+  /** 打开元数据录入弹窗（仅草稿卷，2026-08-25） */
+  onMetadataEntry: (volumeId: string) => void;
+  /** 最近一次四性检测结果（移交时自动检测产生；未检测为 null） */
+  lastCheck: VolumeLastCheck | null;
   /** 左侧选中件数，用于显示"加入当前案卷"按钮 */
   selectedCount: number;
   /** 将左侧选中件加入指定案卷 */
@@ -490,8 +497,8 @@ const CHECK_LABELS: Record<string, string> = {
 
 const VolumeCard: React.FC<VolumeCardProps> = ({
   volume, items, recordMap, isActive,
-  onSelect, onRemoveItem, onConfirm, onDelete, onRunChecks, onTransfer, onPrint,
-  onUpdateTitle, onDecompose, onUnconfirm, onInsertAtPosition, checks, issues, selectedCount, onAddSelectedToVolume, attachmentCountMap, onViewDetail,
+  onSelect, onRemoveItem, onConfirm, onDelete, onTransfer, onPrint,
+  onUpdateTitle, onDecompose, onUnconfirm, onInsertAtPosition, onMetadataEntry, lastCheck, selectedCount, onAddSelectedToVolume, attachmentCountMap, onViewDetail,
   itemSelIds, onToggleItemSelect, onMerge,
 }) => {
   const [expanded, setExpanded] = useState(true);
@@ -515,9 +522,6 @@ const VolumeCard: React.FC<VolumeCardProps> = ({
     transferred: '已移交',
     destroyed: '已销毁',
   };
-
-  const allChecksPassed = checks.real === 'passed' && checks.complete === 'passed' && checks.usable === 'passed' && checks.safe === 'passed';
-  const checksRunning = checks.real === 'running' || checks.complete === 'running' || checks.usable === 'running' || checks.safe === 'running';
 
   // ★ 单元化分组（2026-08-20 先组件再组卷）：主体件为主行，已挂接原始凭证收进其下的
   //   附件组块（列表化整齐呈现）；父件不在本卷的悬挂件作为普通主行显示（避免"消失"）
@@ -786,57 +790,11 @@ const VolumeCard: React.FC<VolumeCardProps> = ({
             )}
           </div>
 
-          {/* 四性检测状态 */}
+          {/* 四性检测提示（2026-08-25：检测统一在移交=推送至保管库时自动执行，组卷环节不检测） */}
           {volume.status === 'draft' && (
-            <div className="space-y-1.5">
-              <div className="grid grid-cols-4 gap-1.5">
-                {(['real', 'complete', 'usable', 'safe'] as const).map((key) => {
-                  const status = checks[key];
-                  const colors: Record<string, string> = {
-                    pending: 'bg-slate-100 text-slate-500',
-                    running: 'bg-sky-100 text-sky-600 animate-pulse',
-                    passed: 'bg-green-100 text-green-700',
-                    failed: 'bg-red-100 text-red-700',
-                  };
-                  const icons: Record<string, React.ReactNode> = {
-                    pending: <Clock className="w-3 h-3" />,
-                    running: <RefreshCw className="w-3 h-3 animate-spin" />,
-                    passed: <CheckCircle2 className="w-3 h-3" />,
-                    failed: <AlertCircle className="w-3 h-3" />,
-                  };
-                  return (
-                    <div key={key} className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium ${colors[status]}`}>
-                      {icons[status]}
-                      {CHECK_LABELS[key]}
-                    </div>
-                  );
-                })}
-              </div>
-              {!allChecksPassed && !checksRunning && (
-                <button
-                  type="button"
-                  onClick={() => onRunChecks(volume.id)}
-                  disabled={items.length === 0}
-                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-sky-600 bg-sky-50 border border-sky-200 rounded-lg hover:bg-sky-100 disabled:opacity-50"
-                >
-                  <Shield className="w-3 h-3" />
-                  运行四性检测
-                </button>
-              )}
-              {/* ★ 检测问题明细（真实现：run-volume 未通过项） */}
-              {issues.length > 0 && !checksRunning && (
-                <div className="space-y-1 max-h-24 overflow-y-auto">
-                  {issues.slice(0, 5).map((iss, i) => (
-                    <div key={i} className="flex items-start gap-1.5 text-[10px] text-red-600 bg-red-50 border border-red-100 rounded px-2 py-1">
-                      <AlertCircle className="w-3 h-3 shrink-0 mt-px" />
-                      <span className="min-w-0"><strong>{iss.name}</strong>：{iss.note}</span>
-                    </div>
-                  ))}
-                  {issues.length > 5 && (
-                    <div className="text-[10px] text-slate-400 px-1">…共 {issues.length} 项问题，处理后可重新运行检测</div>
-                  )}
-                </div>
-              )}
+            <div className="flex items-start gap-1.5 text-[10px] text-slate-400 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5">
+              <Shield className="w-3 h-3 shrink-0 mt-px" />
+              <span>四性检测在「移交至档案保管」时按规定自动执行，未通过将阻断移交；检测明细见 档案整理→快速检测</span>
             </div>
           )}
 
@@ -847,7 +805,7 @@ const VolumeCard: React.FC<VolumeCardProps> = ({
                 <button
                   type="button"
                   onClick={handleConfirm}
-                  disabled={items.length === 0 || !allChecksPassed || confirming}
+                  disabled={items.length === 0 || confirming}
                   className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-sky-600 rounded-lg hover:bg-sky-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
                 >
                   {confirming ? (
@@ -864,6 +822,16 @@ const VolumeCard: React.FC<VolumeCardProps> = ({
                 >
                   <Printer className="w-3 h-3" />
                   目录预览
+                </button>
+                {/* ★ 元数据录入（2026-08-25：组卷环节的卷/件元数据录入与修正入口） */}
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onMetadataEntry(volume.id); }}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:border-sky-300 hover:text-sky-700 transition-colors"
+                  title="录入/修改案卷与卷内件的元数据（确认组卷前完成）"
+                >
+                  <FileText className="w-3 h-3" />
+                  元数据录入
                 </button>
                 <div className="flex-1" />
                 {/* 卷级操作：合并（他卷并入本卷）/ 拆卷（整卷打散回池） */}
@@ -898,9 +866,6 @@ const VolumeCard: React.FC<VolumeCardProps> = ({
                   </button>
                 )}
               </div>
-              {!allChecksPassed && items.length > 0 && (
-                <span className="text-[10px] text-amber-600 inline-flex items-center gap-0.5"><AlertTriangle className="w-3 h-3" /> 需先通过四性检测</span>
-              )}
             </div>
           )}
 
@@ -918,6 +883,22 @@ const VolumeCard: React.FC<VolumeCardProps> = ({
                   已确认（未赋号 — 会计档案使用自身凭证号体系）
                 </div>
               )}
+              {/* ★ 四性检测状态（移交时自动执行；展示最近一次结果，2026-08-25） */}
+              <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium ${
+                lastCheck == null
+                  ? 'bg-slate-100 text-slate-500'
+                  : lastCheck.allPass
+                    ? 'bg-green-50 text-green-700 border border-green-100'
+                    : 'bg-red-50 text-red-700 border border-red-100'
+              }`}>
+                {lastCheck == null ? (
+                  <><Clock className="w-3 h-3" /> 待移交时自动执行四性检测（按规定：移交=检测节点）</>
+                ) : lastCheck.allPass ? (
+                  <><CheckCircle2 className="w-3 h-3" /> 四性检测通过（{lastCheck.checkedAt.slice(0, 16).replace('T', ' ')}）</>
+                ) : (
+                  <><AlertCircle className="w-3 h-3" /> 四性检测未通过：{lastCheck.issueCount} 项问题（详见 快速检测）</>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -1162,10 +1143,9 @@ const SplitVolumeModal: React.FC<{
           />
         </label>
         <div className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1 leading-relaxed">
-          <p>· 新案卷继承本卷类别 / 年度 / 保管期限，仍为草稿状态，确认组卷时统一赋号。</p>
           <p>· 选中 {selectedCount} 件按原顺序移入新卷，本卷其余 {sourceCount - selectedCount} 件保持原顺序。</p>
           {allSelected && (
-            <p className="text-amber-700 font-medium">· 已勾选全部件：拆分后本卷为空，将自动销毁（如需整卷改名请直接编辑题名）。</p>
+            <p className="text-amber-700 font-medium">· 已勾选全部件：拆分后本卷为空，将自动销毁。</p>
           )}
         </div>
       </div>
@@ -1372,6 +1352,8 @@ const TransferVolumeModal: React.FC<{
   const [loadErr, setLoadErr] = useState('');
   const [busy, setBusy] = useState(false);
   const [submitErr, setSubmitErr] = useState('');
+  /** 移交四性检测未通过的问题明细（INSPECTION_FAILED 时随异常带回，2026-08-25） */
+  const [submitIssues, setSubmitIssues] = useState<InspectionIssue[]>([]);
 
   // 弹窗打开即拉取：密集架布局 + 格位占用 + 本全宗盒列表（归盒预测）
   useEffect(() => {
@@ -1409,11 +1391,13 @@ const TransferVolumeModal: React.FC<{
   const submit = async () => {
     setBusy(true);
     setSubmitErr('');
+    setSubmitIssues([]);
     try {
       await onSubmit({ mode, position: mode === 'pick' ? pickPos ?? undefined : undefined });
       // 成功：父组件关闭弹窗
     } catch (e) {
       setSubmitErr(e instanceof Error ? e.message : '移交失败');
+      setSubmitIssues((e as { issues?: InspectionIssue[] })?.issues || []);
       setBusy(false);
     }
   };
@@ -1578,8 +1562,30 @@ const TransferVolumeModal: React.FC<{
             </div>
           )}
           {submitErr && (
-            <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-              {submitErr}
+            <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 space-y-2">
+              <div>{submitErr}</div>
+              {submitIssues.length > 0 && (
+                <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
+                  {submitIssues.map((iss, i) => (
+                    <div key={i} className="flex items-start gap-1.5 text-[11px] text-red-700 bg-white/70 border border-red-100 rounded px-2 py-1">
+                      <AlertCircle className="w-3 h-3 shrink-0 mt-px" />
+                      <span className="min-w-0">
+                        <strong>{iss.name}</strong>：{iss.note}
+                        {iss.target && iss.target !== 'volume' && (
+                          <span className="text-red-400 ml-1">（件 {iss.target.slice(0, 8)}…）</span>
+                        )}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => useAppStore.getState().setActiveMainMenu('quick-check')}
+                className="inline-flex items-center gap-1 text-[11px] font-medium text-sky-700 hover:text-sky-900 underline"
+              >
+                到「档案整理 → 快速检测」查看完整报告
+              </button>
             </div>
           )}
         </div>
@@ -1704,7 +1710,10 @@ const VolumeWorkspacePage: React.FC = () => {
   // ── 本地状态 ──
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeVolumeId, setActiveVolumeId] = useState<string | null>(null);
+  // 支持外部深链（快速检测页「查看案卷」→ setActiveVolume 后跳转，2026-08-25）
+  const [activeVolumeId, setActiveVolumeId] = useState<string | null>(
+    () => useVolumeStore.getState().activeVolume?.id ?? null,
+  );
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
   const [decomposeTarget, setDecomposeTarget] = useState<string | null>(null); // 拆卷确认目标
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -1712,7 +1721,6 @@ const VolumeWorkspacePage: React.FC = () => {
   /** ★ 快速组件配对弹窗（2026-08：智能组卷左侧的放松式配对入口） */
   const [showQuickComponent, setShowQuickComponent] = useState(false);
   const [preselectedPrintVolumeId, setPreselectedPrintVolumeId] = useState<string | null>(null);
-  const [volumeChecks, setVolumeChecks] = useState<Record<string, VolumeChecks>>({});
   const [detailRecord, setDetailRecord] = useState<ArchiveRecord | null>(null);
   /** 详情件所属卷的检测是否实际运行过（passed/failed 任一），未运行 → 徽标显示「未检测」（2026-08-20） */
   const [detailInspectionRan, setDetailInspectionRan] = useState(false);
@@ -1748,6 +1756,34 @@ const VolumeWorkspacePage: React.FC = () => {
     };
   }, [itemSel, volumeItems, volumes]);
 
+  // ── 四性检测（2026-08-25：统一在移交=推送至保管库时由服务端自动执行） ──
+  // 工作台只读展示各卷最近一次检测结果（移交尝试后刷新）；手动检测入口在 快速检测 页
+  const [volumeLastCheck, setVolumeLastCheck] = useState<Record<string, VolumeLastCheck>>({});
+
+  const refreshLastChecks = useCallback(async () => {
+    try {
+      const reports = await fetchInspectionReports();
+      const latest: Record<string, VolumeLastCheck> = {};
+      for (const r of reports) { // reports 按时间倒序，首次命中即最新
+        if (r.target_kind !== 'volume' || latest[r.target_node]) continue;
+        const detail = parseReportDetail(r.detail_json);
+        latest[r.target_node] = {
+          allPass: !!(r.real && r.complete && r.usable && r.safe),
+          real: !!r.real, complete: !!r.complete, usable: !!r.usable, safe: !!r.safe,
+          checkedAt: r.created_at || '',
+          issueCount: (detail.items || []).filter((it) => !it.pass).length,
+        };
+      }
+      setVolumeLastCheck(latest);
+    } catch {
+      /* 检测历史不可读不影响工作台主流程 */
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshLastChecks();
+  }, [refreshLastChecks]);
+
   // ★ 查看凭证详情（从未分配池或案卷卡片中点击）
   const handleViewDetail = useCallback((r: { id: string }) => {
     // ★ 2026-08-19 修复：卷内件不在待组卷池 records 里，必须回退全量件视图 allRecords，
@@ -1758,29 +1794,22 @@ const VolumeWorkspacePage: React.FC = () => {
       showToast('未找到该件的详情数据', 'info');
       return;
     }
-    // ★ 四性检测在卷级（2026-08-20）：件在卷内时，详情徽标继承所属案卷的检测结果
+    // ★ 四性检测在卷级（移交时自动执行，2026-08-25）：件在卷内时，详情徽标继承所属案卷最近检测结果
     let volId: string | null = null;
     for (const [vid, items] of Object.entries(volumeItems)) {
       if (items.some((it) => it.recordId === full.id)) { volId = vid; break; }
     }
-    const vc = volId ? volumeChecks[volId] : undefined;
-    setDetailInspectionRan(
-      !!vc && [vc.real, vc.complete, vc.usable, vc.safe].some((s) => s === 'passed' || s === 'failed'),
-    );
+    const vc = volId ? volumeLastCheck[volId] : undefined;
+    setDetailInspectionRan(!!vc);
     setDetailRecord(
       vc
         ? {
             ...full,
-            checks: {
-              real: vc.real === 'passed',
-              complete: vc.complete === 'passed',
-              usable: vc.usable === 'passed',
-              safe: vc.safe === 'passed',
-            },
+            checks: { real: vc.real, complete: vc.complete, usable: vc.usable, safe: vc.safe },
           }
         : full,
     );
-  }, [records, allRecords, volumeItems, volumeChecks]);
+  }, [records, allRecords, volumeItems, volumeLastCheck]);
 
   const showToast = (message: string, type: 'success' | 'info' = 'success') => {
     setToast({ message, type });
@@ -2545,48 +2574,13 @@ const VolumeWorkspacePage: React.FC = () => {
     showToast(`已为 ${targetRecord.voucherNo} 补传 ${newDocs.length} 份附件`);
   }, [records, setRecords, volumes, activeVolumeId, volumeItems]);
 
-  // ── 四性检测（真实现：/inspection/run-volume，2026-08-18 替换 setTimeout 假检测） ──
-  const [volumeIssues, setVolumeIssues] = useState<Record<string, InspectionIssue[]>>({});
-
-  const handleRunChecks = useCallback(async (volumeId: string) => {
-    setVolumeChecks((prev) => ({
-      ...prev,
-      [volumeId]: { real: 'running', complete: 'running', usable: 'running', safe: 'running' },
-    }));
-    try {
-      const r = await runVolumeInspection(volumeId);
-      setVolumeChecks((prev) => ({
-        ...prev,
-        [volumeId]: {
-          real: r.real ? 'passed' : 'failed',
-          complete: r.complete ? 'passed' : 'failed',
-          usable: r.usable ? 'passed' : 'failed',
-          safe: r.safe ? 'passed' : 'failed',
-        },
-      }));
-      setVolumeIssues((prev) => ({ ...prev, [volumeId]: r.issues || [] }));
-      showToast(
-        r.allPass
-          ? `四性检测通过（${r.itemCount} 件）`
-          : `四性检测未通过：${(r.issues || []).length} 项问题（展开案卷查看明细）`,
-        r.allPass ? 'success' : 'info'
-      );
-    } catch (e: any) {
-      setVolumeChecks((prev) => ({
-        ...prev,
-        [volumeId]: { real: 'failed', complete: 'failed', usable: 'failed', safe: 'failed' },
-      }));
-      setVolumeIssues((prev) => ({ ...prev, [volumeId]: [] }));
-      showToast(e.message || '四性检测执行失败', 'info');
-    }
-  }, []);
-
   // ── 移交至档案保管（弹窗选择上架方式，2026-08-20） ──
   const handleTransfer = useCallback((volumeId: string) => {
     setTransferTarget(volumeId);
   }, []);
 
-  /** 移交弹窗「确认移交」：先移交归盒（服务端自动找/建盒），再按选择上架。
+  /** 移交弹窗「确认移交」：服务端先自动四性检测（移交=法定检测节点），通过后移交归盒，再按选择上架。
+   *  四性未通过 → INSPECTION_FAILED 携带问题明细抛回弹窗内联展示（弹窗保持打开）；
    *  移交失败 → 异常抛回弹窗内联展示（弹窗保持打开，可重试）；
    *  上架失败 → 不回滚移交，提示盒已入「待上架区」可补上架（兜底闭环）。 */
   const handleTransferSubmit = useCallback(async (choice: { mode: ShelveMode; position?: ShelfPosition }) => {
@@ -2597,8 +2591,25 @@ const VolumeWorkspacePage: React.FC = () => {
     // ★ 类别名按归一化后的大类代码查表（数字代码 01 需先映射为 KP）
     const categoryCode = toCategoryCode(volume?.archiveTypeCode || '', volume?.archiveType);
     const typeName = ARCHIVE_TYPE_CATEGORY_NAMES[categoryCode] || '';
-    // 第一步：移交归盒
-    await volumeStore.transferVolume(volumeId);
+    // 第一步：移交归盒（服务端在归盒前自动执行四性检测，未通过即阻断）
+    try {
+      await volumeStore.transferVolume(volumeId);
+    } catch (e: any) {
+      void refreshLastChecks(); // 无论成败，检测都已产生报告 → 刷新卷卡检测状态
+      if (e?.code === 'INSPECTION_FAILED') {
+        // 拉取本报告的问题明细，随异常抛给弹窗内联展示
+        try {
+          const reports = await fetchInspectionReports(volumeId);
+          const latest = reports[0];
+          if (latest) {
+            const detail = parseReportDetail(latest.detail_json);
+            e.issues = (detail.items || []).filter((it) => !it.pass);
+          }
+        } catch { /* 明细不可读时仅显示错误文案 */ }
+      }
+      throw e;
+    }
+    void refreshLastChecks();
     useArchiveStore.getState().loadRecords();
     void useArchiveStore.getState().loadAllRecords(); // 同步刷新全量件视图（2026-08-16 贯通修复）
     const transferred = useVolumeStore.getState().volumes.find((v) => v.id === volumeId);
@@ -2631,13 +2642,25 @@ const VolumeWorkspacePage: React.FC = () => {
       showToast(`已移交 1 卷（${typeName}）至档案保管${boxNo ? ` · ${boxNo}` : ''}`);
     }
     setTransferTarget(null);
-  }, [transferTarget, filters.fondsCode]);
+  }, [transferTarget, filters.fondsCode, refreshLastChecks]);
 
   // ── 打开目录打印弹窗 ──
   const handleOpenPrint = useCallback((volumeId: string) => {
     setPreselectedPrintVolumeId(volumeId);
     setShowPrintModal(true);
   }, []);
+
+  // ── 元数据录入（2026-08-25）：卷/件元数据录入弹窗；保存后刷新卷内件与件域镜像 ──
+  const [metadataVolumeId, setMetadataVolumeId] = useState<string | null>(null);
+
+  const handleMetadataSaved = useCallback(async () => {
+    const vid = metadataVolumeId;
+    if (vid) {
+      try { await useVolumeStore.getState().loadVolumeItems(vid); } catch { /* 忽略 */ }
+    }
+    void useArchiveStore.getState().loadRecords();
+    void useArchiveStore.getState().loadAllRecords();
+  }, [metadataVolumeId]);
 
   // ── 删除未组卷记录（v2.6 起逻辑删除：移入回收站，可恢复；已删件不再出现于列表） ──
   // 删除确认（2026-08-22 重做）：站内 ConfirmModal 替代 window.confirm（原生弹窗与整站风格不符），
@@ -2694,11 +2717,6 @@ const VolumeWorkspacePage: React.FC = () => {
       showToast(`已移入 ${okIds.length} 条，${failedIds.size} 条失败（${firstErr}）`, 'info');
     }
   }, [setRecords]);
-
-  // ── 获取案卷的四性检测状态 ──
-  const getChecks = (volumeId: string): VolumeChecks => {
-    return volumeChecks[volumeId] || { real: 'pending', complete: 'pending', usable: 'pending', safe: 'pending' };
-  };
 
   // ── 渲染 ──
   const draftVolumes = volumes.filter((v) => v.status === 'draft');
@@ -2875,7 +2893,6 @@ const VolumeWorkspacePage: React.FC = () => {
                       deleteVolume(id);
                       showToast('已删除案卷', 'info');
                     }}
-                    onRunChecks={handleRunChecks}
                     onTransfer={handleTransfer}
                     onPrint={handleOpenPrint}
                     onUpdateTitle={(volId, title) => {
@@ -2885,8 +2902,8 @@ const VolumeWorkspacePage: React.FC = () => {
                     onDecompose={handleDecompose}
                     onUnconfirm={handleUnconfirm}
                     onInsertAtPosition={handleInsertAtPosition}
-                    checks={getChecks(v.id)}
-                    issues={volumeIssues[v.id] || []}
+                    onMetadataEntry={(id) => setMetadataVolumeId(id)}
+                    lastCheck={volumeLastCheck[v.id] || null}
                     selectedCount={selectedIds.size}
                     onAddSelectedToVolume={handleAddSelectedToActiveVolume}
                     attachmentCountMap={attachmentCountMap}
@@ -2916,7 +2933,6 @@ const VolumeWorkspacePage: React.FC = () => {
                     onRemoveItem={handleRemoveItem}
                     onConfirm={handleConfirmVolume}
                     onDelete={() => {}}
-                    onRunChecks={handleRunChecks}
                     onTransfer={handleTransfer}
                     onPrint={handleOpenPrint}
                     onUpdateTitle={(volId, title) => {
@@ -2926,8 +2942,8 @@ const VolumeWorkspacePage: React.FC = () => {
                     onDecompose={() => {}}
                     onUnconfirm={handleUnconfirm}
                     onInsertAtPosition={() => {}}
-                    checks={getChecks(v.id)}
-                    issues={volumeIssues[v.id] || []}
+                    onMetadataEntry={() => {}}
+                    lastCheck={volumeLastCheck[v.id] || null}
                     selectedCount={0}
                     onAddSelectedToVolume={() => {}}
                     attachmentCountMap={attachmentCountMap}
@@ -3064,6 +3080,15 @@ const VolumeWorkspacePage: React.FC = () => {
         preselectedVolumeId={preselectedPrintVolumeId}
       />
 
+      {/* ★ 元数据录入弹窗（2026-08-25：卷级+件级元数据录入/修正） */}
+      <MetadataEntryModal
+        open={!!metadataVolumeId}
+        volume={volumes.find((v) => v.id === metadataVolumeId) || null}
+        items={metadataVolumeId ? (volumeItems[metadataVolumeId] || []) : []}
+        onClose={() => setMetadataVolumeId(null)}
+        onSaved={() => void handleMetadataSaved()}
+      />
+
       {/* ★ 纯原始凭证组卷确认（2026-08-19：组件＝1张记账凭证+N个原始凭证附件，
           原始凭证一般应随记账凭证组卷；确需单独装订成册时经确认放行） */}
       {pureSourceConfirm && (
@@ -3094,7 +3119,6 @@ const VolumeWorkspacePage: React.FC = () => {
         >
           <div className="text-xs text-slate-600 bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-1.5 leading-relaxed">
             <p>· 所选 {selectedIds.size} 件均为原始凭证{pureSourceConfirm.kind === 'add' ? '，且目标案卷内也没有记账凭证' : ''}，缺少记账凭证作为主体。</p>
-            <p>· 按《会计基础工作规范》，原始凭证一般应作为附件随所属记账凭证组卷；仅当附件过多、确需单独装订成册时，才独立成卷。</p>
           </div>
         </OpModal>
       )}

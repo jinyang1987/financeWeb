@@ -96,7 +96,7 @@ const LifecycleStatsPage: React.FC = () => {
               ))}
             </div>
             <div className="mt-4 flex items-center justify-between px-3 py-2.5 bg-slate-50 rounded-xl">
-              <span className="text-xs text-slate-500">全项通过（真实性+完整性+可用性+安全性）</span>
+              <span className="text-xs text-slate-500">四性检测通过率</span>
               <span className={`text-sm font-bold font-mono ${lc.checksPassRate === 100 ? 'text-emerald-600' : 'text-amber-600'}`}>
                 {lc.checksPassRate}%
               </span>

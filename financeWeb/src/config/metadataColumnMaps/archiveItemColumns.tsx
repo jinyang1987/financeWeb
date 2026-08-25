@@ -83,7 +83,7 @@ export const ARCHIVE_ITEM_COLUMN_MAP: Record<string, ColumnDef> = {
     accessor: (r) => (
       <span className="font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-xs">{r.voucherNo}</span>
     ),
-    width: '90px',
+    width: '96px',
     align: 'center',
   },
   // M30: 会计资料形式 → archiveType
@@ -101,7 +101,7 @@ export const ARCHIVE_ITEM_COLUMN_MAP: Record<string, ColumnDef> = {
       const cls = colorMap[r.archiveType] || 'bg-slate-50 text-slate-600';
       return <span className={`px-2 py-0.5 rounded-full font-bold text-[10.5px] ${cls}`}>{r.archiveType}</span>;
     },
-    width: '90px',
+    width: '100px',
     align: 'center',
   },
   // M17: 责任者 → department
@@ -129,7 +129,7 @@ export const ARCHIVE_ITEM_COLUMN_MAP: Record<string, ColumnDef> = {
     metaId: 'M29',
     label: '会计年度',
     accessor: (r) => <span className="font-mono text-slate-500">{r.year}</span>,
-    width: '80px',
+    width: '96px',
     align: 'center',
   },
   // M15: 日期 → year + month
@@ -156,7 +156,7 @@ export const ARCHIVE_ITEM_COLUMN_MAP: Record<string, ColumnDef> = {
         </span>
       );
     },
-    width: '80px',
+    width: '96px',
     align: 'center',
   },
   // M14: 题名 → remarks
@@ -229,7 +229,7 @@ export const ARCHIVE_ITEM_COLUMN_MAP: Record<string, ColumnDef> = {
       const main = r.components[0];
       return <span className="text-xs text-slate-500 font-mono">{main?.size || '—'}</span>;
     },
-    width: '80px',
+    width: '96px',
     align: 'center',
   },
   // M9: 室编案卷号 → volumeCode
@@ -274,7 +274,7 @@ export const ARCHIVE_ITEM_COLUMN_MAP: Record<string, ColumnDef> = {
         ? <span className="px-1.5 py-0.5 text-[10px] bg-slate-100 text-slate-600 rounded font-mono">{main.contentType.toUpperCase()}</span>
         : <span className="text-slate-300">—</span>;
     },
-    width: '70px',
+    width: '96px',
     align: 'center',
   },
   // M27: 哈希值 → components[0].hash
@@ -322,7 +322,7 @@ export const ARCHIVE_ITEM_COLUMN_MAP: Record<string, ColumnDef> = {
     accessor: (r) => r.pageNo != null
       ? <span className="font-mono text-slate-600">{r.pageNo}</span>
       : <span className="text-slate-300">—</span>,
-    width: '50px',
+    width: '64px',
     align: 'center',
   },
   // M39: 关联档案号 → parentRecordId / sourceDocumentIds
@@ -335,7 +335,7 @@ export const ARCHIVE_ITEM_COLUMN_MAP: Record<string, ColumnDef> = {
         ? <span className="text-sky-600 font-medium text-xs">{linkedCount} 条关联</span>
         : <span className="text-slate-300">无</span>;
     },
-    width: '90px',
+    width: '96px',
     align: 'center',
   },
   // M18: 附件 → 子件数量
@@ -367,7 +367,7 @@ export const ARCHIVE_ITEM_COLUMN_MAP: Record<string, ColumnDef> = {
     metaId: 'M16',
     label: '文件编号',
     accessor: (r) => <span className="font-mono text-slate-500 text-xs">{r.voucherNo}</span>,
-    width: '80px',
+    width: '96px',
     align: 'center',
   },
 };

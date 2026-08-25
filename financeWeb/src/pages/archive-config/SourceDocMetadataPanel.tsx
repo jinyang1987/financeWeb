@@ -2,10 +2,12 @@
  * 原始凭证元数据配置面板
  *
  * "大而全让客户选"模式：
- * 1. 从 96 种原始凭证类型中选择一种
- * 2. 查看该类型的全部字段（公共 + 类型特有）
+ * 1. 从原始凭证类型目录（外来/自制/特殊，覆盖全量类型）中选择一种
+ * 2. 查看该类型的全部字段（公共字段 + 引用字段集 + 类型特有）
  * 3. 独立开关每个字段的可见性
  * 4. 配置持久化到 localStorage
+ *
+ * 字段依据：DA/T 95-2022（附录A自制/附录B外来）+ 税务总局发票规定 + 财政票据办法（见 types/sourceDocument.ts）。
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -14,7 +16,7 @@ import {
   FileText, Tag, Hash, DollarSign, Building2, User, Package,
   FileSpreadsheet, Settings, CheckCircle2,
 } from 'lucide-react';
-import { SOURCE_DOC_TYPE_TREE, getExtFieldDefs } from '../../types/sourceDocument';
+import { SOURCE_DOC_TYPE_TREE, getExtFieldDefs, getStandardBasis, countLeafTypes } from '../../types/sourceDocument';
 import type { SourceDocTypeNode } from '../../types/sourceDocument';
 import { useSourceDocFieldStore, SOURCE_DOC_COMMON_FIELDS } from '../../stores/sourceDocFieldStore';
 
@@ -209,8 +211,19 @@ const FieldConfigTable: React.FC<{ typeCode: string }> = ({ typeCode }) => {
     setVisibleKeys(typeCode, requiredKeys);
   };
 
+  // 该类型的规范依据（字段来源的法规/标准）
+  const basis = getStandardBasis(typeCode);
+
   return (
     <div>
+      {/* 规范依据 */}
+      {basis && (
+        <div className="mb-3 px-3 py-2 bg-teal-50/60 border border-teal-200/70 rounded-lg">
+          <span className="text-[10px] font-semibold text-teal-700 mr-1.5">字段依据</span>
+          <span className="text-[11px] text-teal-600 leading-relaxed">{basis}</span>
+        </div>
+      )}
+
       {/* 统计 + 快捷操作 */}
       <div className="flex items-center justify-between mb-3 px-1">
         <span className="text-xs text-slate-500">
@@ -293,15 +306,6 @@ const FieldConfigTable: React.FC<{ typeCode: string }> = ({ typeCode }) => {
         })}
       </div>
 
-      {/* 预览提示 */}
-      <div className="mt-4 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg">
-        <div className="flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-          <span className="text-xs text-slate-600">
-            配置已自动保存。可见字段将展示在<a href="?menu=source-doc-search" className="text-sky-600 underline">原始凭证检索</a>页面的表格和详情抽屉中。
-          </span>
-        </div>
-      </div>
     </div>
   );
 };
@@ -318,24 +322,19 @@ const SourceDocMetadataPanel: React.FC = () => {
 
   return (
     <div>
-      {/* 说明横幅 */}
-      <div className="mb-4 px-4 py-3 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl">
-        <div className="flex items-start gap-3">
-          <FileSpreadsheet className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-          <div>
-            <h3 className="text-sm font-bold text-emerald-800">原始凭证元数据配置</h3>
-            <p className="text-xs text-emerald-600 mt-1 leading-relaxed">
-              覆盖 96 种原始凭证类型，每种类型包含 9 个公共字段 + 类型特有扩展字段。
-              选择凭证类型后可独立控制每个字段在检索页面的可见性。
-              遵循"<strong>大而全让客户选</strong>"的设计原则——所有字段默认可见，客户按需精简。
-            </p>
-          </div>
-        </div>
+      {/* 类型总数 + 字段依据 */}
+      <div className="mb-4 flex items-center gap-2 text-xs text-slate-500">
+        <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" />
+        <span>
+          {countLeafTypes()} 种原始凭证类型 · 字段依据：DA/T 95-2022（附录A自制 / 附录B外来）、
+          《发票管理办法》及税务总局公告、《财政票据管理办法》
+        </span>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* items-start：左栏高度不随右栏字段列表伸缩（2026-08-25 左侧方框高度不定修复） */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* 左侧：类型选择器 */}
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 self-start">
           <div className="border border-slate-200 rounded-xl bg-white p-4 sticky top-4">
             <TypeSelector selectedCode={selectedCode} onSelect={handleSelect} />
           </div>
@@ -357,8 +356,7 @@ const SourceDocMetadataPanel: React.FC = () => {
             <div className="flex items-center justify-center h-64 border-2 border-dashed border-slate-300 rounded-xl bg-white">
               <div className="text-center">
                 <FileSpreadsheet className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-                <p className="text-sm text-slate-500">请先从左侧选择一种原始凭证类型</p>
-                <p className="text-xs text-slate-400 mt-1">然后查看和配置该类型的字段显隐</p>
+                <p className="text-sm text-slate-500">请选择原始凭证类型</p>
               </div>
             </div>
           )}

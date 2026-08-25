@@ -191,9 +191,6 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose, contextI
               </button>
             </div>
           </div>
-          <p className="text-xs text-slate-400 mt-1.5">
-            拖拽手柄调整顺序，<Check className="w-3 h-3 inline mx-0.5" />采用 / <Eye className="w-3 h-3 inline mx-0.5" />展示 / <Star className="w-3 h-3 inline mx-0.5" />推荐常用 三层配置
-          </p>
         </div>
 
         {/* 预览区 */}
@@ -202,9 +199,8 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose, contextI
           <div className="border border-slate-200 rounded-xl bg-white overflow-hidden shadow-sm">
             <div className="px-5 py-3 bg-slate-50 border-b border-slate-200">
               <h3 className="text-sm font-semibold text-slate-700">
-                <Package className="w-4 h-4 inline mr-1" />会计档案详情卡片（预览）—— 件级+卷级+盒级元数据
+                <Package className="w-4 h-4 inline mr-1" />会计档案详情卡片（预览）
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">拖拽字段调整顺序，勾选控制可见性 — 字段从左到右排列，自动换行</p>
             </div>
 
             {visibleFields.length === 0 ? (
@@ -429,7 +425,7 @@ const MetadataSection: React.FC<SectionProps> = ({ title, description, icon, met
           </div>
           <div>
             <h3 className={`text-sm font-bold ${titleColor}`}>{title}</h3>
-            <p className="text-xs text-slate-500 mt-0.5">{description}（{metadata.length} 项）</p>
+            <p className="text-xs text-slate-500 mt-0.5">{metadata.length} 项</p>
           </div>
         </div>
         {isExpanded ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
@@ -732,7 +728,7 @@ const MetadataConfigTab: React.FC = () => {
                     </div>
                   ) : (
                     <MetadataSection
-                      title="检索结果" description="匹配当前关键词/必选性条件的全部元数据项"
+                      title="检索结果" description=""
                       icon={<Search className="w-4 h-4 text-sky-600" />}
                       metadata={searchResults} isExpanded onToggle={() => {}}
                     />
@@ -745,7 +741,6 @@ const MetadataConfigTab: React.FC = () => {
                     <div className="flex items-center gap-2 mb-4">
                       <LayoutGrid className="w-4 h-4 text-sky-600" />
                       <h3 className="text-sm font-bold text-slate-800">元数据概览</h3>
-                      <span className="text-xs text-slate-400">盒→卷→件→凭证四级穿透 · 点左侧导航查看分组明细</span>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-4">
                       <div className="bg-slate-50 rounded-lg p-3 text-center">

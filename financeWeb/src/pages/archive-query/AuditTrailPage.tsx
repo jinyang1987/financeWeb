@@ -131,7 +131,6 @@ const AuditTrailPage: React.FC = () => {
         <div className="flex items-center gap-3">
           <ShieldCheck className="w-5 h-5 text-slate-600" />
           <h1 className="text-base font-bold text-slate-800">审计追踪</h1>
-          <span className="text-xs text-slate-400">操作日志哈希链 · 全链路穿透 · 合规取证包导出</span>
         </div>
       </div>
 
@@ -166,8 +165,7 @@ const AuditTrailPage: React.FC = () => {
         {!queried ? (
           <div className="max-w-3xl mx-auto text-center py-20 text-slate-400">
             <ShieldCheck className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-            <p className="text-sm">输入凭证号、借阅单号或动作关键词，查询真实操作审计链路</p>
-            <p className="text-xs mt-2 text-slate-300">数据来自操作日志哈希链（ams_operation_log），留空查询则显示最近记录</p>
+            <p className="text-sm">输入凭证号、单号或动作关键词查询</p>
           </div>
         ) : loading ? (
           <div className="max-w-3xl mx-auto text-center py-20 text-slate-400">
@@ -178,9 +176,6 @@ const AuditTrailPage: React.FC = () => {
           <div className="max-w-3xl mx-auto text-center py-20 text-slate-400">
             <AlertCircle className="w-12 h-12 mx-auto mb-3 text-slate-300" />
             <p className="text-sm">未找到相关审计记录</p>
-            <p className="text-xs mt-2 text-slate-300">
-              该凭证/单号暂无操作日志。借阅申请、审批、出库、归还等操作会自动写入审计链路。
-            </p>
           </div>
         ) : (
           <div className="max-w-3xl mx-auto">

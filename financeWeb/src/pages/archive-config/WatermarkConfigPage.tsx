@@ -510,7 +510,6 @@ const WatermarkConfigPage: React.FC = () => {
               <div className="pb-4">
                 <SectionTitle
                   title="动态变量"
-                  desc="水印内容与当前操作上下文动态绑定（需求第3节），泄露时可精准定位泄露人、时间与 IP"
                 />
                 <div className="divide-y divide-slate-50">
                   <ConfigRow label="操作人姓名" desc="如：张三">
@@ -557,7 +556,7 @@ const WatermarkConfigPage: React.FC = () => {
                   </ConfigRow>
                 </div>
 
-                <SectionTitle title="警示文案" desc="醒目的视觉警示，提醒查阅者文件机密性（需求第3节）" />
+                <SectionTitle title="警示文案" />
                 <div className="px-4 pb-2">
                   <input
                     type="text"
@@ -588,7 +587,7 @@ const WatermarkConfigPage: React.FC = () => {
                   </div>
                 </div>
 
-                <SectionTitle title="自定义附加文字" desc="追加在水印末尾的一行自定义文本（如单位名称、项目代号）" />
+                <SectionTitle title="自定义附加文字" />
                 <div className="px-4 pb-2">
                   <input
                     type="text"
@@ -636,7 +635,7 @@ const WatermarkConfigPage: React.FC = () => {
             {/* ==================== 样式与布局 ==================== */}
             {activeTab === 'style' && (
               <div className="pb-4">
-                <SectionTitle title="布局模式" desc="全屏倾斜平铺可确保截图任意局部均含完整溯源信息（需求第4节）" />
+                <SectionTitle title="布局模式" />
                 <div className="grid grid-cols-2 gap-3 px-4">
                   {([
                     { key: 'tile' as const, icon: LayoutGrid, title: '全屏倾斜平铺', desc: '水印按密度铺满整个页面，任意局部截图均可溯源（推荐）' },
@@ -660,7 +659,7 @@ const WatermarkConfigPage: React.FC = () => {
                   ))}
                 </div>
 
-                <SectionTitle title="视觉呈现" desc="透明度建议 15% ~ 30%，既能看清字迹又不遮挡关键数字与印章" />
+                <SectionTitle title="视觉呈现" />
                 <div className="divide-y divide-slate-50">
                   <ConfigRow label="倾斜角度" desc="建议 30° ~ 45°">
                     <SliderRow
@@ -733,7 +732,6 @@ const WatermarkConfigPage: React.FC = () => {
               <div className="pb-4">
                 <SectionTitle
                   title="防前端篡改"
-                  desc="MutationObserver 监听 DOM 树，水印节点被删除或修改时按策略处置并记录安全日志（需求第2.1节）"
                 />
                 <div className="divide-y divide-slate-50">
                   <ConfigRow label="防篡改监听" desc="实时监听水印节点状态">
@@ -754,7 +752,7 @@ const WatermarkConfigPage: React.FC = () => {
                   </ConfigRow>
                 </div>
 
-                <SectionTitle title="高阶安全（高密级档案）" desc="常规明水印之外的进阶防护（需求第5节）" />
+                <SectionTitle title="高阶安全（高密级档案）" />
                 <div className="divide-y divide-slate-50">
                   <ConfigRow label="盲水印（暗水印）" desc="频域数字水印：拍照/截图/裁剪/压缩后仍可提取泄露人工号">
                     <div className="flex items-center gap-2">
@@ -776,7 +774,7 @@ const WatermarkConfigPage: React.FC = () => {
                   </ConfigRow>
                 </div>
 
-                <SectionTitle title="策略豁免" desc="对特定角色免除水印，视单位安全规定启用（需求第4节）" />
+                <SectionTitle title="策略豁免" />
                 <div className="divide-y divide-slate-50">
                   <ConfigRow label="启用角色豁免" desc="命中豁免角色的用户不加水印">
                     <Toggle
@@ -817,7 +815,7 @@ const WatermarkConfigPage: React.FC = () => {
                   )}
                 </div>
 
-                <SectionTitle title="下载烧录" desc="后端将水印作为图层烧录进文件本体（需求第2.2节·第6节）" />
+                <SectionTitle title="下载烧录" />
                 <div className="divide-y divide-slate-50">
                   <ConfigRow label="支持烧录的格式" desc="PDF / OFD / JPG / PNG">
                     <div className="flex flex-wrap gap-1.5">

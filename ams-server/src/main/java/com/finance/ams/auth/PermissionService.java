@@ -420,7 +420,7 @@ public class PermissionService {
       menus.put("archivist", union(portal,
           "voucher-search", "matter-search", "source-doc-search", "volume-item-search", "audit-trail",
           "archive-rcv", "archive-api-receive",
-          "voucher-manager", "volume-workspace",
+          "voucher-manager", "volume-workspace", "quick-check",
           "view-finance", "digital-warehouse",
           "approval-center", "borrow-manage", "borrow-ledger", "borrow-stats", "transfer-manage",
           "stats-cockpit", "stats-inventory", "stats-lifecycle", "stats-compliance",
@@ -430,7 +430,7 @@ public class PermissionService {
           "config-workflow", "sys-storage", "sys-cockpit-config", "sys-connection"));
       menus.put("archive_director", union(portal,
           "voucher-search", "matter-search", "source-doc-search", "volume-item-search", "audit-trail",
-          "voucher-manager", "volume-workspace",
+          "voucher-manager", "volume-workspace", "quick-check",
           "view-finance", "digital-warehouse",
           "approval-center", "borrow-manage", "borrow-ledger", "borrow-stats", "transfer-manage",
           "stats-cockpit", "stats-inventory", "stats-lifecycle", "stats-compliance",

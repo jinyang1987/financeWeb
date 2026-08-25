@@ -4,10 +4,10 @@
  * 会计实操：原始凭证是记账凭证的附属附件，不独立归档。
  * 检索入口以"所属记账凭证号"为核心，类型树用于附件分类参考。
  *
- * - 左侧类型树：96种原始凭证类型（附件分类参考目录）
+ * - 左侧类型树：原始凭证全量类型目录（外来/自制/特殊，附件分类参考）
  * - 顶部搜索：★ 所属凭证号（核心检索键）、单据编号、日期/金额范围、对方单位
  * - 中央表格：可配置列、排序、点击行展开详情
- * - 详情抽屉：9公共字段 + 类型扩展字段 + 所属记账凭证追溯
+ * - 详情抽屉：公共字段 + 字段集/类型扩展字段 + 所属记账凭证追溯
  */
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { useSourceDocumentStore } from '../../stores/sourceDocumentStore';
 import { useArchiveStore } from '../../stores/archiveStore';
-import { SOURCE_DOC_TYPE_TREE, flattenTypeTree, getExtFieldDefs } from '../../types/sourceDocument';
+import { SOURCE_DOC_TYPE_TREE, flattenTypeTree, getExtFieldDefs, countLeafTypes } from '../../types/sourceDocument';
 import type { SourceDocument, SourceDocTypeNode, SourceDocExtFieldDef } from '../../types/sourceDocument';
 import { FieldGrid } from '../../components/common/DetailTable';
 
@@ -533,7 +533,7 @@ const SourceDocumentSearchPage: React.FC = () => {
         <div>
           <h2 className="text-sm font-semibold text-slate-800">原始凭证附件检索</h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            共 {store.filteredDocuments.length} 份附件 · 按所属记账凭证号查找 · 96种类型仅供参考
+            共 {store.filteredDocuments.length} 份附件 · 按所属记账凭证号查找 · {countLeafTypes()} 种类型目录供分类参考
           </p>
         </div>
         <div className="flex items-center gap-2">

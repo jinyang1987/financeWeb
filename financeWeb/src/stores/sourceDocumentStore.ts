@@ -1,14 +1,16 @@
 ﻿/**
- * 原始凭证 Store（P1-④ 已切 ams-server 真后端）
+ * 原始凭证 Store（方案A 载体统一到 record，2026-08-25）
  *
- * 数据源: ams-server /source-docs（全宗聚合查询）
+ * 数据源: 全量件（scope=all）中 voucherCategory='原始凭证' 的件，经
+ * recordsToSourceDocs 映射为富元数据 SourceDocument 视图（不再读遗留 /source-docs）。
  * 仿真种子已清除（2026-07-28，假数据分域随切随清）
  */
 
 import { create } from 'zustand';
 import type { SourceDocument, SourceDocTypeNode } from '../types/sourceDocument';
 import { SOURCE_DOC_TYPE_TREE, flattenTypeTree } from '../types/sourceDocument';
-import { fetchSourceDocsByFonds } from '../services/sourceDocumentService';
+import { fetchAllRecords, dtoToRecord } from '../services/recordService';
+import { recordsToSourceDocs } from '../utils/recordToSourceDoc';
 
 // 预计算类型 code → label 映射
 const TYPE_LABEL_MAP = flattenTypeTree(SOURCE_DOC_TYPE_TREE);
@@ -90,11 +92,16 @@ export const useSourceDocumentStore = create<SourceDocumentState>((set, get) => 
 
   loading: false,
 
-  /** 从 ams-server 加载当前全宗的全部原始凭证（P1-④） */
+  /**
+   * 加载当前全宗的全部原始凭证（方案A 载体统一到 record，2026-08-25）。
+   * 数据源 = 全量件（scope=all）中 voucherCategory='原始凭证' 的件，经
+   * recordsToSourceDocs 映射为富元数据 SourceDocument 视图；不再读遗留 /source-docs。
+   */
   loadSourceDocs: async (fondsCode: string) => {
     set({ loading: true });
     try {
-      const docs = await fetchSourceDocsByFonds(fondsCode);
+      const { items } = await fetchAllRecords({ fondsCode });
+      const docs = recordsToSourceDocs(items.map(dtoToRecord));
       get().setDocuments(docs);
     } catch (e) {
       console.warn('原始凭证加载失败:', e);

@@ -6,12 +6,14 @@
  * 原理：两类单据版式与语义差异稳定互斥，关键词加权打分即可高准确区分：
  *   - 记账凭证（系统机打）：标题「记账凭证」、凭证字号、会计科目表、借/贷方金额、制单/审核/记账签章
  *   - 原始凭证（外来/自制单据）：发票家族（发票代码/号码/税率/税额/价税合计）、
- *     报销单/审批单/银行回单/收据/行程单/对账单/合同/清单等（对齐 96 种原始凭证分类目录）
+ *     报销单/审批单/银行回单/收据/行程单/对账单/合同/清单等（对齐原始凭证全量类型分类目录）
  *
  * 输入 = 文件名 + OCR 文本（可为空，空时仅按文件名识别，置信度自然降低）；
  * 输出 = 类别 + 置信度 + 抽取字段（凭证号/金额/日期）+ 命中证据（UI 可解释）。
  * 拿不准一律「未识别」，宁缺毋滥 —— 交给人工校验，不瞎猜。
  */
+
+import { SOURCE_DOC_TYPE_TREE, flattenTypeTree } from '../types/sourceDocument';
 
 export type DocCategory = '记账凭证' | '原始凭证' | '未识别';
 
@@ -34,6 +36,10 @@ export interface ClassifyResult {
   hits: string[];
   /** 识别依据来源 */
   source: 'ocr' | 'filename';
+  /** 原始凭证 96 类目录编码（仅 category='原始凭证' 且可推断时有值，2026-08-25） */
+  docTypeCode?: string;
+  /** 原始凭证类型名称 */
+  docTypeName?: string;
 }
 
 // ── 规则表（权重 = 命中得分；strong 类单条即可定类） ──
@@ -56,7 +62,7 @@ const VOUCHER_TEXT_RULES: Rule[] = [
   { kw: '摘要', w: 3 },
 ];
 
-/** 原始凭证：单据名称为强特征（对齐 96 种原始凭证目录的高频族），票据字段为佐证 */
+/** 原始凭证：单据名称为强特征（对齐原始凭证全量类型目录的高频族），票据字段为佐证 */
 const SOURCE_TEXT_RULES: Rule[] = [
   { kw: '增值税专用发票', w: 45, strong: true },
   { kw: '增值税普通发票', w: 42, strong: true },
@@ -77,6 +83,16 @@ const SOURCE_TEXT_RULES: Rule[] = [
   { kw: '入库单', w: 34, strong: true },
   { kw: '纳税申报', w: 34, strong: true },
   { kw: '结算单', w: 30, strong: true },
+  { kw: '火车票', w: 36, strong: true },
+  { kw: '高铁票', w: 36, strong: true },
+  { kw: '机票', w: 34, strong: true },
+  { kw: '海关缴款书', w: 36, strong: true },
+  { kw: '缴款书', w: 34, strong: true },
+  { kw: '报关单', w: 34, strong: true },
+  { kw: '完税证明', w: 34, strong: true },
+  { kw: '缴费凭证', w: 32, strong: true },
+  { kw: '验收单', w: 32, strong: true },
+  { kw: '采购订单', w: 32, strong: true },
   { kw: '价税合计', w: 12 },
   { kw: '税率', w: 10 },
   { kw: '税额', w: 10 },
@@ -150,6 +166,82 @@ function extractDate(raw: string): string {
   return '';
 }
 
+// ── 原始凭证 96 类目录推断（2026-08-25 方案A：类型编码落库） ──
+// 有序规则表：从最具体到一般，命中即返回。覆盖高频族；未命中返回 null（类型留待人工选择）。
+const SOURCE_TYPE_RULES: Array<{ re: RegExp; code: string }> = [
+  { re: /机动车销售/, code: 'vehicle-invoice' },
+  { re: /二手车/, code: 'used-vehicle-invoice' },
+  { re: /货物运输/, code: 'transport-invoice' },
+  { re: /增值税电子专用/, code: 'vat-e-special-invoice' },
+  { re: /增值税专用发票/, code: 'vat-special-invoice' },
+  { re: /增值税电子普通/, code: 'vat-e-normal-invoice' },
+  { re: /增值税普通发票/, code: 'vat-normal-invoice' },
+  { re: /全面数字化|数电票|数电发票/, code: 'vat-electronic-invoice' },
+  { re: /火车票|高铁/, code: 'passenger-train-ticket' },
+  { re: /行程单|航空|飞机票/, code: 'passenger-flight-itinerary' },
+  { re: /出租车/, code: 'taxi-invoice' },
+  { re: /网约车/, code: 'ridehailing-invoice' },
+  { re: /通行费|过路费/, code: 'toll-invoice' },
+  { re: /农产品收购/, code: 'agricultural-invoice' },
+  { re: /海关.{0,6}缴款书|进口增值税/, code: 'customs-vat-payment' },
+  { re: /关税缴款/, code: 'customs-tariff-payment' },
+  { re: /报关单/, code: 'export-declaration' },
+  { re: /行政事业性收费/, code: 'admin-fee-receipt' },
+  { re: /医疗收费/, code: 'medical-receipt' },
+  { re: /捐赠票据/, code: 'donation-receipt' },
+  { re: /非税收入/, code: 'non-tax-receipt' },
+  { re: /政府性基金/, code: 'gov-fund-receipt' },
+  { re: /进账单/, code: 'bank-deposit-slip' },
+  { re: /电汇|汇款/, code: 'bank-remittance' },
+  { re: /银行回单|回单/, code: 'bank-receipt' },
+  { re: /对账单/, code: 'bank-statement' },
+  { re: /支票/, code: 'check-stub' },
+  { re: /手续费/, code: 'bank-fee-receipt' },
+  { re: /差旅费报销/, code: 'travel-reimbursement' },
+  { re: /报销单|费用报销/, code: 'expense-reimbursement' },
+  { re: /借款单/, code: 'loan-form' },
+  { re: /备用金/, code: 'petty-cash' },
+  { re: /招待费/, code: 'entertainment-approval' },
+  { re: /领料单|限额领料/, code: 'material-requisition' },
+  { re: /退料单/, code: 'material-return' },
+  { re: /盘点/, code: 'inventory-count' },
+  { re: /入库单/, code: 'warehouse-receipt' },
+  { re: /出库单|发货单|提货单/, code: 'delivery-note' },
+  { re: /调拨/, code: 'material-transfer' },
+  { re: /工资|薪酬/, code: 'payroll-sheet' },
+  { re: /考勤/, code: 'attendance-sheet' },
+  { re: /奖金|绩效/, code: 'bonus-sheet' },
+  { re: /采购订单|采购申请/, code: 'purchase-order' },
+  { re: /验收单/, code: 'asset-acceptance' },
+  { re: /折旧/, code: 'depreciation-schedule' },
+  { re: /报废/, code: 'asset-scrap' },
+  { re: /收款收据|收据/, code: 'cash-receipt' },
+  { re: /完税证明|税收缴款|印花税/, code: 'tax-payment-cert' },
+  { re: /社保|公积金/, code: 'social-insurance-notice' },
+  { re: /工会经费/, code: 'union-fee' },
+  { re: /残疾人保障金/, code: 'disability-fund' },
+  { re: /红字发票|红字信息/, code: 'red-invoice-info' },
+  { re: /资产评估/, code: 'asset-evaluation' },
+  { re: /股权转让|投资协议/, code: 'equity-transfer' },
+  { re: /债务重组/, code: 'debt-restructure' },
+  { re: /拆迁补偿/, code: 'demolition-compensation' },
+  { re: /违约金|赔偿金/, code: 'penalty-settlement' },
+  { re: /发票/, code: 'generic-invoice' }, // 兜底：仅"发票"字样 → 通用发票族
+];
+
+const TYPE_LABEL_MAP = flattenTypeTree(SOURCE_DOC_TYPE_TREE);
+
+/** 按 OCR 文本 + 文件名推断原始凭证 96 类编码；未命中返回 null */
+export function classifySourceDocType(ocrText: string, fileName: string): { code: string; label: string } | null {
+  const compact = ((ocrText || '') + ' ' + (fileName || '')).replace(/\s+/g, '');
+  for (const rule of SOURCE_TYPE_RULES) {
+    if (rule.re.test(compact)) {
+      return { code: rule.code, label: TYPE_LABEL_MAP.get(rule.code) || rule.code };
+    }
+  }
+  return null;
+}
+
 // ── 主入口 ──
 
 export function classifyDocument({ fileName, ocrText }: ClassifyInput): ClassifyResult {
@@ -205,6 +297,17 @@ export function classifyDocument({ fileName, ocrText }: ClassifyInput): Classify
   const amount = extractAmount(ocrText || '');
   const date = extractDate(ocrText || '');
 
+  // 原始凭证 96 类目录推断（方案A：类型编码随件落库，2026-08-25）
+  let docTypeCode: string | undefined;
+  let docTypeName: string | undefined;
+  if (category === '原始凭证') {
+    const t = classifySourceDocType(ocrText || '', fileName || '');
+    if (t) {
+      docTypeCode = t.code;
+      docTypeName = t.label;
+    }
+  }
+
   return {
     category,
     confidence,
@@ -213,5 +316,7 @@ export function classifyDocument({ fileName, ocrText }: ClassifyInput): Classify
     date,
     hits,
     source: compact ? 'ocr' : 'filename',
+    docTypeCode,
+    docTypeName,
   };
 }

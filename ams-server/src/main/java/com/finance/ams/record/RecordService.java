@@ -69,15 +69,24 @@ public class RecordService {
       String fondsCode, String voucherNo, String archiveType, String department,
       Double amount, Integer year, Integer month, String retention,
       String source, String carrierType, String preparer, String voucherCategory,
-      String remarks, VoucherMeta voucherMeta) {
+      String remarks, VoucherMeta voucherMeta, SourceDocMeta sourceDocMeta) {
 
-    /** 兼容旧签名（无凭证扩展元数据） */
+    /** 兼容旧签名（无凭证扩展元数据、无原始凭证元数据） */
     public CreateCmd(String fondsCode, String voucherNo, String archiveType, String department,
                      Double amount, Integer year, Integer month, String retention,
                      String source, String carrierType, String preparer, String voucherCategory,
                      String remarks) {
       this(fondsCode, voucherNo, archiveType, department, amount, year, month, retention,
-          source, carrierType, preparer, voucherCategory, remarks, null);
+          source, carrierType, preparer, voucherCategory, remarks, null, null);
+    }
+
+    /** 兼容旧签名（有凭证扩展元数据、无原始凭证元数据） */
+    public CreateCmd(String fondsCode, String voucherNo, String archiveType, String department,
+                     Double amount, Integer year, Integer month, String retention,
+                     String source, String carrierType, String preparer, String voucherCategory,
+                     String remarks, VoucherMeta voucherMeta) {
+      this(fondsCode, voucherNo, archiveType, department, amount, year, month, retention,
+          source, carrierType, preparer, voucherCategory, remarks, voucherMeta, null);
     }
   }
 
@@ -90,6 +99,18 @@ public class RecordService {
       String auditor, String tallyMan, String entriesJson,
       Integer attachedBillCount, String sourceSystem, String externalId,
       String description) {}
+
+  /**
+   * 原始凭证富元数据（finance-model v2.7 件级 srcDoc* 属性；方案A 载体统一到 record）。
+   * 原始凭证 = voucherCategory='原始凭证' 的件，承载 96 类目录编码 + 票据信息 + 类型扩展字段。
+   * 字段依据 DA/T 95-2022 + 发票/财政票据规定（目录见 financeWeb/src/types/sourceDocument.ts）。
+   * 金额/业务日期/制单人/审核人等公共项复用既有件级属性（amount/voucherDate/preparer/auditor）。
+   */
+  public record SourceDocMeta(
+      String docTypeCode, String docTypeName, String docNo,
+      String counterpartyName, String counterpartyTaxId,
+      String summary, String amountUpper, String businessCategory,
+      String extFieldsJson) {}
 
   /**
    * 上传建件：建 finance:record 节点（全属性）→ 写入文件内容；内容失败回滚删节点。
@@ -132,6 +153,19 @@ public class RecordService {
       if (notBlank(vm.sourceSystem())) props.put("finance:sourceSystem", vm.sourceSystem());
       if (notBlank(vm.externalId())) props.put("finance:externalId", vm.externalId());
       if (notBlank(vm.description())) props.put("cm:description", vm.description());
+    }
+    // v2.7 原始凭证富元数据（方案A：原始凭证=件，类型与票据信息落 srcDoc* 属性）
+    SourceDocMeta sd = cmd.sourceDocMeta();
+    if (sd != null) {
+      if (notBlank(sd.docTypeCode())) props.put("finance:srcDocTypeCode", sd.docTypeCode());
+      if (notBlank(sd.docTypeName())) props.put("finance:srcDocTypeName", sd.docTypeName());
+      if (notBlank(sd.docNo())) props.put("finance:srcDocNo", sd.docNo());
+      if (notBlank(sd.counterpartyName())) props.put("finance:srcDocCounterpartyName", sd.counterpartyName());
+      if (notBlank(sd.counterpartyTaxId())) props.put("finance:srcDocCounterpartyTaxId", sd.counterpartyTaxId());
+      if (notBlank(sd.summary())) props.put("finance:srcDocSummary", sd.summary());
+      if (notBlank(sd.amountUpper())) props.put("finance:srcDocAmountUpper", sd.amountUpper());
+      if (notBlank(sd.businessCategory())) props.put("finance:srcDocBusinessCategory", sd.businessCategory());
+      if (notBlank(sd.extFieldsJson())) props.put("finance:srcDocExtFields", sd.extFieldsJson());
     }
 
     Map<String, Object> entry = createWithRenameRetry(ticket, poolId, sanitizeName(filename), "finance:record", props);
@@ -260,6 +294,44 @@ public class RecordService {
       throw translate("恢复失败", e);
     }
     events.publishEvent(RecordsChangedEvent.refreshOne(nodeId)); // 重入读模型
+  }
+
+  /**
+   * 彻底删除回收站记录（2026-08-25 恢复入口）：物理删除 Alfresco 节点，不可恢复。
+   *
+   * 守卫：仅回收站内（finance:deleted 置位）且「仅件数据」状态的记录可彻底删除。
+   * 入回收站的件必然未组卷/未归档（delete 端点守卫保证），即组卷阶段的未归档件——
+   * 按业务规则可直接销毁，无需走鉴定销毁流程；已归档记录不经过本端点。
+   */
+  public void purgeRecycle(String ticket, String userId, String nodeId) {
+    Map<String, Object> entry;
+    try {
+      entry = nodes.getNodeWithPath(ticket, nodeId);
+    } catch (HttpClientErrorException e) {
+      throw BizException.badRequest("NOT_FOUND", "记录不存在: " + nodeId);
+    }
+    if (!"finance:record".equals(entry.get("nodeType"))) {
+      throw BizException.badRequest("NOT_RECORD", "目标不是档案记录节点: " + nodeId);
+    }
+    Object props = entry.get("properties");
+    String deletedAt = props instanceof Map<?, ?> p && p.get("finance:deleted") != null
+        ? String.valueOf(p.get("finance:deleted")) : "";
+    if (deletedAt.isEmpty()) {
+      throw BizException.badRequest("NOT_DELETED", "该记录不在回收站，无法彻底删除");
+    }
+    String status = props instanceof Map<?, ?> p2 && p2.get("finance:recordStatus") != null
+        ? String.valueOf(p2.get("finance:recordStatus")) : "";
+    if (!"仅件数据".equals(status)) {
+      throw new BizException(HttpStatus.CONFLICT, "NOT_PURGEABLE",
+          "仅未归档（仅件数据）记录可彻底删除（当前: " + status + "）；已归档档案须走鉴定销毁流程");
+    }
+    try {
+      nodes.deleteNode(ticket, nodeId);
+      log.info("记录已彻底删除: {}（操作人 {}）", nodeId, userId);
+    } catch (HttpClientErrorException e) {
+      throw translate("彻底删除失败", e);
+    }
+    events.publishEvent(RecordsChangedEvent.removed(nodeId)); // 同步清读模型
   }
 
   /**
@@ -547,6 +619,29 @@ public class RecordService {
    */
   @SuppressWarnings("unchecked")
   public List<Map<String, Object>> listByParent(String ticket, String parentId) {
+    // 归属解析（2026-08-25）：父节点是案卷时视图带 volumeId/volumeCode，
+    // 案卷已装盒时再带 boxId/boxNo——装盒必然已组卷，财务视图「所属案卷」列依赖此字段
+    String volId = "", volCode = "", boxId = "", boxNo = "";
+    try {
+      Map<String, Object> parent = nodes.getNode(ticket, parentId);
+      if ("finance:volume".equals(parent.get("nodeType"))) {
+        volId = parentId;
+        volCode = prop(parent, "finance:volumeCode");
+        Map<String, Object> box = layout.nearestAncestorOfType(ticket, parentId, "finance:archiveBox");
+        if (box != null) {
+          boxId = str(box.get("id"));
+          boxNo = prop(box, "finance:boxNo");
+        }
+      } else if ("finance:archiveBox".equals(parent.get("nodeType"))) {
+        boxId = parentId;
+        boxNo = prop(parent, "finance:boxNo");
+      }
+    } catch (HttpClientErrorException.NotFound e) {
+      // 父节点不存在：下方 listChildren 会按空返回
+    } catch (Exception e) {
+      log.warn("父节点归属解析失败，按空归属返回: {}", e.getMessage());
+    }
+
     List<Map<String, Object>> all = new ArrayList<>();
     int skip = 0;
     while (all.size() < 5000) {
@@ -570,7 +665,20 @@ public class RecordService {
       Integer n = intProp(e, "finance:volumeItemNo");
       return n == null ? Integer.MAX_VALUE : n;
     }));
-    return all.stream().map(e -> toView(e, null, -1)).toList();
+    List<Map<String, Object>> views = all.stream().map(e -> toView(e, null, -1)).toList();
+    if (!volId.isEmpty() || !boxId.isEmpty()) {
+      for (Map<String, Object> v : views) {
+        if (!volId.isEmpty()) {
+          v.put("volumeId", volId);
+          v.put("volumeCode", volCode);
+        }
+        if (!boxId.isEmpty()) {
+          v.put("boxId", boxId);
+          v.put("boxNo", boxNo);
+        }
+      }
+    }
+    return views;
   }
 
   /** 带行级权限过滤的卷内件读取（2026-08-18） */
@@ -793,9 +901,22 @@ public class RecordService {
     view.put("deletedBy", prop(entry, "finance:deletedBy"));
     // V10 全文检索读模型补字段（2026-08-18）：科目/往来单位/单据号/正文（OCR 双通道回写）
     view.put("accountSubject", prop(entry, "finance:accountSubject"));
-    view.put("counterpartyName", prop(entry, "finance:counterpartyName"));
-    view.put("documentNo", prop(entry, "finance:documentNo"));
     view.put("ocrText", prop(entry, "finance:ocrText"));
+    // v2.7 原始凭证富元数据（方案A：原始凭证=件，读 srcDoc* 属性）
+    String srcDocNo = prop(entry, "finance:srcDocNo");
+    String srcDocCounterparty = prop(entry, "finance:srcDocCounterpartyName");
+    String srcDocSummary = prop(entry, "finance:srcDocSummary");
+    view.put("docTypeCode", prop(entry, "finance:srcDocTypeCode"));
+    view.put("docTypeName", prop(entry, "finance:srcDocTypeName"));
+    view.put("srcDocCounterpartyTaxId", prop(entry, "finance:srcDocCounterpartyTaxId"));
+    view.put("srcDocAmountUpper", prop(entry, "finance:srcDocAmountUpper"));
+    view.put("srcDocBusinessCategory", prop(entry, "finance:srcDocBusinessCategory"));
+    view.put("srcDocExtFields", prop(entry, "finance:srcDocExtFields"));
+    // 往来单位/单据号/摘要：OCR 回写值优先，缺省时回落到原始凭证 srcDoc* 值
+    String cp = prop(entry, "finance:counterpartyName");
+    view.put("counterpartyName", cp.isEmpty() ? srcDocCounterparty : cp);
+    String dn = prop(entry, "finance:documentNo");
+    view.put("documentNo", dn.isEmpty() ? srcDocNo : dn);
     // v2.2 凭证扩展元数据
     view.put("voucherWord", prop(entry, "finance:voucherWord"));
     view.put("voucherDate", prop(entry, "finance:voucherDate"));
@@ -806,7 +927,8 @@ public class RecordService {
     view.put("attachedBillCount", intProp(entry, "finance:attachedBillCount"));
     view.put("sourceSystem", prop(entry, "finance:sourceSystem"));
     view.put("externalId", prop(entry, "finance:externalId"));
-    view.put("description", prop(entry, "cm:description"));
+    String desc = prop(entry, "cm:description");
+    view.put("description", desc.isEmpty() ? srcDocSummary : desc);
     // 行级权限过滤键（2026-08-18）：密级档序判定
     view.put("securityLevel", prop(entry, "finance:securityLevel"));
     Object numbered = entry.get("properties") instanceof Map<?, ?> p2 ? p2.get("finance:numbered") : null;
@@ -902,6 +1024,82 @@ public class RecordService {
     nodes.updateNode(ticket, nodeId, Map.of("finance:parentRecordId", parentRecordId));
     events.publishEvent(RecordsChangedEvent.refreshOne(nodeId));
     log.info("组件挂接: {} → {}", nodeId, parentRecordId);
+  }
+
+  /**
+   * 件级元数据录入/修改（2026-08-25 组卷工作台「元数据录入」）。
+   * 仅白名单字段可改；仅收集池件与草稿卷内件（仅件数据/待审核）可编辑——
+   * 已确认/已移交件须先退回工作台再改，避免改写已固化的正式档案元数据。
+   */
+  public Map<String, Object> updateMetadata(String ticket, String nodeId, Map<String, Object> fields) {
+    Map<String, Object> entry = requireRecordEntry(ticket, nodeId);
+    String status = prop(entry, "finance:recordStatus");
+    if (!List.of("仅件数据", "待审核").contains(status)) {
+      throw BizException.badRequest("NOT_EDITABLE",
+          "该件状态「" + status + "」不可直接修改元数据（已确认/移交件请先退回到组卷工作台）");
+    }
+    if (fields == null || fields.isEmpty()) {
+      throw BizException.badRequest("VALIDATION_FAILED", "未提供任何修改字段");
+    }
+
+    Map<String, Object> props = new LinkedHashMap<>();
+    // 字符串白名单（前端字段 → 节点属性）
+    putStr(fields, "voucherNo", "finance:voucherNo", props);
+    putStr(fields, "voucherCategory", "finance:voucherCategory", props);
+    putStr(fields, "voucherWord", "finance:voucherWord", props);
+    putStr(fields, "voucherDate", "finance:voucherDate", props);
+    putStr(fields, "department", "finance:department", props);
+    putStr(fields, "preparer", "finance:preparer", props);
+    putStr(fields, "auditor", "finance:auditor", props);
+    putStr(fields, "tallyMan", "finance:tallyMan", props);
+    putStr(fields, "retention", "finance:retention", props);
+    putStr(fields, "securityLevel", "finance:securityLevel", props);
+    putStr(fields, "carrierType", "finance:carrierType", props);
+    putStr(fields, "archiveType", "finance:archiveType", props);
+    putStr(fields, "remarks", "finance:recordRemark", props);
+    putStr(fields, "summary", "cm:description", props);
+    // 数值字段（容忍数字字符串）
+    Integer year = asInt(fields.get("year"));
+    if (year != null) props.put("finance:year", year);
+    Integer month = asInt(fields.get("month"));
+    if (month != null) {
+      if (month < 1 || month > 12) throw BizException.badRequest("VALIDATION_FAILED", "月份须为 1-12");
+      props.put("finance:month", month);
+    }
+    Double amount = asDouble(fields.get("amount"));
+    if (amount != null) props.put("finance:amount", amount);
+
+    if (props.isEmpty()) {
+      throw BizException.badRequest("VALIDATION_FAILED", "无可修改的有效字段（仅支持件级白名单元数据）");
+    }
+    try {
+      nodes.updateNode(ticket, nodeId, props);
+    } catch (HttpClientErrorException e) {
+      throw translate("元数据修改失败", e);
+    }
+    events.publishEvent(RecordsChangedEvent.refreshOne(nodeId)); // V10 读模型同步
+    log.info("件元数据录入: {} 修改 {} 项字段", nodeId, props.size());
+    return toView(nodes.getNode(ticket, nodeId), null, -1);
+  }
+
+  private static void putStr(Map<String, Object> fields, String key, String propName, Map<String, Object> out) {
+    if (fields.get(key) instanceof String s) out.put(propName, s);
+  }
+
+  private static Integer asInt(Object v) {
+    if (v instanceof Number n) return n.intValue();
+    if (v instanceof String s && !s.isBlank()) {
+      try { return Integer.parseInt(s.trim()); } catch (NumberFormatException ignored) { }
+    }
+    return null;
+  }
+
+  private static Double asDouble(Object v) {
+    if (v instanceof Number n) return n.doubleValue();
+    if (v instanceof String s && !s.isBlank()) {
+      try { return Double.parseDouble(s.trim()); } catch (NumberFormatException ignored) { }
+    }
+    return null;
   }
 
   /** 件所属全宗号（组件挂接的权限校验用） */

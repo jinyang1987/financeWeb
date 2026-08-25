@@ -694,16 +694,20 @@ export const useVolumeStore = create<VolumeState>((set, get) => ({
     //   诸多【件】按记账凭证编号顺序排列成【一卷】。
     // 因此组卷的最小核算单元由「单张记账凭证」提升为「记账凭证 + 其全部原始凭证」。
 
-    // ① 富元数据原始凭证附件：sourceDocumentStore 中 parentRecordId 指向的源凭证
+    // ② 待组卷池内 id 集合（判断独立『原始凭证』记录的属主是否在本池内）
+    const poolIds = new Set(unassignedRecords.map((r) => r.id));
+
+    // ① 富元数据原始凭证附件：sourceDocumentStore 中 parentRecordId 指向的源凭证。
+    //   方案A（2026-08-25）：documents 已是"原始凭证件(record)"映射——池内的原始凭证件
+    //   由 ③ 处理（避免与之重复计入件数/页数），故此处跳过 id 已在池内的记录，仅保留
+    //   非 record 的补传附件（sd-supplement-*）。
     const sourceDocsByParent = new Map<string, SourceDocument[]>();
     for (const sd of useSourceDocumentStore.getState().documents) {
       if (!sd.parentRecordId) continue;
+      if (poolIds.has(sd.id)) continue; // 池内原始凭证件 → 归 ③ 处理，防重复计数
       if (!sourceDocsByParent.has(sd.parentRecordId)) sourceDocsByParent.set(sd.parentRecordId, []);
       sourceDocsByParent.get(sd.parentRecordId)!.push(sd);
     }
-
-    // ② 待组卷池内 id 集合（判断独立『原始凭证』记录的属主是否在本池内）
-    const poolIds = new Set(unassignedRecords.map((r) => r.id));
 
     // ③ 独立『原始凭证』记录（isSourceDocument 口径，属主父件在本池内）→ 随父件整体归卷
     const orphanSourceByParent = new Map<string, ArchiveRecord[]>();
@@ -777,9 +781,12 @@ export const useVolumeStore = create<VolumeState>((set, get) => ({
     // ★ Step 2: 对每个类别，读取 perTypeRules 进行分组
     for (const [archiveType, typeRecords] of typeBuckets) {
       const rule = cfg.perTypeRules[archiveType] || DEFAULT_PER_TYPE_RULES['其他会计资料'];
-      // P1-⑥ carrierMode 真生效：纯电子模式无盒厚度约束，上限放宽
+      // P1-⑥ carrierMode 真生效：纯电子模式无盒厚度约束，上限放宽；
+      // 纸质/混合受盒容量约束：每卷件数 ≤ 每盒件数（按盒厚度配置，2026-08-25），保证一卷装得下一盒
       const baseMax = rule.maxItemsPerVolume || 50;
-      const maxItems = cfg.carrierMode === 'electronic' ? Math.max(baseMax, 200) : baseMax;
+      const maxItems = cfg.carrierMode === 'electronic'
+        ? Math.max(baseMax, 200)
+        : (cfg.itemsPerBox > 0 ? Math.min(baseMax, cfg.itemsPerBox) : baseMax);
 
       // 2a. 按 period 分组
       const periodGroups = new Map<string, ArchiveRecord[]>();

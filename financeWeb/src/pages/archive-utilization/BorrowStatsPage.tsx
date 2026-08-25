@@ -127,7 +127,6 @@ const BorrowStatsPage: React.FC = () => {
         <div className="flex items-center gap-3">
           <BarChart3 className="w-5 h-5 text-slate-600" />
           <h1 className="text-base font-bold text-slate-800">借阅统计分析</h1>
-          <span className="text-xs text-slate-400">管理驾驶舱 · 借阅热力 / 逾期红黑榜 / 全链路日志</span>
         </div>
 
         {/* KPI 卡片 */}
@@ -266,7 +265,6 @@ const BorrowStatsPage: React.FC = () => {
             <div className="flex items-center gap-2">
               <ScrollText className="w-4 h-4 text-slate-500" />
               <span className="text-sm font-bold text-slate-700">全链路操作日志</span>
-              <span className="text-[10px] text-slate-400">谁在什么时间搜索了什么、借了什么、看了什么、打印了几次（等保要求，不可篡改）</span>
             </div>
             <span className="text-xs text-slate-400">共 {logs.length} 条</span>
           </div>

@@ -288,7 +288,6 @@ const OpenAppManagePage: React.FC = () => {
       <div className="flex items-center gap-3 px-6 py-3 bg-white border-b border-slate-200">
         <KeyRound className="w-5 h-5 text-slate-600" />
         <h1 className="text-base font-bold text-slate-800">推送接入应用</h1>
-        <span className="text-xs text-slate-400">业务系统 AppKey/AppSecret 签发 · 推送入档管理</span>
         <div className="flex-1" />
         {canManage && (
           <button
@@ -432,17 +431,6 @@ const OpenAppManagePage: React.FC = () => {
           </table>
         </div>
 
-        {/* 说明 */}
-        <div className="bg-sky-50 border border-sky-200 rounded-xl p-4">
-          <div className="flex items-start gap-2">
-            <Clock className="w-4 h-4 text-sky-500 mt-0.5 shrink-0" />
-            <div className="text-xs text-sky-800 space-y-1">
-              <p className="font-medium">业务系统推送接入说明</p>
-              <p>① 在此签发 AppKey/AppSecret → ② 业务系统用凭据调 <span className="font-mono">POST /api/ams/open/v1/token</span> 换令牌 → ③ 携带 Bearer 令牌调 <span className="font-mono">POST /api/ams/open/v1/archives</span>（单件）或 <span className="font-mono">/archives/batch</span>（批量）推送电子会计资料 → ④ 数据入目标全宗收集池，按去向「送组卷工作台」或「直接入库·自动组卷」。</p>
-              <p>幂等保障：以来源系统 externalId 去重，重复推送自动跳过。</p>
-            </div>
-          </div>
-        </div>
       </div>
 
       <CreateAppModal open={createOpen} onClose={() => setCreateOpen(false)} onCreated={refresh} />

@@ -251,7 +251,7 @@ interface ProjectItem {
   selectedAccountingItems: Set<string>;
 }
 
-export default function DirectoryConfigPanel() {
+export default function DirectoryConfigPanel({ embedded = false }: { embedded?: boolean } = {}) {
   const { config, loading, updateConfig } = useDirectoryConfig();
   const [activeTab, setActiveTab] = useState<TabType>('archive-category');
   
@@ -469,11 +469,11 @@ export default function DirectoryConfigPanel() {
     <div className="w-full h-full flex flex-col bg-white">
       {/* Header with Tabs */}
       <div className="border-b border-slate-200">
-        <div className="px-6 pt-5 pb-2 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-slate-800">目录配置</h2>
+        <div className={`px-6 pb-2 flex items-center justify-between ${embedded ? 'pt-4' : 'pt-5'}`}>
+          {!embedded && <h2 className="text-lg font-bold text-slate-800">目录配置</h2>}
           <button
             onClick={saveAllConfig}
-            className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors"
+            className={`flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors ${embedded ? 'ml-auto' : ''}`}
           >
             <Save className="w-4 h-4" />
             <span className="text-sm font-medium">保存全部</span>
@@ -642,7 +642,6 @@ export default function DirectoryConfigPanel() {
               </div>
             </div>
             
-            <div className="text-sm font-medium text-slate-600 mb-3">点击年份卡片进行选择/取消</div>
             <div className="grid grid-cols-5 gap-3">
               {availableYears.map((year) => {
                 const isSelected = selectedYears.has(year);
@@ -838,10 +837,6 @@ export default function DirectoryConfigPanel() {
         )}
       </div>
       
-      {/* Footer */}
-      <div className="p-3 border-t border-slate-200 bg-slate-50 text-xs text-slate-500">
-        配置保存后将在左侧目录树中生效
-      </div>
     </div>
   );
 }

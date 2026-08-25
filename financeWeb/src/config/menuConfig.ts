@@ -4,8 +4,9 @@
   Calendar, Building2, Building, Users, UserCheck, Shield as ShieldIcon,
   Fingerprint, FolderCog, Eye, ListTodo, Search, Grid, CheckCircle2,
   CheckCircle, Check, Ticket, Menu, X, ChevronDown, ChevronRight, GitBranch,
-  Send, ZoomIn, ShieldCheck, Droplets, ScanBarcode,
-  Gauge, Boxes, SlidersHorizontal, KeyRound, PlugZap, Warehouse,
+  Send, ZoomIn, ShieldCheck, Droplets, ScanBarcode, Zap,
+  Gauge, Boxes, SlidersHorizontal, KeyRound, PlugZap, Warehouse, ClipboardList,
+  History,
   type LucideIcon,
 } from 'lucide-react';
 import type { MenuId } from '../stores/appStore';
@@ -70,6 +71,7 @@ export const menuGroups: MenuGroupDef[] = [
     toggleable: true,
     items: [
       { key: 'volume-workspace', label: '组卷工作台', Icon: Layers, depth: 1 },
+      { key: 'quick-check', label: '快速检测', Icon: Zap, depth: 1 },
       { key: 'recycle-bin', label: '回收站', Icon: Trash2, depth: 1 },
     ],
   },
@@ -126,9 +128,7 @@ export const menuGroups: MenuGroupDef[] = [
     toggleable: false,
     items: [
       { key: 'config-fanzong', label: '全宗管理', Icon: Building2, depth: 1 },
-      { key: 'directory-config', label: '目录配置', Icon: FolderCog, depth: 1 },
-      { key: 'archive-manage-config', label: '档案管理配置', Icon: Settings, depth: 1 },
-      { key: 'retention-config', label: '档案三合一表配置', Icon: Clock, depth: 1 },
+      { key: 'archive-manage-config', label: '档案管理配置', Icon: ClipboardList, depth: 1 },
       { key: 'inspection-config', label: '四性检测配置', Icon: Eye, depth: 1 },
       { key: 'report-config', label: '报告配置', Icon: FileText, depth: 1 },
       { key: 'watermark-config', label: '水印配置', Icon: Droplets, depth: 1 },
@@ -148,6 +148,7 @@ export const menuGroups: MenuGroupDef[] = [
       { key: 'sys-personnel', label: '人员管理', Icon: Users, depth: 1 },
       { key: 'sys-role', label: '角色管理', Icon: ShieldIcon, depth: 1 },
       { key: 'sys-connection', label: '连接配置', Icon: PlugZap, depth: 1 },
+      { key: 'sys-oplog', label: '操作日志', Icon: History, depth: 1 },
       { key: 'sys-log', label: '安全审计日志', Icon: Fingerprint, depth: 1 },
     ],
   },

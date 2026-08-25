@@ -254,6 +254,23 @@ export const FanzongManager: React.FC = () => {
     return node?.name || selectedOrg;
   }, [selectedOrg, unitTree]);
 
+  /**
+   * 现行全宗唯一性校验（2026-08-25）：一个单位只能有一个现行全宗，代管全宗不限。
+   * 返回冲突的现行全宗（无冲突返回 null）；excludeId 用于编辑时排除自身。
+   */
+  const findActiveConflict = useCallback((companyId: string, excludeId?: string): FondsItem | null => {
+    if (!companyId) return null;
+    return normalizedFonds.find(f =>
+      f.type === 'active' && f.companyId === companyId && f.id !== excludeId
+    ) || null;
+  }, [normalizedFonds]);
+
+  /** 现行全宗冲突的统一错误文案 */
+  const activeConflictMsg = (conflict: FondsItem) => {
+    const unitName = findNodeById(unitTree, conflict.companyId)?.name || conflict.companyId;
+    return `一个单位只能有一个现行全宗：「${unitName}」已存在现行全宗 ${conflict.code}（${conflict.name}）。如需调整，请先将原现行全宗改为代管全宗`;
+  };
+
   // ─── 交互处理 ────────────────────────────────────────────
 
   const toggleOrgExpand = (id: string) => {
@@ -271,6 +288,14 @@ export const FanzongManager: React.FC = () => {
 
   const handleEditSave = async () => {
     if (!editingFonds) return;
+    // 现行全宗唯一：改为现行或变更所属公司后不得与既有现行全宗冲突
+    if (editForm.type === 'active') {
+      const conflict = findActiveConflict(editForm.companyId, editingFonds.id);
+      if (conflict) {
+        setError(activeConflictMsg(conflict));
+        return;
+      }
+    }
     try {
       await updateFonds(editingFonds.id, {
         code: editForm.code,
@@ -301,6 +326,14 @@ export const FanzongManager: React.FC = () => {
 
   const handleCreate = async () => {
     if (!newForm.name || !newForm.code || !newForm.companyId) return;
+    // 现行全宗唯一：该单位已有现行全宗时不允许再建现行全宗（可建代管全宗）
+    if (newForm.type === 'active') {
+      const conflict = findActiveConflict(newForm.companyId);
+      if (conflict) {
+        setError(activeConflictMsg(conflict));
+        return;
+      }
+    }
     try {
       await createFonds({
         code: newForm.code,
@@ -428,7 +461,6 @@ export const FanzongManager: React.FC = () => {
             <div className="flex flex-col items-center justify-center py-8 text-slate-400">
               <Building2 className="w-8 h-8 mb-2 text-slate-300" />
               <p className="text-xs text-center">暂无公司数据</p>
-              <p className="text-xs text-center mt-1">请先在"系统管理→单位管理"中创建单位</p>
             </div>
           ) : (
             unitTree.map(n => renderOrgNode(n))
@@ -529,11 +561,7 @@ export const FanzongManager: React.FC = () => {
                   {filteredFonds.all.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="p-8 text-center text-slate-400 text-sm">
-                        {selectedOrg
-                          ? `"${selectedOrgName}" 暂无全宗数据`
-                          : unitTree.length === 0
-                            ? '请先在左侧创建公司单位'
-                            : '请选择左侧公司组织'}
+                        暂无全宗数据
                       </td>
                     </tr>
                   ) : (
@@ -543,7 +571,7 @@ export const FanzongManager: React.FC = () => {
                           <tr className="bg-emerald-50/50">
                             <td colSpan={5} className="px-4 py-2 text-xs font-bold text-emerald-700">
                               <Shield className="w-3.5 h-3.5 inline-block mr-1.5 align-text-bottom" />
-                              现行全宗（运行中）
+                              现行全宗
                             </td>
                           </tr>
                           {filteredFonds.active.map(renderFondsRow)}
@@ -554,7 +582,7 @@ export const FanzongManager: React.FC = () => {
                           <tr className="bg-amber-50/50">
                             <td colSpan={5} className="px-4 py-2 text-xs font-bold text-amber-700">
                               <FolderTree className="w-3.5 h-3.5 inline-block mr-1.5 align-text-bottom" />
-                              代管全宗（历史遗留，由现行全宗代管）
+                              代管全宗
                             </td>
                           </tr>
                           {filteredFonds.custodial.map(renderFondsRow)}
@@ -635,9 +663,6 @@ export const FanzongManager: React.FC = () => {
                       <option key={f.code} value={f.code}>{f.code} - {f.name}</option>
                     ))}
                   </select>
-                  <p className="text-[10px] text-amber-600 mt-1">
-                    该全宗已被现行全宗代管，"一套人马两块牌子"的历史全宗
-                  </p>
                 </div>
               )}
               {editForm.type === 'active' && (
@@ -713,7 +738,7 @@ export const FanzongManager: React.FC = () => {
                         : 'bg-slate-100 text-slate-500'
                     }`}>
                     <Shield className="w-3.5 h-3.5 inline-block mr-1 align-text-bottom" />
-                    现行全宗（运行中）
+                    现行全宗
                   </button>
                   <button type="button" onClick={() => setNewForm({...newForm, type: 'custodial'})}
                     className={`px-4 py-2 rounded-lg text-xs font-bold cursor-pointer transition-all ${
@@ -722,7 +747,7 @@ export const FanzongManager: React.FC = () => {
                         : 'bg-slate-100 text-slate-500'
                     }`}>
                     <FolderTree className="w-3.5 h-3.5 inline-block mr-1 align-text-bottom" />
-                    代管全宗（历史遗留）
+                    代管全宗
                   </button>
                 </div>
               </div>
@@ -736,9 +761,6 @@ export const FanzongManager: React.FC = () => {
                       <option key={f.code} value={f.code}>{f.code} - {f.name}</option>
                     ))}
                   </select>
-                  <p className="text-[10px] text-amber-600 mt-1">
-                    该全宗将被现行全宗代管，适用于公司重组、全宗号变更等场景
-                  </p>
                 </div>
               )}
             </div>

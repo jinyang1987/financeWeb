@@ -26,6 +26,7 @@ import com.finance.ams.alfresco.RepoLayout;
 import com.finance.ams.api.BizException;
 import com.finance.ams.code.CodeSerialService;
 import com.finance.ams.configcenter.ConfigService;
+import com.finance.ams.inspection.InspectionService;
 import com.finance.ams.record.RecordsChangedEvent;
 
 /**
@@ -61,16 +62,18 @@ public class VolumeService {
   private final CodeSerialService serials;
   private final ConfigService config;
   private final ApplicationEventPublisher events;
+  private final InspectionService inspection;
   private final ObjectMapper json = new ObjectMapper();
 
   public VolumeService(AlfrescoNodeClient nodes, RepoLayout layout,
                        CodeSerialService serials, ConfigService config,
-                       ApplicationEventPublisher events) {
+                       ApplicationEventPublisher events, InspectionService inspection) {
     this.nodes = nodes;
     this.layout = layout;
     this.serials = serials;
     this.config = config;
     this.events = events;
+    this.inspection = inspection;
   }
 
   // ═══════════════════ 建卷 / 更新 / 删除 ═══════════════════
@@ -707,10 +710,25 @@ public class VolumeService {
   /**
    * 移交归盒：在 /{全宗}/盒库/{大类}/{年度}/ 找 active 盒（无则自动建盒），
    * 案卷 move 进盒并置 transferred；盒计数同步。
+   *
+   * 2026-08-25 移交即检测：按规定（DA/T 94-2022）四性检测在移交（推送至保管库）环节执行——
+   * 移交时自动运行卷级四性检测（移交环节完整口径），未通过即拦截移交（问题明细落报告，
+   * 档案整理→快速检测 可查看）；通过后方可归盒。
+   * 盒容量约束：纸质/混合载体按「档案管理配置·组卷盒号」的每盒件数上限装盒，
+   * 装不下的 active 盒自动封盒，另开新盒。
    */
   public Map<String, Object> transfer(String ticket, String userId, String volumeId) {
     Map<String, Object> vol = requireVolume(ticket, volumeId);
     requireStatus(vol, "confirmed", "案卷须先确认组卷才能移交，当前状态: " + prop(vol, "finance:volumeStatus"));
+
+    // ── 移交时自动四性检测（法定检测节点；未通过不得移交入库） ──
+    Map<String, Object> report = inspection.runVolume(ticket, userId, volumeId, "yj");
+    if (!Boolean.TRUE.equals(report.get("allPass"))) {
+      Object issues = report.get("issues");
+      int issueCount = issues instanceof List<?> l ? l.size() : 0;
+      throw BizException.conflict("INSPECTION_FAILED",
+          "移交四性检测未通过：" + issueCount + " 项问题，已阻断移交。请到 档案整理→快速检测 查看明细并整改后重新移交");
+    }
 
     Map<String, Object> fonds = layout.findFondsOf(ticket, volumeId);
     String fondsId = str(fonds.get("id"));
@@ -721,18 +739,28 @@ public class VolumeService {
 
     String boxesDir = layout.ensurePath(ticket, fondsId, RepoLayout.BOXES_ROOT, cat, String.valueOf(year));
 
-    // 找该目录下第一个 active 盒；无则建盒
+    // 找该目录下能装下本卷的 active 盒；装不下（超每盒件数上限）的 active 盒封盒，另开新盒
+    BoxCapacity cap = loadBoxCapacity();
     Map<String, Object> box = null;
     List<Map<String, Object>> boxes = childrenOfType(ticket, boxesDir, "finance:archiveBox");
     for (Map<String, Object> b : boxes) {
-      if ("active".equals(prop(b, "finance:boxStatus"))) { box = b; break; }
+      if (!"active".equals(prop(b, "finance:boxStatus"))) continue;
+      int cur = intProp(b, "finance:boxTotalItems") != null ? intProp(b, "finance:boxTotalItems") : 0;
+      if (cap.enforce() && cur + totalItems > cap.limit()) {
+        updateProps(ticket, str(b.get("id")), Map.of("finance:boxStatus", "sealed"));
+        log.info("盒 {} 容量已满（{}+{}>{} 件），自动封盒", prop(b, "finance:boxNo"), cur, totalItems, cap.limit());
+        continue;
+      }
+      box = b;
+      break;
     }
     if (box == null) {
       int seq = boxes.size() + 1;
       String boxNo = "BOX-" + year + "-" + cat + "-" + String.format("%03d", seq);
       Map<String, Object> props = new LinkedHashMap<>();
       props.put("finance:boxNo", boxNo);
-      props.put("finance:boxName", year + "年" + CategoryCodes.categoryName(cat) + " 第" + String.format("%03d", seq) + "盒");
+      props.put("finance:boxName", year + "年" + CategoryCodes.categoryName(cat) + " 第" + String.format("%03d", seq) + "盒"
+          + (cap.enforce() ? "（限装" + cap.limit() + "件）" : ""));
       props.put("finance:typeCode", cat);
       if (notBlank(prop(vol, "finance:volumeRetention"))) props.put("finance:boxRetention", prop(vol, "finance:volumeRetention"));
       props.put("finance:boxYear", year);
@@ -798,6 +826,28 @@ public class VolumeService {
   }
 
   // ═══════════════════ 档号构建（镜像前端 defaultPaperCodeRule） ═══════════════════
+
+  /** 盒容量口径（档案管理配置·组卷盒号：volume-grouping-config） */
+  private record BoxCapacity(String carrierMode, int limit) {
+    /** 纯电子无盒厚度约束；纸质/混合按每盒件数上限装盒 */
+    boolean enforce() {
+      return limit > 0 && !"electronic".equals(carrierMode);
+    }
+  }
+
+  /** 读取装盒容量配置（缺省：纸质不限，保持旧行为） */
+  private BoxCapacity loadBoxCapacity() {
+    try {
+      var entry = config.get("volume-grouping-config");
+      if (entry.isEmpty()) return new BoxCapacity("paper", 0);
+      JsonNode root = json.readTree(entry.get().valueJson());
+      JsonNode cfg = root.path("state").path("config");
+      return new BoxCapacity(cfg.path("carrierMode").asText("paper"), cfg.path("itemsPerBox").asInt(0));
+    } catch (Exception e) {
+      log.warn("读取装盒容量配置失败，按不限容量处理: {}", e.getMessage());
+      return new BoxCapacity("paper", 0);
+    }
+  }
 
   /** 赋号时机（ams_config key=archive-code-config，zustand persist 包装 {state:{config:{...}}}） */
   private boolean assignOnConfirm() {

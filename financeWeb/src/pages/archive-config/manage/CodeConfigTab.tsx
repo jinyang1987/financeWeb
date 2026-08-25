@@ -218,14 +218,6 @@ const CodeConfigTab: React.FC = () => {
     <div className="flex flex-col flex-1 min-h-0 bg-slate-100">
       {/* ═══ 操作栏（说教内容已移「原理说明」Tab） ═══ */}
       <div className="flex items-center gap-3 px-6 py-2.5 bg-white border-b border-slate-200 shrink-0">
-        <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium"
-          title="赋号引擎在服务端执行：确认组卷时按本配置取号（ams_code_serial 原子流水），段结构/赋号时机即配即生效">
-          服务端赋号引擎实时消费 · 即配即生效
-        </span>
-        <span className="flex items-center gap-1.5 text-[11px] text-slate-400">
-          <History className="w-3 h-3" />
-          变更留痕可审计 · 历史档号保持原样
-        </span>
         <div className="flex-1" />
         <button
           type="button"
@@ -264,9 +256,6 @@ const CodeConfigTab: React.FC = () => {
                 </button>
               ))}
             </nav>
-            <div className="p-3 border-t border-slate-100 text-[10px] text-slate-400 leading-relaxed">
-              <p>刚性规则、标准示例与规范依据见「原理说明 → 档号体系」。</p>
-            </div>
           </aside>
 
           {/* ══ 右侧内容 ══ */}
@@ -343,10 +332,6 @@ const CodeConfigTab: React.FC = () => {
             {activeKey === 'timing' && (
               <SectionCard title="赋号时机配置" icon={<Clock className="w-4 h-4 text-emerald-500" />} badge="组卷确认时的档号分配策略">
                 <div className="space-y-4">
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    控制在组卷确认操作时是否自动为案卷分配档号。此设置影响所有档案类别的组卷流程。
-                  </p>
-
                   <div className="grid grid-cols-1 gap-3">
                     {/* 选项1：组卷时赋号 */}
                     <label

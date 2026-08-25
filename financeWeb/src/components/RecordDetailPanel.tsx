@@ -279,16 +279,10 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
   }, [isVoucher]);
 
   // 直接从 store 选数据，避免选函数引用导致的稳定性问题
+  // ★ 方案A（2026-08-25）：sourceDocumentStore.documents 已是"原始凭证件"（record）映射的
+  //   富元数据视图，是本面板附件展示的唯一数据源；不再另走 allRecords 过滤（避免重复渲染）。
   const allSourceDocs = useSourceDocumentStore((s) => s.documents);
   const allArchiveRecords = useArchiveStore((s) => s.records);
-  const allRecordsFull = useArchiveStore((s) => s.allRecords);
-
-  // ★ 件级挂接的原始凭证（v2.3 组件挂接 record→record，2026-08-20）：
-  //   走全量件视图（池内/卷内件都在），与 SourceDocument 富元数据附件并存展示
-  const linkedSourceRecords = useMemo(
-    () => allRecordsFull.filter((r) => isSourceDocument(r) && r.parentRecordId === record.id),
-    [allRecordsFull, record.id],
-  );
 
   // 旧版子件（ArchiveRecord-based，向后兼容）
   const childRecords = useMemo(() => {
@@ -321,6 +315,25 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
   const entryDebitTotal = entries.reduce((s, e) => s + (e.debit || 0), 0);
   const entryCreditTotal = entries.reduce((s, e) => s + (e.credit || 0), 0);
 
+  // ── 原始凭证类型特有字段（v2.7 方案A：record 载体，解析 srcDocExtFields JSON） ──
+  const srcDocExtItems = useMemo<FieldItem[]>(() => {
+    if (!isSourceDoc || !record.docTypeCode) return [];
+    let parsed: Record<string, string | number | boolean | null> = {};
+    if (record.srcDocExtFields) {
+      try { parsed = JSON.parse(record.srcDocExtFields); } catch { /* 忽略解析失败 */ }
+    }
+    return getExtFieldDefs(record.docTypeCode)
+      .filter(def => {
+        const v = parsed[def.key];
+        return v !== undefined && v !== null && v !== '';
+      })
+      .map(def => ({
+        label: def.label,
+        value: String(parsed[def.key]),
+        mono: def.dataType === 'number' || def.dataType === 'decimal',
+      }));
+  }, [isSourceDoc, record.docTypeCode, record.srcDocExtFields]);
+
   // ── L1 概要字段（FieldGrid 表格化） ──
   const summaryFields: FieldItem[] = useMemo(() => {
     const out: FieldItem[] = [];
@@ -345,13 +358,15 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
       if (record.volumeCode) out.push({ label: '所属案卷', value: record.volumeCode, mono: true });
       if (record.archiveCode) out.push({ label: '档号', value: record.archiveCode, mono: true });
       if (record.summary) out.push({ label: '摘要', value: record.summary, span: 2 });
+      // v2.7 原始凭证类型特有字段（字段集/类型专有，来自 srcDocExtFields）
+      for (const it of srcDocExtItems) out.push(it);
       return out;
     }
     if (isVoucher) {
       voucherFields.forEach(col => {
-        // ★ 附件数按组件挂接关系实算（列映射默认实现读遗留字段 sourceDocumentIds，DTO 不下发恒为 0，2026-08-22 修复）
+        // ★ 附件数按组件挂接关系实算（方案A：源数据=record 映射的富元数据视图，2026-08-25）
         if (col.metaId === 'ATTACHMENTS') {
-          out.push({ label: col.label, value: linkedSourceRecords.length > 0 ? `${linkedSourceRecords.length} 份` : '无' });
+          out.push({ label: col.label, value: richSourceDocs.length > 0 ? `${richSourceDocs.length} 份` : '无' });
           return;
         }
         out.push({ label: col.label, value: col.accessor(record) });
@@ -373,7 +388,7 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
     if (record.sourceSystem) out.push({ label: '来源系统', value: record.sourceSystem });
     if (record.summary) out.push({ label: '摘要', value: record.summary, span: 2 });
     return out;
-  }, [isVoucher, isSourceDoc, voucherFields, visibleArchiveFields, record, linkedSourceRecords]);
+  }, [isVoucher, isSourceDoc, voucherFields, visibleArchiveFields, record, richSourceDocs, srcDocExtItems]);
 
   return (
     <div className="flex-1 h-full bg-white border-l border-slate-200 overflow-y-auto">
@@ -562,11 +577,11 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
               附件
             </span>
             <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">
-              {richSourceDocs.length + childRecords.length + linkedSourceRecords.length} 份
+              {richSourceDocs.length + childRecords.length} 份
             </span>
           </div>
 
-          {richSourceDocs.length === 0 && childRecords.length === 0 && linkedSourceRecords.length === 0 ? (
+          {richSourceDocs.length === 0 && childRecords.length === 0 ? (
             <div className="flex items-center justify-center h-20 border-2 border-dashed border-slate-200 rounded-xl">
               <div className="text-center">
                 <Search className="w-5 h-5 text-slate-300 mx-auto mb-1" />
@@ -576,18 +591,7 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
             </div>
           ) : (
             <div className="space-y-2">
-              {/* 件级挂接的原始凭证（v2.3 组件挂接，随本凭证整体组卷） */}
-              {linkedSourceRecords.map((lr) => (
-                <div key={lr.id} className="flex items-center gap-3 px-3 py-2 border border-sky-100 bg-sky-50/40 rounded-lg text-xs">
-                  <Paperclip className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                  <span className="font-mono font-medium text-slate-700">{lr.voucherNo}</span>
-                  {lr.amount > 0 && <span className="text-slate-500">¥{fmt(lr.amount)}</span>}
-                  {lr.year && <span className="text-slate-400">{lr.year}-{lr.month}</span>}
-                  <span className="ml-auto px-1.5 py-px text-[10px] rounded bg-amber-100 text-amber-700 shrink-0">原始凭证 · 随附入卷</span>
-                </div>
-              ))}
-
-              {/* 富元数据原始凭证（主） */}
+              {/* 富元数据原始凭证（方案A：record 映射，唯一附件数据源） */}
               {richSourceDocs.map(sd => (
                 <SourceDocRow
                   key={sd.id}

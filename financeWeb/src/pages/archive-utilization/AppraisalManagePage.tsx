@@ -124,7 +124,6 @@ const AppraisalManagePage: React.FC = () => {
       <div className="flex items-center gap-3 px-6 py-3 bg-white border-b border-slate-200 shrink-0">
         <Shield className="w-5 h-5 text-slate-600" />
         <h1 className="text-base font-bold text-slate-800">期满鉴定与销毁</h1>
-        <span className="text-xs text-slate-400">保管期满自动测算 → 鉴定评审 → 销毁执行留痕（永久档案不进销毁流程）</span>
         <div className="flex-1" />
         <button type="button" onClick={() => void reload()} title="刷新"
           className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
@@ -229,16 +228,6 @@ const AppraisalManagePage: React.FC = () => {
           actions={() => null}
         />
 
-        {/* 合规提示 */}
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-          <div className="flex items-start gap-2 text-xs text-amber-800">
-            <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
-            <div>
-              <p className="font-medium">依据《会计档案管理办法》第十七条</p>
-              <p className="mt-0.5">保管期满的会计档案，由单位档案管理机构牵头，会同会计、审计、纪检监察等机构共同鉴定。确无保存价值的方可销毁；销毁清册与鉴定意见永久留存。销毁操作将永久删除案卷节点及卷内全部件，并写入不可篡改操作日志。</p>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* 评审弹窗 */}

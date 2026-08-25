@@ -254,6 +254,13 @@ export function DataTable<TData extends { id: string }>({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [columns, disableResize, actionsWidth]);
 
+  // ★ 表格最小宽度 = 各列 size 之和：容器不足时由父级横向滚动，
+  //   而不是压缩列宽把表头文字截掉（2026-08-25 财务视图列名显示不全修复）
+  const tableMinWidth = useMemo(
+    () => tanColumns.reduce((sum, c) => sum + ((c.size as number) || DEFAULT_SIZE), 0),
+    [tanColumns],
+  );
+
   // 行选择状态
   const rowSelection = useMemo<RowSelectionState>(() => {
     const sel: RowSelectionState = {};
@@ -286,7 +293,7 @@ export function DataTable<TData extends { id: string }>({
 
   return (
     <div className="w-full">
-      <table className="w-full caption-bottom text-sm table-fixed">
+      <table className="w-full caption-bottom text-sm table-fixed" style={{ minWidth: tableMinWidth }}>
         {/* sticky 表头需实色底（滚动时不透出行），灰带样式由 ui/table 原语统一 */}
         <TableHeader className="sticky top-0 z-10 bg-slate-100">
           {table.getHeaderGroups().map((headerGroup) => (

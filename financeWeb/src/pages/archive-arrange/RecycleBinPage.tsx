@@ -1,35 +1,32 @@
 ﻿/**
  * @license SPDX-License-Identifier: Apache-2.0
  *
- * RecycleBinPage — 回收站（v2.6.2）
+ * RecycleBinPage — 回收站（v2.6.3）
  *
- * 组卷工作台删除的记录不再物理删除，而是「逻辑删除」：置 finance:deleted 标记后
- * 移入 /{全宗}/_回收站/，数据与元数据完整保留。本页提供：
+ * 组卷工作台删除的记录为「逻辑删除」：置 finance:deleted 标记后移入 /{全宗}/_回收站/。
+ * 本页提供：
  *   1. 回收站件列表（按删除时间倒序）
  *   2. 恢复（移回收集池 + 清除删除标记 + 刷新件域镜像，可重新组卷/检索）
+ *   3. 彻底删除（物理删除，不可恢复）——回收站内均为未归档件（组卷阶段），
+ *      可直接彻底删除，无需鉴定销毁流程（2026-08-25 恢复入口）。
  *
- * v2.6.2（2026-08-22）单元化：
- *   - 按「件」展示：凭证行可展开其所附原始凭证；原始凭证行带「附于 xx」徽标——
- *     与组卷工作台的单元视图一致，删除前组好的件在回收站里不再散开；
- *   - 恢复按件整体进行：凭证连同回收站内已挂接的原始凭证一并还原。
- *
- * 本页不提供「彻底删除」：物理销毁属档案鉴定业务，须走「档案利用 → 鉴定销毁」
- * 流程审批办理（2026-08-21 v2.6.1 移除彻底删除入口）。
+ * 单元化：按「件」展示，凭证行可展开其所附原始凭证；恢复/彻底删除按件整体进行。
  *
  * 权限：与组卷工作台一致，需 voucher-manager 功能码（后端校验）。
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  RotateCcw, Search, RefreshCw, FolderOpen, ChevronDown, ChevronRight, Paperclip,
+  RotateCcw, RefreshCw, FolderOpen, ChevronDown, ChevronRight, Paperclip, Trash2,
 } from 'lucide-react';
 import { useArchiveStore } from '../../stores/archiveStore';
 import {
-  fetchRecycleItems, restoreRecycleItem,
+  fetchRecycleItems, restoreRecycleItem, purgeRecycleItem,
   type RecordDto,
 } from '../../services/recordService';
 import { isSourceDocument } from '../../utils/recordType';
 import { DataTable, type DataTableColumn } from '../../components/DataTable';
+import ConfirmModal from '../../components/common/ConfirmModal';
 
 // ── 展示辅助 ──
 const ARCHIVE_TYPE_COLORS: Record<string, string> = {
@@ -79,6 +76,8 @@ const RecycleBinPage: React.FC = () => {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
   /** 凭证行的附件展开态（单元视图，与组卷工作台一致） */
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  /** 彻底删除确认（存待删顶层行 id；确认后连同所附原始凭证一并物理删除） */
+  const [purgeAsk, setPurgeAsk] = useState<string[] | null>(null);
 
   const showToast = useCallback((message: string, type: 'success' | 'info' = 'success') => {
     setToast({ message, type });
@@ -175,6 +174,31 @@ const RecycleBinPage: React.FC = () => {
     }
   }, [load, showToast, attachmentsOf]);
 
+  // ── 彻底删除（按件整体：凭证连同回收站内已挂接原始凭证一并物理删除） ──
+  const handlePurge = useCallback(async (ids: string[]) => {
+    const idSet = new Set(ids);
+    for (const id of ids) for (const a of attachmentsOf(id)) idSet.add(a.id);
+    const all = [...idSet];
+    const failedIds: string[] = [];
+    let firstErr = '';
+    for (const id of all) {
+      try {
+        await purgeRecycleItem(id);
+      } catch (e: any) {
+        failedIds.push(id);
+        if (!firstErr) firstErr = e?.message || '彻底删除失败';
+      }
+    }
+    if (failedIds.length === 0) {
+      showToast(`已彻底删除 ${all.length} 条记录`);
+    } else {
+      showToast(`已删除 ${all.length - failedIds.length} 条，${failedIds.length} 条失败（${firstErr}）`, 'info');
+    }
+    setSelectedIds(new Set());
+    setExpandedId(null);
+    void load();
+  }, [load, showToast, attachmentsOf]);
+
   // ── 列定义 ──
   const columns = useMemo<DataTableColumn<RecycleRow>[]>(() => [
     {
@@ -193,7 +217,7 @@ const RecycleBinPage: React.FC = () => {
                 type="button"
                 onClick={(e) => { e.stopPropagation(); setExpandedId((prev) => (prev === r.id ? null : r.id)); }}
                 className="ml-auto p-0.5 text-slate-400 hover:text-sky-600 rounded transition-colors shrink-0"
-                title={`展开查看 ${atts.length} 张所附原始凭证（随本凭证一并恢复）`}
+                title={`展开查看 ${atts.length} 张所附原始凭证`}
               >
                 {expandedId === r.id
                   ? <ChevronDown className="w-3.5 h-3.5" />
@@ -278,6 +302,13 @@ const RecycleBinPage: React.FC = () => {
           >
             <RotateCcw className="h-4 w-4" /> 恢复{selectedCount > 0 ? `（${selectedCount}）` : ''}
           </button>
+          <button
+            onClick={() => setPurgeAsk([...selectedIds])}
+            disabled={selectedCount === 0}
+            className="inline-flex items-center gap-1 rounded border border-red-200 bg-red-50 px-3 py-1.5 text-sm text-red-600 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Trash2 className="h-4 w-4" /> 彻底删除{selectedCount > 0 ? `（${selectedCount}）` : ''}
+          </button>
         </div>
       </div>
 
@@ -288,7 +319,7 @@ const RecycleBinPage: React.FC = () => {
         ) : items.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-slate-400">
             <FolderOpen className="h-10 w-10 opacity-40" />
-            <p className="text-sm">回收站为空。组卷工作台删除的记录会暂存于此，可随时恢复回待组卷池。</p>
+            <p className="text-sm">回收站为空</p>
           </div>
         ) : (
           <DataTable<RecycleRow>
@@ -304,7 +335,7 @@ const RecycleBinPage: React.FC = () => {
               return (
                 <div className="px-4 py-2 bg-sky-50/60 border-l-2 border-sky-300 space-y-1">
                   <div className="text-[11px] font-medium text-sky-700">
-                    所附原始凭证（{atts.length} 张，恢复本凭证时一并还原回待组卷池）
+                    所附原始凭证（{atts.length} 张，随本凭证一并处理）
                   </div>
                   {atts.map((a) => (
                     <div key={a.id} className="flex items-center gap-3 text-xs text-slate-600 py-0.5">
@@ -328,21 +359,41 @@ const RecycleBinPage: React.FC = () => {
                   >
                     <RotateCcw className="h-4 w-4" />
                   </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setPurgeAsk([r.id]); }}
+                    title={attCount > 0 ? `彻底删除（含 ${attCount} 张所附原始凭证）` : '彻底删除（不可恢复）'}
+                    className="rounded p-1 text-red-500 hover:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
               );
             }}
-            actionsWidth={60}
+            actionsWidth={84}
           />
         )}
       </div>
 
-      {/* ── 提示 / Toast ── */}
-      {items.length > 0 && (
-        <div className="flex items-center gap-1.5 border-t border-slate-200 px-5 py-2 text-xs text-slate-400">
-          <Search className="h-3.5 w-3.5" />
-          提示：恢复按件整体进行——凭证连同其所附原始凭证一并还原回「组卷工作台」待组卷池。回收站不提供彻底删除，到期档案的物理销毁须走「档案利用 → 鉴定销毁」流程审批办理。
-        </div>
-      )}
+      {/* ── 彻底删除确认 ── */}
+      <ConfirmModal
+        open={purgeAsk !== null}
+        danger
+        title="彻底删除"
+        confirmLabel="彻底删除"
+        message={
+          <>
+            将物理删除 <strong>{purgeAsk?.length || 0}</strong> 件记录（含所附原始凭证），
+            <strong className="text-red-600">删除后不可恢复</strong>。
+          </>
+        }
+        onCancel={() => setPurgeAsk(null)}
+        onConfirm={() => {
+          const ids = purgeAsk || [];
+          setPurgeAsk(null);
+          void handlePurge(ids);
+        }}
+      />
+
       {toast && (
         <div className={`pointer-events-none fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded px-4 py-2 text-sm text-white shadow-lg ${
           toast.type === 'success' ? 'bg-slate-800' : 'bg-amber-600'

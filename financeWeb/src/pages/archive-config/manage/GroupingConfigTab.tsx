@@ -21,8 +21,12 @@ import {
   DEFAULT_PER_TYPE_RULES,
   PERIOD_OPTIONS,
   CARRIER_MODE_OPTIONS,
+  BOX_CAPACITY_MODE_OPTIONS,
+  BOX_THICKNESS_PRESETS,
+  calcItemsPerBox,
   type GroupPeriod,
   type PerTypeRule,
+  type VolumeGroupingConfig,
 } from '../../../stores/volumeGroupingStore';
 
 // ============================================================
@@ -194,9 +198,6 @@ const GroupingConfigTab: React.FC = () => {
                 </React.Fragment>
               ))}
             </nav>
-            <div className="p-3 border-t border-slate-100 text-[10px] text-slate-400 leading-relaxed">
-              <p>法定依据、整理流程与装盒校验规则见「原理说明 → 整理流程 / 盒号与装盒」。</p>
-            </div>
           </aside>
 
           {/* ══ 右侧内容 ══ */}
@@ -206,9 +207,6 @@ const GroupingConfigTab: React.FC = () => {
             {activeKey === 'carrier' && (
               <SectionCard title="载体模式" icon={<Monitor className="w-4 h-4 text-violet-500" />} badge="影响组卷策略">
                 <div className="space-y-4">
-                  <p className="text-xs text-slate-500">
-                    纯电子档案卷=盒无厚度限制；纸质实体受盒厚度约束，需设置每盒件数上限。
-                  </p>
                   <div className="grid grid-cols-3 gap-3">
                     {CARRIER_MODE_OPTIONS.map((opt) => (
                       <button
@@ -232,26 +230,111 @@ const GroupingConfigTab: React.FC = () => {
                     ))}
                   </div>
 
-                  {/* 纸质模式下显示每盒上限 */}
+                  {/* 纸质模式下显示每盒上限（档案盒厚度 → 装盒件数，2026-08-25） */}
                   {(config.carrierMode === 'paper' || config.carrierMode === 'mixed') && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-2">
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
+                      <div className="flex items-center gap-2">
                         <Package className="w-4 h-4 text-amber-600" />
-                        <span className="text-sm font-bold text-amber-800">纸质盒容量约束</span>
+                        <span className="text-sm font-bold text-amber-800">纸质盒容量约束（一盒装多少件）</span>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm text-slate-600">每盒最多</span>
-                        <input
-                          type="number"
-                          min={1}
-                          max={500}
-                          value={config.itemsPerBox}
-                          onChange={(e) => setConfig({ itemsPerBox: Math.max(1, Math.min(500, parseInt(e.target.value) || 50)) })}
-                          className="w-24 px-3 py-1.5 text-sm border border-amber-300 rounded-lg text-center bg-white"
-                        />
-                        <span className="text-sm text-slate-600">件</span>
-                        <span className="text-xs text-slate-400">（标准凭证盒约50件，账簿盒视厚度而定）</span>
+
+                      {/* 容量模式 */}
+                      <div className="grid grid-cols-2 gap-2">
+                        {BOX_CAPACITY_MODE_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => {
+                              const next: Partial<VolumeGroupingConfig> = { boxCapacityMode: opt.value };
+                              if (opt.value === 'auto') {
+                                next.itemsPerBox = calcItemsPerBox(config.boxThicknessMm, config.perItemThicknessMm);
+                              }
+                              setConfig(next);
+                            }}
+                            className={`p-3 rounded-lg border-2 text-left transition-all ${
+                              config.boxCapacityMode === opt.value
+                                ? 'border-amber-500 bg-white'
+                                : 'border-amber-200/60 hover:border-amber-300 bg-white/60'
+                            }`}
+                          >
+                            <div className="text-xs font-bold text-slate-700">{opt.label}</div>
+                            <div className="text-[11px] text-slate-500 mt-0.5">{opt.desc}</div>
+                          </button>
+                        ))}
                       </div>
+
+                      {config.boxCapacityMode === 'auto' ? (
+                        <div className="space-y-2.5 bg-white/70 border border-amber-200 rounded-lg p-3">
+                          {/* 档案盒厚度 */}
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <span className="text-sm text-slate-600 w-28 shrink-0">档案盒厚度</span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {BOX_THICKNESS_PRESETS.map((p) => (
+                                <button
+                                  key={p.mm}
+                                  type="button"
+                                  onClick={() => setConfig({
+                                    boxThicknessMm: p.mm,
+                                    itemsPerBox: calcItemsPerBox(p.mm, config.perItemThicknessMm),
+                                  })}
+                                  className={`px-2.5 py-1 text-[11px] rounded-full border transition-colors cursor-pointer ${
+                                    config.boxThicknessMm === p.mm
+                                      ? 'bg-amber-600 text-white border-amber-600 font-medium'
+                                      : 'bg-white text-slate-600 border-slate-300 hover:border-amber-400'
+                                  }`}
+                                >
+                                  {p.label}
+                                </button>
+                              ))}
+                              <span className="inline-flex items-center gap-1 ml-1">
+                                <input
+                                  type="number" min={5} max={300}
+                                  value={config.boxThicknessMm}
+                                  onChange={(e) => {
+                                    const mm = Math.max(5, Math.min(300, parseInt(e.target.value) || 30));
+                                    setConfig({ boxThicknessMm: mm, itemsPerBox: calcItemsPerBox(mm, config.perItemThicknessMm) });
+                                  }}
+                                  className="w-20 px-2 py-1 text-xs border border-amber-300 rounded-lg text-center bg-white"
+                                />
+                                <span className="text-xs text-slate-500">mm（自定义）</span>
+                              </span>
+                            </div>
+                          </div>
+                          {/* 单件平均厚度 */}
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <span className="text-sm text-slate-600 w-28 shrink-0">单件平均厚度</span>
+                            <input
+                              type="number" min={0.5} max={50} step={0.5}
+                              value={config.perItemThicknessMm}
+                              onChange={(e) => {
+                                const mm = Math.max(0.5, Math.min(50, parseFloat(e.target.value) || 3));
+                                setConfig({ perItemThicknessMm: mm, itemsPerBox: calcItemsPerBox(config.boxThicknessMm, mm) });
+                              }}
+                              className="w-20 px-2 py-1 text-xs border border-amber-300 rounded-lg text-center bg-white"
+                            />
+                            <span className="text-xs text-slate-500">mm/件（记账凭证+所附原始凭证的纸张厚度，A4 纸约 0.1mm/页）</span>
+                          </div>
+                          {/* 测算结果 */}
+                          <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                            测算：{config.boxThicknessMm}mm ÷ {config.perItemThicknessMm}mm/件 ≈{' '}
+                            <strong className="text-sm">{config.itemsPerBox}</strong> 件/盒
+                            <span className="text-amber-600 ml-2">（装盒达到上限后自动封盒、另开新盒）</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-3 bg-white/70 border border-amber-200 rounded-lg p-3">
+                          <span className="text-sm text-slate-600">每盒最多</span>
+                          <input
+                            type="number"
+                            min={1}
+                            max={500}
+                            value={config.itemsPerBox}
+                            onChange={(e) => setConfig({ itemsPerBox: Math.max(1, Math.min(500, parseInt(e.target.value) || 50)) })}
+                            className="w-24 px-3 py-1.5 text-sm border border-amber-300 rounded-lg text-center bg-white"
+                          />
+                          <span className="text-sm text-slate-600">件</span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -262,11 +345,6 @@ const GroupingConfigTab: React.FC = () => {
             {activeKey === 'perType' && (
               <SectionCard title="按档案类别独立配置" icon={<Layers className="w-4 h-4 text-sky-500" />} badge="四类独立规则 · 驱动智能组卷">
                 <div className="space-y-3">
-                  <p className="text-xs text-slate-500 mb-1">
-                    不同档案类别有不同整理周期：凭证按月装订、账簿按年归档、报告按季度/半年/年整理。
-                    以下配置直接驱动组卷工作台的「智能组卷」和「组卷」操作。
-                  </p>
-
                   {ARCHIVE_TYPE_CONFIG.map((at) => {
                     const rule: PerTypeRule = config.perTypeRules[at.key] || DEFAULT_PER_TYPE_RULES['其他会计资料'];
                     const borderColor = at.color === 'blue' ? 'border-sky-200' :
@@ -326,7 +404,6 @@ const GroupingConfigTab: React.FC = () => {
                               className="rounded border-slate-300 text-sky-600"
                             />
                             <span className="text-xs text-slate-600">按凭证子类型分段（收款/付款/转账分段归集）</span>
-                            <span className="text-[10px] text-slate-400">（机关/行政事业单位财政资金监管要求；企业一般关闭直接按月+号组卷）</span>
                           </label>
                         )}
                         {/* 账簿：按子类型独立组卷 */}
@@ -339,7 +416,6 @@ const GroupingConfigTab: React.FC = () => {
                               className="rounded border-slate-300 text-sky-600"
                             />
                             <span className="text-xs text-slate-600">按账簿子类型独立组卷</span>
-                            <span className="text-[10px] text-slate-400">（总账/明细账/日记账/辅助账簿各独立一卷，DA/T 42-2022）</span>
                           </label>
                         )}
                         {/* 报告：年度报告与中期报告分开 */}
@@ -352,7 +428,6 @@ const GroupingConfigTab: React.FC = () => {
                               className="rounded border-slate-300 text-sky-600"
                             />
                             <span className="text-xs text-slate-600">年度报告(永久)与中期报告(10年)分开组卷</span>
-                            <span className="text-[10px] text-slate-400">（不同周期、不同保管期限严禁合并，DA/T 42-2022）</span>
                           </label>
                         )}
                         {/* 其他：按子类别分别组卷 */}
@@ -365,7 +440,6 @@ const GroupingConfigTab: React.FC = () => {
                               className="rounded border-slate-300 text-sky-600"
                             />
                             <span className="text-xs text-slate-600">按资料子类别分别组卷</span>
-                            <span className="text-[10px] text-slate-400">（银行对账单/纳税申报表/管理清册等按类别+期限独立，DA/T 42-2022）</span>
                           </label>
                         )}
 
@@ -436,7 +510,7 @@ const GroupingConfigTab: React.FC = () => {
                           <Box className={`w-4 h-4 ${boxMode === 'self' ? 'text-sky-600' : 'text-slate-400'}`} />
                           <span className={`text-sm font-bold ${boxMode === 'self' ? 'text-sky-700' : 'text-slate-600'}`}>企业自主管理</span>
                         </div>
-                        <p className="text-xs text-slate-500">按需配置盒号编码结构，系统默认「年度-二级类别-3位流水号」</p>
+                        <p className="text-xs text-slate-500">默认「年度-二级类别-3位流水号」</p>
                       </button>
                       <button
                         type="button"
@@ -449,7 +523,7 @@ const GroupingConfigTab: React.FC = () => {
                           <CheckCircle2 className={`w-4 h-4 ${boxMode === 'archive' ? 'text-amber-600' : 'text-slate-400'}`} />
                           <span className={`text-sm font-bold ${boxMode === 'archive' ? 'text-amber-700' : 'text-slate-600'}`}>档案馆进馆适配</span>
                         </div>
-                        <p className="text-xs text-slate-500">按接收方要求配置盒号结构与流水范围，确保移交验收合规</p>
+                        <p className="text-xs text-slate-500">按接收方要求配置盒号结构与流水范围</p>
                       </button>
                     </div>
                     {boxMode === 'archive' && (

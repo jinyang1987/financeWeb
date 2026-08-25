@@ -17,6 +17,9 @@ import org.springframework.web.bind.annotation.RestController;
 import com.finance.ams.api.BizException;
 import com.finance.ams.auth.AuthUser;
 import com.finance.ams.auth.PermissionService;
+import com.finance.ams.oplog.OperationLogService;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * 卷域端点（P1-② 组卷写路径）
@@ -47,10 +50,12 @@ public class VolumeController {
 
   private final VolumeService service;
   private final PermissionService perm;
+  private final OperationLogService oplog;
 
-  public VolumeController(VolumeService service, PermissionService perm) {
+  public VolumeController(VolumeService service, PermissionService perm, OperationLogService oplog) {
     this.service = service;
     this.perm = perm;
+    this.oplog = oplog;
   }
 
   // ── 建卷 ──
@@ -59,7 +64,8 @@ public class VolumeController {
   public Map<String, Object> create(
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
-      @RequestBody Map<String, Object> body) {
+      @RequestBody Map<String, Object> body,
+      HttpServletRequest request) {
     AuthUser me = guard(userId, ticket, "volume-workspace");
     perm.checkFonds(me, str(body.get("fondsCode")));
     var cmd = new VolumeService.CreateCmd(
@@ -74,7 +80,10 @@ public class VolumeController {
         str(body.get("dateTo")),
         str(body.get("carrierType")),
         str(body.get("securityLevel")));
-    return service.create(userId, ticket, cmd);
+    Map<String, Object> view = service.create(userId, ticket, cmd);
+    oplog.append(me.account(), me.name(), "组卷建卷", str(view.get("volumeCode")),
+        null, "案卷：" + str(view.get("title")), OperationLogService.clientIp(request));
+    return view;
   }
 
   // ── 卷列表 ──
@@ -111,9 +120,12 @@ public class VolumeController {
   public Map<String, Object> delete(
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
-      @PathVariable String volumeId) {
-    guard(userId, ticket, "volume-workspace");
+      @PathVariable String volumeId,
+      HttpServletRequest request) {
+    AuthUser me = guard(userId, ticket, "volume-workspace");
     service.deleteEmpty(ticket, volumeId);
+    oplog.append(me.account(), me.name(), "删除案卷", volumeId, null,
+        "删除空草稿案卷", OperationLogService.clientIp(request));
     return Map.of("deleted", true);
   }
 
@@ -169,9 +181,13 @@ public class VolumeController {
   public Map<String, Object> confirm(
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
-      @PathVariable String volumeId) {
-    guard(userId, ticket, "volume-workspace");
-    return service.confirm(ticket, userId, volumeId);
+      @PathVariable String volumeId,
+      HttpServletRequest request) {
+    AuthUser me = guard(userId, ticket, "volume-workspace");
+    Map<String, Object> view = service.confirm(ticket, userId, volumeId);
+    oplog.append(me.account(), me.name(), "确认组卷", volumeId, null,
+        "案卷确认（赋号按配置时机）", OperationLogService.clientIp(request));
+    return view;
   }
 
   @PostMapping("/{volumeId}/unconfirm")
@@ -187,9 +203,12 @@ public class VolumeController {
   public Map<String, Object> decompose(
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
-      @PathVariable String volumeId) {
-    guard(userId, ticket, "volume-workspace");
+      @PathVariable String volumeId,
+      HttpServletRequest request) {
+    AuthUser me = guard(userId, ticket, "volume-workspace");
     int count = service.decompose(ticket, volumeId);
+    oplog.append(me.account(), me.name(), "拆卷", volumeId, null,
+        "卷内 " + count + " 件全部回收集池", OperationLogService.clientIp(request));
     return Map.of("decomposed", true, "itemCount", count);
   }
 
@@ -244,18 +263,26 @@ public class VolumeController {
   public Map<String, Object> transfer(
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
-      @PathVariable String volumeId) {
-    guard(userId, ticket, "volume-workspace");
-    return service.transfer(ticket, userId, volumeId);
+      @PathVariable String volumeId,
+      HttpServletRequest request) {
+    AuthUser me = guard(userId, ticket, "volume-workspace");
+    Map<String, Object> view = service.transfer(ticket, userId, volumeId);
+    oplog.append(me.account(), me.name(), "移交归盒", volumeId, null,
+        "案卷移交至档案保管", OperationLogService.clientIp(request));
+    return view;
   }
 
   @PostMapping("/{volumeId}/return")
   public Map<String, Object> returnBack(
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
-      @PathVariable String volumeId) {
-    guard(userId, ticket, "volume-workspace");
-    return service.returnToWorkbench(ticket, volumeId);
+      @PathVariable String volumeId,
+      HttpServletRequest request) {
+    AuthUser me = guard(userId, ticket, "volume-workspace");
+    Map<String, Object> view = service.returnToWorkbench(ticket, volumeId);
+    oplog.append(me.account(), me.name(), "退回组卷", volumeId, null,
+        "案卷退回组卷工作台", OperationLogService.clientIp(request));
+    return view;
   }
 
   // ── 内部 ──

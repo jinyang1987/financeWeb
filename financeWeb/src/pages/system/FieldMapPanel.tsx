@@ -387,7 +387,6 @@ const FieldMapPanel: React.FC = () => {
               <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-2">
                 <FlaskConical className="w-4 h-4 text-emerald-600" />
                 <span className="text-sm font-semibold text-slate-700">映射测试</span>
-                <span className="text-xs text-slate-400">粘贴来源系统的样例 JSON，实时查看转换后的标准条目</span>
               </div>
               <div className="p-4 grid grid-cols-2 gap-4">
                 <div>

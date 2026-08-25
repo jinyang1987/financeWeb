@@ -32,6 +32,15 @@ public class OperationLogService {
 
   public void append(String actorId, String actorName, String action, String target,
                      String orderId, String detail) {
+    append(actorId, actorName, action, target, orderId, detail, null);
+  }
+
+  /**
+   * 追加操作日志（带客户端 IP，2026-08-25）。
+   * ip 列（inet）仅存证、不入哈希链输入——保持与历史行同一验链公式，链可真实重算。
+   */
+  public void append(String actorId, String actorName, String action, String target,
+                     String orderId, String detail, String ip) {
     // 注意：表结构以 V1__init.sql 为准——时间列是 ts（非 created_at），目标列是 target_label（非 target），id 为 bigserial 自增
     String prevHash = jdbc.sql("SELECT hash FROM ams_operation_log ORDER BY ts DESC, id DESC LIMIT 1")
         .query().listOfRows().stream().findFirst().map(r -> String.valueOf(r.get("hash"))).orElse("GENESIS");
@@ -42,13 +51,35 @@ public class OperationLogService {
     String hash = sha256(prevHash + actorId + action + target + ts);
 
     jdbc.sql("""
-        INSERT INTO ams_operation_log (actor_id, actor_name, action, target_label, order_id, detail, hash, prev_hash, ts)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO ams_operation_log (actor_id, actor_name, action, target_label, order_id, detail, hash, prev_hash, ts, ip)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?::inet)
         """)
         .param(actorId).param(actorName)
         .param(action).param(target).param(toUuidOrNull(orderId)).param(detail)
         .param(hash).param(prevHash).param(java.sql.Timestamp.valueOf(now))
+        .param(toIpOrNull(ip))
         .update();
+  }
+
+  /** 客户端真实 IP：优先取 X-Forwarded-For 首段（反代/网关场景），否则远端地址 */
+  public static String clientIp(jakarta.servlet.http.HttpServletRequest request) {
+    if (request == null) return null;
+    String xff = request.getHeader("X-Forwarded-For");
+    if (xff != null && !xff.isBlank()) {
+      String first = xff.split(",")[0].trim();
+      if (!first.isEmpty()) return first;
+    }
+    String real = request.getHeader("X-Real-IP");
+    if (real != null && !real.isBlank()) return real.trim();
+    return request.getRemoteAddr();
+  }
+
+  /** ip 列（inet 类型）：空白转 null；非法格式降级为 null 而不是让整条日志写入失败 */
+  private static Object toIpOrNull(String ip) {
+    if (ip == null || ip.isBlank()) return null;
+    String s = ip.trim();
+    if (!s.matches("[0-9a-fA-F.:]+")) return null;
+    return s;
   }
 
   /**
@@ -102,7 +133,7 @@ public class OperationLogService {
   }
 
   public List<Map<String, Object>> query(String actorId, String action, String orderId,
-                                         int skip, int limit) {
+                                         String from, String to, int skip, int limit) {
     // 别名兼容前端契约：created_at←ts, target←target_label
     var sql = new StringBuilder("SELECT *, ts AS created_at, target_label AS target FROM ams_operation_log WHERE 1=1");
     var params = new java.util.ArrayList<Object>();
@@ -113,6 +144,8 @@ public class OperationLogService {
       if (oid == null) { sql.append(" AND 1=0"); }  // 非 UUID 的 orderId 不可能命中 uuid 列
       else { sql.append(" AND order_id = ?"); params.add(oid); }
     }
+    if (from != null && !from.isBlank()) { sql.append(" AND ts >= ?::timestamptz"); params.add(from.trim()); }
+    if (to != null && !to.isBlank()) { sql.append(" AND ts <= ?::timestamptz"); params.add(to.trim()); }
     sql.append(" ORDER BY ts DESC LIMIT ? OFFSET ?");
     params.add(limit);
     params.add(skip);
@@ -125,11 +158,13 @@ public class OperationLogService {
     try { return UUID.fromString(s.trim()); } catch (Exception e) { return null; }
   }
 
-  public long count(String actorId, String action) {
+  public long count(String actorId, String action, String from, String to) {
     var sql = new StringBuilder("SELECT COUNT(*) FROM ams_operation_log WHERE 1=1");
     var params = new java.util.ArrayList<Object>();
     if (actorId != null && !actorId.isBlank()) { sql.append(" AND actor_id = ?"); params.add(actorId); }
     if (action != null && !action.isBlank()) { sql.append(" AND action = ?"); params.add(action); }
+    if (from != null && !from.isBlank()) { sql.append(" AND ts >= ?::timestamptz"); params.add(from.trim()); }
+    if (to != null && !to.isBlank()) { sql.append(" AND ts <= ?::timestamptz"); params.add(to.trim()); }
     return jdbc.sql(sql.toString()).params(params.toArray()).query(Long.class).single();
   }
 

@@ -47,7 +47,7 @@ const ITEM_STATUS: Record<string, { label: string; cls: string }> = {
 /** 抓取去向（2026-08-21 收敛：核对工作台已移除，抓取/推送/手动统一进组卷工作台） */
 const DEST_OPTIONS: { value: 'auto-archive' | 'to-volume'; label: string; desc: string }[] = [
   { value: 'to-volume', label: '送组卷工作台', desc: '进入待组卷池，由整理人员人工组卷（默认）' },
-  { value: 'auto-archive', label: '直接入库 · 自动组卷', desc: '四性检测后按期间自动建卷、赋号、归档（可信源）' },
+  { value: 'auto-archive', label: '直接入库 · 自动组卷', desc: '按期间自动建卷、赋号、归档（可信源）；四性检测在移交环节自动执行' },
 ];
 
 // ─── 子组件：批次明细表 ───
@@ -357,10 +357,6 @@ const ApiReceivePage: React.FC = () => {
                 </label>
               ))}
             </div>
-            <div className="mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-400 flex items-start gap-1.5">
-              <ArrowRight className="w-3 h-3 mt-0.5 shrink-0" />
-              <span>定时自动抓取计划在「系统管理 → 连接配置 → 数据源连接」中维护。</span>
-            </div>
           </div>
         </div>
 
@@ -432,16 +428,6 @@ const ApiReceivePage: React.FC = () => {
         </div>
 
         {/* 说明 */}
-        <div className="bg-sky-50 border border-sky-200 rounded-xl p-4">
-          <div className="flex items-start gap-2">
-            <FileText className="w-4 h-4 text-sky-500 mt-0.5 shrink-0" />
-            <div className="text-xs text-sky-800 space-y-1">
-              <p className="font-medium">归档转换规则（用友 → 会计档案）</p>
-              <p>记账凭证：凭证字号/凭证字/会计期间/制单人/审核人/借贷合计/附单据数全字段映射，分录结构化存储；无电子附件时按凭证数据生成标准版式 PDF 作为电子文件（79号令）。</p>
-              <p>幂等保障：以用友凭证 ID 为去重键，重复同步同一期间自动跳过已归档件；财务报表（科目余额表/利润发生表）仅在用友侧有数据时归档，空期间如实记录不归档。</p>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

@@ -11,14 +11,10 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, FileText, FolderTree, BookOpen, X, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, ExternalLink, BookOpenCheck, Package } from 'lucide-react';
+import { Search, FileText, FolderTree, BookOpen, CheckCircle2, ChevronDown, ExternalLink, Package } from 'lucide-react';
 import { useVolumeStore, toCategoryCode } from '../../stores/volumeStore';
 import { useArchiveStore } from '../../stores/archiveStore';
-import { useBorrowStore } from '../../stores/borrowStore';
-import { useAuthStore } from '../../stores/authStore';
-import { useAppStore } from '../../stores/appStore';
 import ArchiveStatusTags from '../../components/borrow/ArchiveStatusTags';
-import BorrowCartBar from '../../components/borrow/BorrowCartBar';
 import type { Volume } from '../../types/volume';
 
 /** 大类代码 → 中文名 */
@@ -53,32 +49,12 @@ const VolumeItemSearchPage: React.FC = () => {
     void loadAllRecords();
     if (currentFanzongCode) void loadVolumes(currentFanzongCode);
   }, [loadAllRecords, loadVolumes, currentFanzongCode]);
-  const cart = useBorrowStore((s) => s.cart);
-  const addToCart = useBorrowStore((s) => s.addToCart);
-  const removeFromCart = useBorrowStore((s) => s.removeFromCart);
-  const logAction = useBorrowStore((s) => s.logAction);
-  const currentUser = useAuthStore((s) => s.currentUser);
-  const triggerToast = useAppStore((s) => s.triggerToast);
-
   const [query, setQuery] = useState('');
   const [searched, setSearched] = useState(false);
   const [compareRecord, setCompareRecord] = useState<string | null>(null);
   const [showCompare, setShowCompare] = useState(false);
 
-  const cartIds = useMemo(() => new Set(cart.map((c) => c.recordId)), [cart]);
   const recordById = useMemo(() => new Map(records.map((r) => [r.id, r])), [records]);
-
-  const handleToggleCart = (recordId: string) => {
-    const rec = recordById.get(recordId);
-    if (!rec) return;
-    if (cartIds.has(recordId)) {
-      removeFromCart(recordId);
-      return;
-    }
-    addToCart(recordId);
-    if (currentUser) logAction('加入借阅车', rec.remarks || rec.voucherNo, currentUser, undefined, rec.archiveCode);
-    triggerToast(`已加入借阅车：${rec.voucherNo}`, 'success');
-  };
 
   // 搜索
   const results = useMemo(() => {
@@ -198,7 +174,6 @@ const VolumeItemSearchPage: React.FC = () => {
           <div className="flex flex-col items-center justify-center h-64 text-slate-400">
             <BookOpen className="w-12 h-12 mb-3" />
             <span className="text-sm font-medium">关联查询</span>
-            <span className="text-xs mt-1">输入凭证号或档号，同时检索纸质卷位置和电子件信息</span>
           </div>
         )}
 
@@ -258,28 +233,13 @@ const VolumeItemSearchPage: React.FC = () => {
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         {r.type === 'item' && r.recordId && (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => handleCompare(r.recordId!)}
-                              className="px-3 py-1.5 text-xs font-medium text-sky-600 bg-sky-50 border border-sky-200 rounded-lg hover:bg-sky-100"
-                            >
-                              同屏对比
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleToggleCart(r.recordId!)}
-                              className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer ${
-                                cartIds.has(r.recordId)
-                                  ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
-                                  : 'bg-sky-600 text-white hover:bg-sky-700 shadow-sm'
-                              }`}
-                              title={cartIds.has(r.recordId) ? '已在借阅车中，点击移出' : '加入借阅车，统一结算发起申请'}
-                            >
-                              <BookOpenCheck className="w-3.5 h-3.5" />
-                              {cartIds.has(r.recordId) ? '已加入' : '加入借阅'}
-                            </button>
-                          </>
+                          <button
+                            type="button"
+                            onClick={() => handleCompare(r.recordId!)}
+                            className="px-3 py-1.5 text-xs font-medium text-sky-600 bg-sky-50 border border-sky-200 rounded-lg hover:bg-sky-100"
+                          >
+                            同屏对比
+                          </button>
                         )}
                         {r.type === 'volume' && (
                           <button
@@ -383,7 +343,6 @@ const VolumeItemSearchPage: React.FC = () => {
               <h3 className="text-xs font-semibold text-slate-700 mb-3 flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-slate-500" />
                 元数据比对
-                <span className="text-[10px] font-normal text-slate-400 ml-2">扫描侧逐字段识别待 OCR 抽取能力建设；当前可打开原件人工比对</span>
               </h3>
               <table className="w-full text-sm">
                 <thead>
@@ -413,9 +372,6 @@ const VolumeItemSearchPage: React.FC = () => {
           </div>
         )}
       </div>
-
-      {/* 借阅车浮条 */}
-      <BorrowCartBar />
     </div>
   );
 };

@@ -33,11 +33,10 @@ import com.finance.ams.auth.AuthUser;
  *   POST /open/v1/apps             签发接入应用（含默认去向）
  *   PUT  /open/v1/apps/{id}/destination  修改应用默认去向
  *   GET  /open/v1/batches          推送批次历史
- *   POST /open/v1/batches/{batchNo}/four-checks 批次运行四性检测
  *   POST /open/v1/batches/{batchNo}/to-review   批次转审核库
  *   POST /open/v1/batches/{batchNo}/auto-group  批次自动组卷
  *   GET  /open/v1/logs             推送全链路日志
- *   POST /open/v1/simulate         模拟推送（演示：四类样例走真实管道）
+ *   （2026-08-25：模拟推送已移除；批次四性检测已移除——四性检测统一在移交环节执行）
  *   GET  /open/v1/collect/pending-check         收集池待核对列表
  *   POST /open/v1/collect/{id}/pass             核对通过（送组卷/送审核）
  *   GET  /open/v1/field-maps                    字段映射配置列表
@@ -149,16 +148,6 @@ public class OpenApiController {
     return service.listBatches(limit);
   }
 
-  /** 批次运行四性检测 */
-  @PostMapping("/batches/{batchNo}/four-checks")
-  public Map<String, Object> batchFourChecks(
-      @RequestHeader(value = "X-User-Id", required = false) String userId,
-      @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
-      @PathVariable String batchNo) {
-    requireAdminRole(userId, ticket);
-    return service.runFourChecksForBatch(ticket, batchNo);
-  }
-
   /** 批次转审核库（核对工作台·待审核） */
   @PostMapping("/batches/{batchNo}/to-review")
   public Map<String, Object> batchToReview(
@@ -190,17 +179,6 @@ public class OpenApiController {
       @RequestParam(defaultValue = "200") int limit) {
     requireAdminRole(userId, ticket);
     return pushLogs.list(batchNo, level, limit);
-  }
-
-  // ═══ 模拟推送（演示） ═══
-
-  @PostMapping("/simulate")
-  public Map<String, Object> simulate(
-      @RequestHeader(value = "X-User-Id", required = false) String userId,
-      @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
-      @RequestBody Map<String, Object> body) {
-    requireAdminRole(userId, ticket);
-    return service.simulate(userId, body);
   }
 
   // ═══ 收集台账（待核对流转） ═══

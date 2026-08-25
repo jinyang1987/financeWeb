@@ -26,7 +26,6 @@ import org.springframework.web.client.RestTemplate;
 
 import com.finance.ams.alfresco.AlfrescoClient;
 import com.finance.ams.api.BizException;
-import com.finance.ams.inspection.InspectionService;
 import com.finance.ams.record.RecordService;
 import com.finance.ams.volume.VolumeService;
 
@@ -51,7 +50,8 @@ import com.finance.ams.volume.VolumeService;
  *   POST /open/v1/archives          单件推送
  *   POST /open/v1/archives/batch    批量推送（统一四类契约）
  *   GET  /open/v1/batches/{batchNo} 回执查询
- *   POST /open/v1/simulate          模拟推送（演示：生成四类样例走真实管道）
+ *   （2026-08-25：模拟推送已移除——正式系统不提供模拟入口；
+ *    四性检测统一在移交（推送至保管库）环节执行）
  */
 @Service
 public class OpenPushService {
@@ -67,7 +67,6 @@ public class OpenPushService {
   private final JdbcClient jdbc;
   private final RecordService records;
   private final VolumeService volumes;
-  private final InspectionService inspection;
   private final CollectItemService collectItems;
   private final PushLogService logs;
   private final FieldMapService fieldMaps;
@@ -87,14 +86,13 @@ public class OpenPushService {
                         String fondsCode, String retention) {}
 
   public OpenPushService(DataSource dataSource, RecordService records, VolumeService volumes,
-                         InspectionService inspection, CollectItemService collectItems,
+                         CollectItemService collectItems,
                          PushLogService logs, FieldMapService fieldMaps, AlfrescoClient alfresco,
                          @Value("${ams.seed.admin-user:admin}") String seedAdminUser,
                          @Value("${ams.seed.admin-password:admin}") String seedAdminPassword) {
     this.jdbc = JdbcClient.create(dataSource);
     this.records = records;
     this.volumes = volumes;
-    this.inspection = inspection;
     this.collectItems = collectItems;
     this.logs = logs;
     this.fieldMaps = fieldMaps;
@@ -169,7 +167,8 @@ public class OpenPushService {
     FilePayload file = fileOf(body, meta, externalId);
     String ticket = adminTicket();
     String category = categoryOf(meta, str(body.get("category")));
-    boolean fourChecks = body.get("runFourChecks") instanceof Boolean b && b;
+    // 2026-08-25：四性检测时机统一为移交（推送至保管库）环节，
+    // 收集入池阶段不再执行（runFourChecks 字段仅保留契约兼容）
 
     long pushId = createBatch(app, body, str(body.get("period")), category, destination);
     String batchNo = batchNoOf(pushId);
@@ -183,20 +182,16 @@ public class OpenPushService {
         out.put("batchNo", batchNo);
         return out;
       }
-      int fourPass = 0;
-      if (fourChecks) {
-        fourPass = runFourChecks(ticket, batchNo, List.of(str(r.get("nodeId"))));
-      }
       String fonds = str(meta.getOrDefault("fondsCode", app.get("fonds_code")));
       String routeNote = routeDestination(ticket, "openapi:" + app.get("app_name"),
           batchNo, destination, List.of(new OkItem(str(r.get("nodeId")), category,
               str(r.get("archiveType")), intObj(meta.get("year")), fonds,
               str(r.getOrDefault("retention", "")))));
       finishBatch(pushId, "success", 1, 1, 0, routeNote);
-      logs.info(batchNo, "receipt", "单件推送完成：" + r.get("voucherNo") + "，" + routeNote);
+      logs.info(batchNo, "receipt", "单件推送完成：" + r.get("voucherNo") + "，" + routeNote
+          + "（四性检测将于移交环节自动执行）");
       Map<String, Object> out = new LinkedHashMap<>(r);
       out.put("batchNo", batchNo);
-      out.put("fourChecksPassed", fourPass);
       out.put("route", routeNote);
       return out;
     } catch (BizException e) {
@@ -222,15 +217,15 @@ public class OpenPushService {
     String period = str(body.get("period"));
     String batchCategory = str(body.get("category"));
     String destination = destOf(body, app);
-    boolean fourChecks = body.get("runFourChecks") instanceof Boolean b && b;
+    // 2026-08-25：runFourChecks 字段仅保留契约兼容——四性检测统一在移交（推送至保管库）环节执行
     boolean rawFormat = "raw".equals(str(body.get("format")));
     String sourceSystem = str(app.get("source_system"));
 
     long pushId = createBatch(app, body, period, batchCategory, destination);
     String batchNo = batchNoOf(pushId);
-    logs.info(batchNo, "accept", String.format("批次受理：%s 推送 %d 条（类别 %s，去向 %s，四性 %s）",
+    logs.info(batchNo, "accept", String.format("批次受理：%s 推送 %d 条（类别 %s，去向 %s）",
         app.get("app_name"), items.size(), batchCategory.isBlank() ? "混合" : batchCategory,
-        destination, fourChecks ? "开启" : "关闭"));
+        destination));
 
     String ticket = adminTicket();
     int success = 0, failed = 0, skipped = 0;
@@ -266,12 +261,7 @@ public class OpenPushService {
       }
     }
 
-    // ── 四性检测（可选） ──
-    int fourPass = 0;
-    if (fourChecks && !oks.isEmpty()) {
-      fourPass = runFourChecks(ticket, batchNo, oks.stream().map(OkItem::nodeId).toList());
-      notes.append("四性检测通过 ").append(fourPass).append("/").append(oks.size()).append("；");
-    }
+    // 四性检测不在收集环节执行：统一在移交（推送至保管库）环节自动检测（2026-08-25）
 
     // ── 去向路由 ──
     String routeNote = routeDestination(ticket, "openapi:" + app.get("app_name"), batchNo, destination, oks);
@@ -290,7 +280,6 @@ public class OpenPushService {
     out.put("success", success);
     out.put("skipped", skipped);
     out.put("failed", failed);
-    out.put("fourChecksPassed", fourPass);
     out.put("route", routeNote);
     out.put("message", notes.toString());
     return out;
@@ -407,7 +396,7 @@ public class OpenPushService {
     String archiveCode = String.valueOf(view.get("archiveCode"));
     insertPushItem(pushId, sourceSystem, externalId, voucherNo, archiveType, category,
         str(meta.get("summary")), doubleObj(meta.get("amount")), nodeId, archiveCode, "success", null);
-    collectItems.record(nodeId, fondsCode, "demo-simulator".equals(sourceSystem) ? "simulate" : "open-push",
+    collectItems.record(nodeId, fondsCode, "open-push",
         batchNo, category, destination, DEST_CHECK.equals(destination) ? "pending" : "na",
         externalId, voucherNo, archiveType);
     logs.info(batchNo, "create", String.format("%s 入池（%s，%s年%s月，%s）→ %s",
@@ -428,24 +417,8 @@ public class OpenPushService {
     return out;
   }
 
-  // ═══════════════════ 四性检测 / 去向路由 ═══════════════════
-
-  /** 批量四性检测，返回通过数 */
-  private int runFourChecks(String ticket, String batchNo, List<String> nodeIds) {
-    int pass = 0;
-    for (String nodeId : nodeIds) {
-      try {
-        Map<String, Object> r = inspection.run(ticket, nodeId, "collect");
-        boolean allPass = r.get("allPass") instanceof Boolean b && b;
-        if (allPass) pass++;
-        logs.log(batchNo, allPass ? "info" : "warn", "fourchecks",
-            (allPass ? "四性检测通过：" : "四性检测存在不通过项：") + nodeId, null);
-      } catch (Exception e) {
-        logs.warn(batchNo, "fourchecks", "四性检测执行失败：" + nodeId + "（" + e.getMessage() + "）");
-      }
-    }
-    return pass;
-  }
+  // ═══════════════════ 去向路由 ═══════════════════
+  // 四性检测不在收集环节执行：统一在移交（推送至保管库）环节由 VolumeService.transfer 自动触发（2026-08-25）
 
   /** 去向路由：auto-archive 自动组卷 / to-review 转审核 / to-check、to-volume 台账已登记 */
   private String routeDestination(String ticket, String operator, String batchNo,
@@ -544,15 +517,6 @@ public class OpenPushService {
         .list();
   }
 
-  /** 批次运行四性检测（管理端） */
-  public Map<String, Object> runFourChecksForBatch(String ticket, String batchNo) {
-    List<Map<String, Object>> items = successItemsOfBatch(batchNo);
-    if (items.isEmpty()) throw BizException.badRequest("NO_ITEMS", "该批次无成功入池条目");
-    int pass = runFourChecks(ticket, batchNo, items.stream()
-        .map(it -> String.valueOf(it.get("recordNodeId"))).toList());
-    return Map.of("checked", items.size(), "passed", pass, "failed", items.size() - pass);
-  }
-
   /** 批次转审核库（管理端） */
   public Map<String, Object> routeBatchToReview(String ticket, String userId, String batchNo) {
     List<Map<String, Object>> items = successItemsOfBatch(batchNo);
@@ -590,148 +554,8 @@ public class OpenPushService {
     return Map.of("volumes", vols, "items", oks.size());
   }
 
-  // ═══════════════════ 模拟推送（演示：四类样例走真实管道） ═══════════════════
-
-  /** 生成四类样例数据并通过真实推送管道入档 */
-  public Map<String, Object> simulate(String operator, Map<String, Object> body) {
-    String category = str(body.getOrDefault("category", "all"));
-    int count = Math.min(Math.max(intOr(body.get("count"), 3), 1), 20);
-    String destination = str(body.getOrDefault("destination", DEST_CHECK));
-    boolean fourChecks = !(body.get("runFourChecks") instanceof Boolean b) || b;
-
-    Map<String, Object> app = ensureDemoApp(operator);
-    String period = YearMonth.now().toString();
-    List<Map<String, Object>> items = new ArrayList<>();
-    List<String> cats = "all".equals(category) || category.isBlank()
-        ? List.of("voucher", "ledger", "report", "other") : List.of(category);
-    for (String c : cats) items.addAll(sampleItems(c, count, period));
-
-    Map<String, Object> batch = new LinkedHashMap<>();
-    batch.put("period", period);
-    batch.put("category", cats.size() == 1 ? cats.get(0) : "");
-    batch.put("destination", destination);
-    batch.put("runFourChecks", fourChecks);
-    batch.put("items", items);
-    logs.info("", "simulate", String.format("模拟推送：%s 四类样例 %d 条（去向 %s）",
-        category, items.size(), destination));
-    return pushBatch(app, batch);
-  }
-
-  /** 确保演示应用存在 */
-  private Map<String, Object> ensureDemoApp(String operator) {
-    Map<String, Object> app = jdbc.sql("""
-        SELECT id, app_key, app_secret, app_name, source_system, fonds_code, status, default_destination
-        FROM ams.ams_open_app WHERE source_system = 'demo-simulator' LIMIT 1
-        """)
-        .query((rs, i) -> row(
-            "id", rs.getLong("id"), "app_key", rs.getString("app_key"),
-            "app_secret", rs.getString("app_secret"), "app_name", rs.getString("app_name"),
-            "source_system", rs.getString("source_system"), "fonds_code", rs.getString("fonds_code"),
-            "status", rs.getString("status"), "default_destination", rs.getString("default_destination")))
-        .optional().orElse(null);
-    if (app != null) return app;
-    Long id = jdbc.sql("""
-        INSERT INTO ams.ams_open_app (app_key, app_secret, app_name, source_system, fonds_code, remark, created_by)
-        VALUES ('AK_DEMO_SIMULATOR', 'SK_DEMO', '模拟推送演示', 'demo-simulator', 'Z001',
-                '系统内置演示应用：模拟推送四类会计档案样例数据', ?) RETURNING id
-        """)
-        .param(operator)
-        .query(Long.class).single();
-    log.info("创建模拟推送演示应用: id={}", id);
-    return row("id", id, "app_key", "AK_DEMO_SIMULATOR", "app_secret", "SK_DEMO",
-        "app_name", "模拟推送演示", "source_system", "demo-simulator",
-        "fonds_code", "Z001", "status", "active", "default_destination", DEST_CHECK);
-  }
-
-  /** 按类别生成仿真样例条目 */
-  private List<Map<String, Object>> sampleItems(String category, int count, String period) {
-    List<Map<String, Object>> out = new ArrayList<>();
-    int year = Integer.parseInt(period.substring(0, 4));
-    int month = Integer.parseInt(period.substring(5, 7));
-    String[] depts = {"财务部", "采购部", "销售部", "行政部"};
-    byte[] pdf = minimalPdf();
-    String b64 = Base64.getEncoder().encodeToString(pdf);
-
-    for (int i = 1; i <= count; i++) {
-      Map<String, Object> item = new LinkedHashMap<>();
-      String ext = "SIM-" + category.toUpperCase() + "-" + period.replace("-", "") + "-" + String.format("%03d", i);
-      item.put("externalId", ext);
-      item.put("year", year);
-      item.put("month", month);
-      item.put("department", depts[i % depts.length]);
-      item.put("preparer", "模拟推送");
-      item.put("files", List.of(Map.of(
-          "fileName", ext + ".pdf", "mimeType", "application/pdf", "fileBase64", b64)));
-
-      switch (category) {
-        case "ledger" -> {
-          String[] types = {"总账", "明细账", "日记账", "辅助账簿"};
-          String t = types[(i - 1) % types.length];
-          item.put("summary", year + "年度" + t + "电子账簿");
-          item.put("ledger", Map.of("ledgerType", t,
-              "subjectCode", String.format("%04d", 1001 + i),
-              "subjectName", "银行存款".equals(t) ? "银行存款" : "管理费用"));
-        }
-        case "report" -> {
-          String[] names = {"资产负债表", "利润表", "现金流量表"};
-          String[] periods = {"月度", "季度", "年度"};
-          String name = names[(i - 1) % names.length];
-          String rp = periods[(i - 1) % periods.length];
-          item.put("summary", year + "年" + rp + name);
-          item.put("amount", 1000000.00 + i * 50000);
-          item.put("report", Map.of("reportName", name, "reportPeriod", rp));
-        }
-        case "other" -> {
-          String[] types = {"银行余额调节表", "银行对账单", "纳税申报表", "会计档案移交清册"};
-          String t = types[(i - 1) % types.length];
-          item.put("summary", year + "年" + month + "月" + t);
-          item.put("other", Map.of("materialType", t,
-              "materialNo", "QT-" + period.replace("-", "") + "-" + String.format("%03d", i)));
-        }
-        default -> { // voucher
-          double amount = 800 + i * 137.5;
-          String[] summaries = {"采购办公用品", "支付差旅费报销", "支付水电费", "收到销售货款", "计提本月折旧"};
-          String voucherNo = "记-" + String.format("%03d", 100 + i);
-          item.put("voucherNo", voucherNo);
-          item.put("summary", summaries[(i - 1) % summaries.length]);
-          item.put("amount", amount);
-          item.put("voucher", Map.of(
-              "voucherNo", voucherNo, "voucherWord", "记", "voucherCategory", "转账凭证",
-              "attachedBillCount", 1 + i % 3,
-              "entries", List.of(
-                  Map.of("line", 1, "summary", summaries[(i - 1) % summaries.length],
-                      "subjectCode", "6602", "subjectName", "管理费用", "debit", amount, "credit", 0),
-                  Map.of("line", 2, "summary", summaries[(i - 1) % summaries.length],
-                      "subjectCode", "1002", "subjectName", "银行存款", "debit", 0, "credit", amount))));
-        }
-      }
-      out.add(item);
-    }
-    return out;
-  }
-
-  /** 最小合法单页 PDF（无内容流，演示文件用） */
-  private static byte[] minimalPdf() {
-    String[] objs = {
-        "<< /Type /Catalog /Pages 2 0 R >>",
-        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >>",
-    };
-    StringBuilder sb = new StringBuilder("%PDF-1.4\n");
-    int[] off = new int[objs.length];
-    for (int i = 0; i < objs.length; i++) {
-      off[i] = sb.length();
-      sb.append(i + 1).append(" 0 obj ").append(objs[i]).append("\nendobj\n");
-    }
-    int xref = sb.length();
-    sb.append("xref\n0 ").append(objs.length + 1).append("\n0000000000 65535 f \n");
-    for (int o : off) sb.append(String.format("%010d 00000 n \n", o));
-    sb.append("trailer << /Size ").append(objs.length + 1)
-        .append(" /Root 1 0 R >>\nstartxref\n").append(xref).append("\n%%EOF");
-    return sb.toString().getBytes(StandardCharsets.ISO_8859_1);
-  }
-
   // ═══════════════════ 回执查询 ═══════════════════
+  // 「模拟推送」已于 2026-08-25 移除：正式系统不提供模拟入口，业务系统经 /open/v1 真实接入
 
   public Map<String, Object> batchReceipt(String batchNo) {
     Map<String, Object> batch = findBatch(batchNo);
@@ -1068,11 +892,6 @@ public class OpenPushService {
       try { return Integer.parseInt(s.trim()); } catch (NumberFormatException ignored) { }
     }
     return null;
-  }
-
-  private static int intOr(Object o, int def) {
-    Integer v = intObj(o);
-    return v == null ? def : v;
   }
 
   private static Double doubleObj(Object o) {

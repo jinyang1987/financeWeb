@@ -83,19 +83,21 @@ public class InspectionController {
     return service.setItemEnabled(code, body != null && Boolean.TRUE.equals(body.get("enabled")));
   }
 
-  /** 卷级四性检测（组卷工作台「运行四性检测」真实现） */
+  /** 卷级四性检测（移交时自动执行；快速检测页手动执行，2026-08-25） */
   @PostMapping("/run-volume")
   public Map<String, Object> runVolume(
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
       @RequestBody Map<String, String> body) {
     AuthUser me = perm.me(userId, ticket);
-    perm.requireFunction(me, "volume-workspace");
+    perm.requireFunction(me, "volume-workspace", "quick-check");
     String volumeId = body == null ? null : body.get("volumeId");
     if (volumeId == null || volumeId.isBlank()) {
       throw BizException.badRequest("VALIDATION_FAILED", "volumeId 不能为空");
     }
-    return service.runVolume(ticket, userId, volumeId);
+    String phase = body.get("phase");
+    return service.runVolume(ticket, userId, volumeId,
+        phase == null || phase.isBlank() ? "yj" : phase);
   }
 
   /** 人工复检 {reportId, dimension, status, reason}（留痕：复检人/原因/时间） */
@@ -105,7 +107,7 @@ public class InspectionController {
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
       @RequestBody Map<String, Object> body) {
     AuthUser me = perm.me(userId, ticket);
-    perm.requireFunction(me, "volume-workspace");
+    perm.requireFunction(me, "volume-workspace", "quick-check");
     return service.review(
         str(body == null ? null : body.get("reportId")),
         str(body == null ? null : body.get("dimension")),

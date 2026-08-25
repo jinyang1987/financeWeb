@@ -16,11 +16,10 @@
 import React, { useState, useEffect } from 'react';
 import {
   Settings, Shield, CheckCircle2, FileText, Lock, Eye,
-  Save, RotateCcw, Play, FileSpreadsheet, ChevronDown, Plus, X,
+  Save, RotateCcw, FileSpreadsheet, ChevronDown, Plus, X,
   ListChecks, Loader2,
 } from 'lucide-react';
 import { http } from '../../services/http';
-import { useArchiveStore } from '../../stores/archiveStore';
 import {
   fetchInspectionItems, setInspectionItemEnabled,
   PHASE_LABELS, DIMENSION_LABELS,
@@ -142,10 +141,6 @@ const ItemsLibraryTab: React.FC = () => {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="text-sm font-semibold text-slate-700">标准检测项库（环节 × 四性）</h3>
-          <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-            检测引擎按「已启用」的检测项逐项执行，结果四性归并 + 问题明细落库；
-            勾选集合即本单位的检测方案（归档/移交/长期保存三个环节独立生效）。标准依据列明 DA/T·GB/T 条款。
-          </p>
         </div>
         <span className="text-[11px] text-slate-400 shrink-0 mt-0.5">
           {items.filter((i) => i.enabled).length} / {items.length} 项启用
@@ -392,26 +387,8 @@ const InspectionConfigPage: React.FC = () => {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
-  const [running, setRunning] = useState(false);
-  const [runResult, setRunResult] = useState<string>('');
-  const currentFanzongCode = useArchiveStore((s) => s.currentFanzongCode);
-
-  // ── 立即执行检测（真：对当前全宗收集池批量跑四性检测，走本页保存的方案口径） ──
-  const handleRunBatch = async () => {
-    if (!currentFanzongCode) return;
-    setRunning(true);
-    setRunResult('');
-    try {
-      const r = await http.post<{ checked: number; passed: number; failed: number; failedNames: string[] }>(
-        '/inspection/run-batch', { fondsCode: currentFanzongCode, phase: 'manual-config-page' });
-      setRunResult(`检测完成：共 ${r.checked} 件，通过 ${r.passed} 件，不通过 ${r.failed} 件`
-        + (r.failedNames.length > 0 ? `（${r.failedNames.slice(0, 3).join('；')}${r.failedNames.length > 3 ? ' 等' : ''}）` : ''));
-    } catch (e) {
-      setRunResult('检测失败：' + (e instanceof Error ? e.message : ''));
-    } finally {
-      setRunning(false);
-    }
-  };
+  // 2026-08-25：「立即执行检测」已移除——四性检测统一在移交（推送至保管库）环节自动执行；
+  // 手动检测入口在 档案整理 → 快速检测
 
   // ── 加载已保存方案（ams_config: inspection.plan，2026-08-16 贯通修复——原为假保存） ──
   useEffect(() => {
@@ -499,19 +476,9 @@ const InspectionConfigPage: React.FC = () => {
               保存失败：{saveError}
             </span>
           )}
-          {runResult && (
-            <span className="text-xs font-medium text-sky-700 bg-sky-50 px-2 py-0.5 rounded-full">
-              {runResult}
-            </span>
-          )}
         </div>
-        <p className="text-sm text-slate-500 mt-1">
-          遵循 DA/T 70 标准，配置电子档案四性（真实性/完整性/可用性/安全性）检测规则与方案模板
-        </p>
         <div className="flex items-center gap-2 mt-2 text-xs text-slate-400">
           <span>当前方案：{TEMPLATES.find((t) => t.id === selectedTemplate)?.name}</span>
-          <span>·</span>
-          <span>规则版本 v2.1.0</span>
         </div>
       </div>
 
@@ -617,9 +584,8 @@ const InspectionConfigPage: React.FC = () => {
                   <span className="text-slate-500">检测节点</span>
                   <span className="text-slate-700">
                     {[
-                      nodes.preArchive && '前置',
-                      nodes.archiveTrigger && '归档',
-                      nodes.transferCheck && '移交',
+                      nodes.preArchive && '整理前置检查',
+                      nodes.transferCheck && '移交（推送至保管库）',
                       nodes.longTermSpotCheck && `长期(${nodes.spotCheckPeriod === 'year' ? '每年' : '每季度'} ${nodes.spotCheckRatio}%)`,
                     ].filter(Boolean).join(' → ')}
                   </span>
@@ -632,8 +598,7 @@ const InspectionConfigPage: React.FC = () => {
           {activeTab === 'authenticity' && (
             <div className="divide-y divide-slate-100">
               <div className="p-5">
-                <h3 className="text-sm font-semibold text-slate-700 mb-1">真实性检测配置</h3>
-                <p className="text-xs text-slate-400 mb-4">来源可靠 · 内容未篡改 · 行为可追溯</p>
+                <h3 className="text-sm font-semibold text-slate-700 mb-4">真实性检测配置</h3>
 
                 <ConfigRow label="启用哈希校验" desc="SHA-256 哈希值比对，防止文件篡改">
                   <Toggle checked={authenticity.hashEnabled} onChange={() => setAuthenticity({ ...authenticity, hashEnabled: !authenticity.hashEnabled })} />
@@ -701,8 +666,7 @@ const InspectionConfigPage: React.FC = () => {
           {activeTab === 'completeness' && (
             <div className="divide-y divide-slate-100">
               <div className="p-5">
-                <h3 className="text-sm font-semibold text-slate-700 mb-1">完整性检测配置</h3>
-                <p className="text-xs text-slate-400 mb-4">文件 · 元数据 · 附件 · 结构无缺失</p>
+                <h3 className="text-sm font-semibold text-slate-700 mb-4">完整性检测配置</h3>
 
                 <ConfigRow label="文件数量校验" desc="主件 + 附件数量匹配检查">
                   <Toggle checked={completeness.fileCountCheck} onChange={() => setCompleteness({ ...completeness, fileCountCheck: !completeness.fileCountCheck })} />
@@ -715,7 +679,7 @@ const InspectionConfigPage: React.FC = () => {
                 </ConfigRow>
                 {completeness.metadataRequiredCheck && (
                   <div className="py-3 px-4">
-                    <span className="text-xs text-slate-500 mb-2 block">必填字段清单（勾选需要校验的元数据字段）</span>
+                    <span className="text-xs text-slate-500 mb-2 block">必填字段清单</span>
                     <div className="flex flex-wrap gap-1.5">
                       {METADATA_FIELDS.map((field) => {
                         const checked = completeness.requiredFields.includes(field);
@@ -760,12 +724,10 @@ const InspectionConfigPage: React.FC = () => {
           {activeTab === 'usability' && (
             <div className="divide-y divide-slate-100">
               <div className="p-5">
-                <h3 className="text-sm font-semibold text-slate-700 mb-1">可用性检测配置</h3>
-                <p className="text-xs text-slate-400 mb-4">格式长期可读 · 能正常打开渲染</p>
+                <h3 className="text-sm font-semibold text-slate-700 mb-4">可用性检测配置</h3>
 
                 <div className="py-3 px-4">
                   <span className="text-sm font-medium text-slate-700">格式白名单</span>
-                  <span className="text-xs text-slate-400 ml-2">仅允许白名单内格式通过检测</span>
                   <div className="flex flex-wrap gap-1.5 mt-2 mb-2">
                     {usability.formatWhitelist.map((fmt) => (
                       <TagBadge
@@ -826,8 +788,7 @@ const InspectionConfigPage: React.FC = () => {
           {activeTab === 'security' && (
             <div className="divide-y divide-slate-100">
               <div className="p-5">
-                <h3 className="text-sm font-semibold text-slate-700 mb-1">安全性检测配置</h3>
-                <p className="text-xs text-slate-400 mb-4">无病毒 · 权限可控 · 涉密合规 · 防泄露</p>
+                <h3 className="text-sm font-semibold text-slate-700 mb-4">安全性检测配置</h3>
 
                 <ConfigRow label="病毒扫描" desc="集成 ClamAV 引擎，实时扫描文件">
                   <Toggle checked={security.virusScan} onChange={() => setSecurity({ ...security, virusScan: !security.virusScan })} />
@@ -844,7 +805,7 @@ const InspectionConfigPage: React.FC = () => {
                 {security.sensitiveCheck && (
                   <>
                     <div className="py-3 px-4">
-                      <span className="text-xs text-slate-500 mb-2 block">敏感词库（检测到以下类型信息时触发预警或脱敏）</span>
+                      <span className="text-xs text-slate-500 mb-2 block">敏感词库</span>
                       <div className="flex flex-wrap gap-1.5 mb-2">
                         {security.sensitiveKeywords.map((kw) => (
                           <TagBadge
@@ -893,17 +854,13 @@ const InspectionConfigPage: React.FC = () => {
 
         {/* ======================== 检测节点配置（始终显示） ======================== */}
         <div className="bg-white rounded-xl border border-slate-200 mt-4 p-5">
-          <h3 className="text-sm font-semibold text-slate-700 mb-1">检测节点配置</h3>
-          <p className="text-xs text-slate-400 mb-4">PDF 方案强调"归档、移交、长期保存三节点都要检"，避免一检了之</p>
+          <h3 className="text-sm font-semibold text-slate-700 mb-4">检测节点配置</h3>
 
           <div className="divide-y divide-slate-100">
-            <ConfigRow label="前置检测（归档前）" desc="元数据必填项校验 + 附件关联 + 格式预警">
+            <ConfigRow label="前置检查（整理阶段）" desc="组卷时的基础校验：元数据必填项 + 附件关联 + 凭证号连续性（非正式四性检测）">
               <Toggle checked={nodes.preArchive} onChange={() => setNodes({ ...nodes, preArchive: !nodes.preArchive })} />
             </ConfigRow>
-            <ConfigRow label="归档触发检测" desc="四性全项检测，必须 100% 通过方可归档">
-              <Toggle checked={nodes.archiveTrigger} onChange={() => setNodes({ ...nodes, archiveTrigger: !nodes.archiveTrigger })} />
-            </ConfigRow>
-            <ConfigRow label="移交进馆检测" desc="二次校验，报告互认，交叉验证，避免前端过后端卡">
+            <ConfigRow label="移交检测（推送至保管库）" desc="正式四性检测节点：移交时自动执行全部启用检测项，未通过不得入库">
               <Toggle checked={nodes.transferCheck} onChange={() => setNodes({ ...nodes, transferCheck: !nodes.transferCheck })} />
             </ConfigRow>
             <ConfigRow label="长期保存抽检" desc="定期随机抽取档案复测可用性/真实性/安全性">
@@ -956,15 +913,9 @@ const InspectionConfigPage: React.FC = () => {
             </button>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => void handleRunBatch()}
-              disabled={running}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-sky-700 bg-sky-50 border border-sky-200 rounded-lg hover:bg-sky-100 transition-colors cursor-pointer disabled:opacity-50"
-            >
-              <Play className={`w-4 h-4 ${running ? 'animate-spin' : ''}`} />
-              {running ? '检测中…' : '立即执行检测'}
-            </button>
+            <span className="text-xs text-slate-400">
+              检测在移交（推送至保管库）时自动执行 · 手动检测请前往 档案整理 → 快速检测
+            </span>
             <button
               type="button"
               onClick={() => void handleSave()}

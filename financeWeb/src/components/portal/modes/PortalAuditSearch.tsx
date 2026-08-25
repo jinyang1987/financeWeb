@@ -163,7 +163,6 @@ const PortalAuditSearch: React.FC = () => {
           <div className="max-w-3xl mx-auto text-center py-20 text-slate-400">
             <AlertCircle className="w-12 h-12 mx-auto mb-3 text-slate-300" />
             <p className="text-sm">未找到相关审计记录</p>
-            <p className="text-xs mt-2 text-slate-300">该凭证/单号暂无操作日志。借阅申请、审批、出库、归还等操作会自动写入审计链路。</p>
           </div>
         ) : (
           <div className="max-w-3xl mx-auto">

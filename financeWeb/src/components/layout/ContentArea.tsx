@@ -29,11 +29,11 @@ import LifecycleStatsPage from '../../pages/archive-stats/LifecycleStatsPage';
 import ComplianceStatsPage from '../../pages/archive-stats/ComplianceStatsPage';
 import CockpitConfigPage from '../../pages/system/CockpitConfigPage';
 import VolumeWorkspacePage from '../../pages/archive-arrange/VolumeWorkspacePage';
+import QuickCheckPage from '../../pages/archive-arrange/QuickCheckPage';
 import RecycleBinPage from '../../pages/archive-arrange/RecycleBinPage';
 import VolumeItemSearchPage from '../../pages/archive-preserve/VolumeItemSearchPage';
 import TransferManagePage from '../../pages/archive-utilization/TransferManagePage';
 import ArchiveManageConfigPage from '../../pages/archive-config/manage/ArchiveManageConfigPage';
-import RetentionConfigPage from '../../pages/archive-config/RetentionConfigPage';
 import ApiReceivePage from '../../pages/archive-rcv/ApiReceivePage';
 import OpenApiReceivePage from '../../pages/archive-rcv/OpenApiReceivePage';
 import ConnectionConfigPage from '../../pages/system/ConnectionConfigPage';
@@ -46,6 +46,7 @@ import ArchiveTransferPage from '../../pages/archive-disposal/ArchiveTransferPag
 import AppraisalManagePage from '../../pages/archive-utilization/AppraisalManagePage';
 import WatermarkConfigPage from '../../pages/archive-config/WatermarkConfigPage';
 import WorkflowConfigPage from '../../pages/archive-config/WorkflowConfigPage';
+import OperationLogPage from '../../pages/system/OperationLogPage';
 
 const ContentArea: React.FC = () => {
   // ─── 从 stores 直接读取数据，避免 props drilling ──────
@@ -123,7 +124,6 @@ const ContentArea: React.FC = () => {
 
   // ─── 页面路由（原 PageRouterProps 所用） ────────────────
   const pageRouterMenus: MenuId[] = [
-    'directory-config',
     'archive-rcv',
     'report-config',
     'inspection-config',
@@ -234,12 +234,20 @@ const ContentArea: React.FC = () => {
     return <VolumeWorkspacePage />;
   }
 
+  if (activeMainMenu === 'quick-check') {
+    return <QuickCheckPage />;
+  }
+
   if (activeMainMenu === 'recycle-bin') {
     return <RecycleBinPage />;
   }
 
   if (activeMainMenu === 'sys-connection') {
     return <ConnectionConfigPage />;
+  }
+
+  if (activeMainMenu === 'sys-oplog') {
+    return <OperationLogPage />;
   }
 
   if (activeMainMenu === 'volume-item-search') {
@@ -268,10 +276,6 @@ const ContentArea: React.FC = () => {
 
   if (activeMainMenu === 'archive-manage-config') {
     return <ArchiveManageConfigPage />;
-  }
-
-  if (activeMainMenu === 'retention-config') {
-    return <RetentionConfigPage />;
   }
 
   if (activeMainMenu === 'watermark-config') {

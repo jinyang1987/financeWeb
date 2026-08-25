@@ -75,6 +75,8 @@ export const ArchiveBoxTreeView: React.FC<ArchiveBoxTreeViewProps> = ({
 
   // ── 本地状态 ──
   const [selectedBoxIds, setSelectedBoxIds] = useState<Set<string>>(new Set());
+  /** 盒内件勾选（2026-08-25 修复：原为 new Set()+空回调，复选框点了没反应） */
+  const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
   const [showReturnConfirm, setShowReturnConfirm] = useState(false);
   /** 单卷退回目标（盒内件列表行级入口，2026-08-19） */
   const [returnVolumeId, setReturnVolumeId] = useState<string | null>(null);
@@ -90,6 +92,11 @@ export const ArchiveBoxTreeView: React.FC<ArchiveBoxTreeViewProps> = ({
     () => entries.find((e) => e.box.id === focusedBoxId) || null,
     [entries, focusedBoxId],
   );
+
+  // 切换/离开盒时清空件勾选（避免跨盒残留）
+  React.useEffect(() => {
+    setSelectedItemIds(new Set());
+  }, [focusedBoxId]);
 
   // ── 盒的 DataTable 列定义 ──
   const boxColumns = useMemo((): DataTableColumn<BoxViewEntry>[] => [
@@ -111,7 +118,7 @@ export const ArchiveBoxTreeView: React.FC<ArchiveBoxTreeViewProps> = ({
     {
       id: 'retention', header: '保管期限',
       cell: (e) => <span className="text-xs text-slate-600">{e.box.retention}</span>,
-      size: 80,
+      size: 96,
     },
     {
       id: 'volumeCount', header: '卷数',
@@ -194,13 +201,18 @@ export const ArchiveBoxTreeView: React.FC<ArchiveBoxTreeViewProps> = ({
       };
     });
     // 前置「所属案卷」列：盒内视角下标明件的归属卷
+    // （装盒必然已组卷：后端 by-volume 读取已带 volumeId/volumeCode，2026-08-25 修复空白）
     const volumeCol: DataTableColumn<ArchiveRecord> = {
-      id: 'volumeTitle', header: '所属案卷', size: 200,
+      id: 'volumeTitle', header: '所属案卷', size: 220,
       cell: (r) => {
         const vol = volumes.find((v) => v.id === r.volumeId);
+        const name = vol?.title && vol.title !== '未命名案卷' && vol.title !== '新案卷'
+          ? vol.title
+          : (r.volumeCode || vol?.volumeCode || '');
+        const full = [name, r.volumeCode && name !== r.volumeCode ? r.volumeCode : ''].filter(Boolean).join(' · ');
         return (
-          <span className="text-[11px] text-slate-500 truncate block max-w-[190px]" title={vol?.title}>
-            {vol?.title || r.volumeCode || '—'}
+          <span className="text-[11px] text-slate-500 truncate block max-w-[210px]" title={full || undefined}>
+            {name || '—'}
           </span>
         );
       },
@@ -333,6 +345,11 @@ export const ArchiveBoxTreeView: React.FC<ArchiveBoxTreeViewProps> = ({
               <span className="text-[10px] text-slate-400 shrink-0">
                 ({focusedEntry?.volumes.length || 0} 卷 · {focusedEntry?.matchedItems.length || 0} 件 · {formatAmount(focusedTotalAmount)})
               </span>
+              {selectedItemIds.size > 0 && (
+                <span className="text-[10px] font-medium text-sky-600 bg-sky-50 border border-sky-200 rounded-full px-2 py-0.5 shrink-0">
+                  已选 {selectedItemIds.size} 件
+                </span>
+              )}
             </div>
 
             {/* 盒关键元数据标签 */}
@@ -359,10 +376,16 @@ export const ArchiveBoxTreeView: React.FC<ArchiveBoxTreeViewProps> = ({
           {/* 件表格 */}
           <div className="flex-1 overflow-auto min-h-0 p-1">
             <DataTable
+              key={focusedBoxId || 'box-items'}
               data={focusedEntry?.matchedItems || []}
               columns={itemColumns}
-              selectedIds={new Set()}
-              onSelectionChange={() => {}}
+              selectedIds={selectedItemIds}
+              onSelectionChange={setSelectedItemIds}
+              onToggleAll={() => {
+                const ids = (focusedEntry?.matchedItems || []).map((r) => r.id);
+                setSelectedItemIds((prev) =>
+                  prev.size >= ids.length ? new Set() : new Set(ids));
+              }}
               onRowClick={(r) => onItemClick(r)}
               renderActions={(r) => {
                 // ★ 行级操作：查看详情 + 退回组卷（仅已移交卷可退回，2026-08-19）

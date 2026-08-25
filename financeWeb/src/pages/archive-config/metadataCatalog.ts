@@ -40,7 +40,7 @@ export interface ModeOption {
 
 export const MODE_OPTIONS: ModeOption[] = [
   { key: 'accounting-archive', label: '会计档案元数据', description: '件级元数据（M1-M49）+ 卷级元数据（V1-V20）+ 卷件关联（VA1-VA6）+ 盒级元数据（B1-B29），盒→卷→件→凭证四级穿透' },
-  { key: 'source-doc', label: '原始凭证元数据', description: '96种原始凭证独立元数据配置，公共字段+类型特有扩展字段，支持逐类型定制显隐' },
+  { key: 'source-doc', label: '原始凭证元数据', description: '原始凭证全量类型（外来/自制/特殊）独立元数据配置：公共字段+共享字段集+类型特有扩展字段，逐类型定制显隐；依据 DA/T 95-2022、发票/财政票据规定' },
 ];
 
 // ============================================================

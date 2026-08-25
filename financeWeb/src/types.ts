@@ -137,6 +137,20 @@ export interface ArchiveRecord {
   externalId?: string;
   /** 摘要（cm:description） */
   summary?: string;
+
+  // ── 原始凭证富元数据（finance-model v2.7；方案A 载体统一到 record，2026-08-25） ──
+  /** 原始凭证类型编码（96 类目录，见 types/sourceDocument.ts） */
+  docTypeCode?: string;
+  /** 原始凭证类型名称 */
+  docTypeName?: string;
+  /** 原始凭证类型扩展字段 JSON（字段集/类型特有字段） */
+  srcDocExtFields?: string;
+  /** 原始凭证对方纳税人识别号 */
+  srcDocCounterpartyTaxId?: string;
+  /** 原始凭证大写金额（防篡改法律要件） */
+  srcDocAmountUpper?: string;
+  /** 原始凭证业务分类 */
+  srcDocBusinessCategory?: string;
 }
 
 export interface CategoryNode {

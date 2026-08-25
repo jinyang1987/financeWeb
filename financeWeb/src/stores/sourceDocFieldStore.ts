@@ -10,7 +10,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-// 9 个公共字段
+// 公共字段（《全套原始凭证元数据完整梳理》的 9 类通用公共元数据，展开为 16 个字段；
+// 口径与 DA/T 95-2022 电子原始凭证基本元数据一致，全部类型共用）
 export const SOURCE_DOC_COMMON_FIELDS = [
   { key: 'documentNo', label: '单据编号', group: 'basic', required: true },
   { key: 'docTypeName', label: '凭证类型', group: 'basic', required: true },

@@ -304,7 +304,6 @@ export const DigitalWarehousePanel: React.FC<{ triggerToast: (msg: string, type?
         <div className="flex items-center gap-2 mb-3">
           <Package className="w-4 h-4 text-amber-500" />
           <h3 className="text-sm font-bold text-slate-800">待上架区</h3>
-          <span className="text-[11px] text-slate-400">移交归盒后在此排队，上架后进入密集架在架保管</span>
           <span className="ml-auto text-xs text-slate-500">{pendingBoxes.length} 盒</span>
         </div>
         {pendingBoxes.length === 0 ? (
@@ -382,7 +381,6 @@ export const DigitalWarehousePanel: React.FC<{ triggerToast: (msg: string, type?
         <div className="flex items-center gap-3 mb-4 flex-wrap">
           <Layers className="w-4 h-4 text-sky-600" />
           <h3 className="text-sm font-bold text-slate-800">密集架阵列</h3>
-          <span className="text-[11px] text-slate-400">点击列打开通道查看盒位 · 密集架常态闭合（每架同时只开一列）</span>
           <div className="ml-auto flex items-center gap-1">
             {rooms.map((r) => (
               <button key={r.code} type="button" onClick={() => setActiveRoom(r.code)}

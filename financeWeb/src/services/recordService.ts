@@ -67,6 +67,13 @@ export interface RecordDto {
   // ── v2.6 回收站（2026-08-21）：仅回收站件有值 ──
   deletedAt?: string;
   deletedBy?: string;
+  // ── v2.7 原始凭证富元数据（2026-08-25 方案A 载体统一到 record） ──
+  docTypeCode?: string;
+  docTypeName?: string;
+  srcDocExtFields?: string;
+  srcDocCounterpartyTaxId?: string;
+  srcDocAmountUpper?: string;
+  srcDocBusinessCategory?: string;
 }
 
 export interface PoolResult {
@@ -90,6 +97,25 @@ export interface UploadMeta {
   preparer?: string;
   voucherCategory?: string;
   remarks?: string;
+  // ── v2.7 原始凭证富元数据（方案A）：voucherCategory='原始凭证' 时携带 ──
+  /** 原始凭证类型编码（96 类目录） */
+  docTypeCode?: string;
+  /** 原始凭证类型名称 */
+  docTypeName?: string;
+  /** 单据编号 */
+  documentNo?: string;
+  /** 对方单位 */
+  counterpartyName?: string;
+  /** 对方税号 */
+  counterpartyTaxId?: string;
+  /** 摘要/事由 */
+  summary?: string;
+  /** 大写金额 */
+  amountUpper?: string;
+  /** 业务分类 */
+  businessCategory?: string;
+  /** 类型扩展字段 JSON */
+  extFields?: string;
 }
 
 // ─── API ───
@@ -239,7 +265,7 @@ export async function deleteRecord(nodeId: string): Promise<void> {
   await http.delete(`/records/${nodeId}`);
 }
 
-// ─── 回收站（v2.6：逻辑删除件列表 / 恢复；不提供彻底删除——物理销毁走鉴定销毁流程） ───
+// ─── 回收站（逻辑删除件列表 / 恢复 / 彻底删除） ───
 
 /** 回收站件列表（按删除时间倒序；不可搜索、不参与组卷） */
 export async function fetchRecycleItems(fondsCode: string): Promise<RecordDto[]> {
@@ -252,9 +278,40 @@ export async function restoreRecycleItem(nodeId: string): Promise<void> {
   await http.post(`/records/recycle/${nodeId}/restore`, {});
 }
 
+/** 彻底删除回收站件：物理删除、不可恢复（仅未归档件；已归档档案的物理销毁走鉴定销毁流程） */
+export async function purgeRecycleItem(nodeId: string): Promise<void> {
+  await http.delete(`/records/recycle/${nodeId}`);
+}
+
 /** 组件挂接（2026-08-20 先组件再组卷）：原始凭证件 → 所属记账凭证件；parentRecordId=null 解挂 */
 export async function linkRecordParent(nodeId: string, parentRecordId: string | null): Promise<void> {
   await http.put(`/records/${nodeId}/parent`, { parentRecordId });
+}
+
+/** 件级元数据可编辑字段（组卷工作台「元数据录入」，2026-08-25；后端白名单同构） */
+export interface RecordMetadataPatch {
+  voucherNo?: string;
+  voucherCategory?: string;
+  voucherWord?: string;
+  voucherDate?: string;
+  department?: string;
+  preparer?: string;
+  auditor?: string;
+  tallyMan?: string;
+  retention?: string;
+  securityLevel?: string;
+  carrierType?: string;
+  archiveType?: string;
+  remarks?: string;
+  summary?: string;
+  year?: number;
+  month?: number;
+  amount?: number;
+}
+
+/** 件级元数据录入/修改（仅收集池件/草稿卷内件可改；返回更新后的视图） */
+export async function updateRecordMetadata(nodeId: string, patch: RecordMetadataPatch): Promise<RecordDto> {
+  return http.put<RecordDto>(`/records/${nodeId}/metadata`, patch);
 }
 
 /** 卷内件全量读取（完整 RecordView，含 voucherCategory/subType 等筛选字段）——P1-③ 读视图 */
@@ -347,6 +404,13 @@ export function dtoToRecord(dto: RecordDto): ArchiveRecord {
     ocrText: dto.ocrText || undefined,
     // 组件挂接（v2.3）：原始凭证件的所属记账凭证（空串 → undefined）
     parentRecordId: dto.parentRecordId || undefined,
+    // v2.7 原始凭证富元数据（方案A 载体统一到 record）
+    docTypeCode: dto.docTypeCode || undefined,
+    docTypeName: dto.docTypeName || undefined,
+    srcDocExtFields: dto.srcDocExtFields || undefined,
+    srcDocCounterpartyTaxId: dto.srcDocCounterpartyTaxId || undefined,
+    srcDocAmountUpper: dto.srcDocAmountUpper || undefined,
+    srcDocBusinessCategory: dto.srcDocBusinessCategory || undefined,
   };
 }
 

@@ -9,10 +9,10 @@
  *     POST /open/v1/apps                        签发接入应用（含默认去向）
  *     PUT  /open/v1/apps/{id}/destination       修改应用默认去向
  *     GET  /open/v1/batches                     推送批次历史
- *     POST /open/v1/batches/{batchNo}/four-checks 批次运行四性检测
  *     POST /open/v1/batches/{batchNo}/auto-group  批次自动组卷
  *     GET  /open/v1/logs                        推送全链路日志
- *     POST /open/v1/simulate                    模拟推送（演示）
+ *     （2026-08-25：模拟推送入口已移除——正式系统不提供模拟；
+ *      四性检测统一在移交（推送至保管库）环节执行）
  *     （2026-08-21 收敛：核对工作台已移除；collect/pending-check、to-review 等
  *      历史端点服务端仍在但前端不再消费，遗留去向归一为送组卷工作台）
  *     GET/PUT /open/v1/field-maps/{sourceSystem} 字段映射（低代码集成）
@@ -46,9 +46,6 @@ export const DESTINATION_LABELS: Record<PushDestination, string> = {
   'to-check': '送核对（历史去向，已并入组卷工作台）',
   'to-review': '送审核（历史去向，已并入组卷工作台）',
 };
-
-/** 当前可选的推送去向（UI 选择器只提供这两项；历史 to-check/to-review 仅用于批次回显） */
-export const ACTIVE_DESTINATIONS: PushDestination[] = ['to-volume', 'auto-archive'];
 
 export interface OpenApp {
   id: number;
@@ -163,10 +160,6 @@ export const openPushService = {
   batchDetail: (batchNo: string) =>
     http.get<OpenPushBatchDetail>(`/open/v1/batches/${batchNo}`),
 
-  batchFourChecks: (batchNo: string) =>
-    http.post<{ checked: number; passed: number; failed: number }>(
-      `/open/v1/batches/${batchNo}/four-checks`, {}),
-
   batchToReview: (batchNo: string) =>
     http.post<{ routed: number }>(`/open/v1/batches/${batchNo}/to-review`, {}),
 
@@ -181,13 +174,6 @@ export const openPushService = {
     sp.set('limit', String(params?.limit ?? 200));
     return http.get<PushLogEntry[]>(`/open/v1/logs?${sp.toString()}`);
   },
-
-  // 模拟推送（演示：四类样例走真实管道）
-  simulate: (body: { category: PushCategory | 'all'; count: number;
-    destination: PushDestination; runFourChecks: boolean }) =>
-    http.post<{ batchNo: string; status: string; total: number; success: number;
-      skipped: number; failed: number; fourChecksPassed: number; route: string;
-      message: string }>('/open/v1/simulate', body),
 
   // 收集台账（待核对）
   collectPendingCheck: (fondsCode?: string) =>

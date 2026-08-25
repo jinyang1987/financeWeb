@@ -134,11 +134,8 @@ export const AuditLogsPanel: React.FC<AuditLogsPanelProps> = ({ records, trigger
         <div>
           <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
             <Fingerprint className="w-5 h-5 text-sky-600" />
-            <span>系统安全审计日志（哈希链防篡改）</span>
+            <span>系统安全审计日志</span>
           </h2>
-          <p className="text-xs text-slate-500 mt-1">
-            操作日志写入 ams_operation_log 时逐环计算 SHA-256 哈希链（每环含上一环哈希），「验链」按钮由服务端重算全链核对，断链即篡改信号。
-          </p>
           {verifyResult && (
             <p className={`text-xs mt-1.5 font-medium ${verifyResult.broken > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
               最近一次验链：共 {verifyResult.total} 条 · 验真通过 {verifyResult.verified} · 历史不可验 {verifyResult.unverifiable} · 断链 {verifyResult.broken}
@@ -159,7 +156,7 @@ export const AuditLogsPanel: React.FC<AuditLogsPanelProps> = ({ records, trigger
           ) : (
             <ShieldCheck className="w-3.5 h-3.5 text-white" />
           )}
-          <span>{isVerifying ? '比对防篡改密链中...' : '一键检索核算审计链'}</span>
+          <span>{isVerifying ? '验链中…' : '审计链验真'}</span>
         </button>
       </div>
 
@@ -209,7 +206,7 @@ export const AuditLogsPanel: React.FC<AuditLogsPanelProps> = ({ records, trigger
                 <th className="px-4 py-3 text-left text-[13px] font-semibold w-28">操作柜员 (User)</th>
                 <th className="px-4 py-3 text-left text-[13px] font-semibold w-32">IP 地址 (IP)</th>
                 <th className="px-4 py-3 text-left text-[13px] font-semibold w-44">事件行为 (Action)</th>
-                <th className="px-4 py-3 text-left text-[13px] font-semibold">详细安全留痕与电子发票证据链说明</th>
+                <th className="px-4 py-3 text-left text-[13px] font-semibold">详情</th>
                 <th className="px-4 py-3 text-center text-[13px] font-semibold w-28">不可篡改验证</th>
               </tr>
             </thead>
@@ -242,7 +239,7 @@ export const AuditLogsPanel: React.FC<AuditLogsPanelProps> = ({ records, trigger
               {filteredLogs.length === 0 && (
                 <tr>
                   <td colSpan={6} className="p-12 text-center text-slate-400">
-                    目前暂无符合该筛选器的系统审计追踪日志。
+                    暂无符合条件的审计日志
                   </td>
                 </tr>
               )}

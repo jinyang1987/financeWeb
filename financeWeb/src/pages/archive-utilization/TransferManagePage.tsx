@@ -277,15 +277,6 @@ const TransferManagePage: React.FC = () => {
         </div>
 
         {/* 法规提示 */}
-        <div className="bg-sky-50 border border-sky-200 rounded-xl p-4">
-          <div className="flex items-start gap-2 text-xs text-sky-800">
-            <AlertCircle className="w-4 h-4 text-sky-500 mt-0.5 shrink-0" />
-            <div>
-              <p className="font-medium">依据 79号令 第十二条</p>
-              <p className="mt-0.5">会计档案临时保管期满（1年，最长不超过3年）后，应由会计机构编制移交清册，向档案机构正式移交。移交时保持原卷封装，电子档案需同步移交元数据和数字签名。</p>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* 发起移交弹窗 */}

@@ -31,7 +31,7 @@ interface UploadFileItem {
   type: 'pdf' | 'tiff' | 'jpg' | 'png' | 'ofd' | 'xml' | 'unknown';
   category: '记账凭证' | '原始凭证' | '未识别';
   status: 'pending' | 'processing' | 'ocr-done' | 'verified' | 'error';
-  ocrResult: { voucherNo: string; amount: string; date: string; archiveType: string };
+  ocrResult: { voucherNo: string; amount: string; date: string; archiveType: string; docTypeCode?: string; docTypeName?: string };
   correctedResult: { voucherNo: string; amount: string; date: string; archiveType: string };
   pairId: string | null;
   errorMsg: string;
@@ -545,6 +545,8 @@ const VoucherUploadModal: React.FC<VoucherUploadModalProps> = ({ open, onClose, 
           amount: result.amount,
           date: result.date,
           archiveType: result.category === '未识别' ? '' : result.category,
+          docTypeCode: result.docTypeCode,
+          docTypeName: result.docTypeName,
         },
         // 仅文件名识别时置信度封顶 60，提示人工必须过目
         confidence: degradedMsg || result.source === 'filename' ? Math.min(result.confidence, 60) : result.confidence,
@@ -662,6 +664,12 @@ const VoucherUploadModal: React.FC<VoucherUploadModalProps> = ({ open, onClose, 
             ? 'electronic'
             : 'paper',
           voucherCategory: cat === '记账凭证' || cat === '原始凭证' ? cat : undefined,
+          // v2.7 原始凭证富元数据（方案A）：OCR 推断的 96 类编码 + 单据号随件落库
+          ...(cat === '原始凭证' ? {
+            docTypeCode: f.ocrResult.docTypeCode,
+            docTypeName: f.ocrResult.docTypeName,
+            documentNo: display.voucherNo || undefined,
+          } : {}),
         });
         okRecordIds.push(rec.id);
         recordIdRef.current.set(f.id, rec.id);
@@ -782,7 +790,6 @@ const VoucherUploadModal: React.FC<VoucherUploadModalProps> = ({ open, onClose, 
           <div className="flex items-center gap-3">
             <Upload className="w-5 h-5 text-slate-600" />
             <h1 className="text-base font-bold text-slate-800">资料归档上传</h1>
-            <span className="text-xs text-slate-400">档案管理员手工导入凭证、账簿、报告等档案资料</span>
           </div>
           <button
             type="button"

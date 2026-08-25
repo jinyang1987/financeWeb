@@ -271,6 +271,24 @@
         <!-- v2.3（2026-08-20）：组件挂接——原始凭证件 → 所属记账凭证件的软关联（先组件再组卷）；
              可选属性，存量节点不受影响；仅池内（仅件数据）件可挂接/解挂 -->
         <property name="finance:parentRecordId"><title>所属记账凭证件ID（组件挂接）</title><type>d:text</type><index enabled="true"/></property>
+        <!-- v2.7（2026-08-25）：原始凭证富元数据落到件级（方案A 载体统一到 record）。
+             原始凭证 = voucherCategory='原始凭证' 的 finance:record；这些属性承载其类型与票据信息。
+             命名用 srcDoc 前缀，避免与遗留 finance:sourceDocument 类型的同名属性冲突（全模型属性名唯一约束）。
+             复用既有件级属性：金额=finance:amount、业务日期=finance:voucherDate、制单人=finance:preparer、
+             审核人=finance:auditor、附单据数=finance:attachedBillCount、票据号码可落 finance:voucherNo。
+             类型字段依据 DA/T 95-2022 + 发票/财政票据规定（见 financeWeb/src/types/sourceDocument.ts）。 -->
+        <property name="finance:srcDocTypeCode"><title>原始凭证类型编码（96类目录）</title><type>d:text</type><index enabled="true"/></property>
+        <property name="finance:srcDocTypeName"><title>原始凭证类型名称</title><type>d:text</type></property>
+        <property name="finance:srcDocNo"><title>原始凭证单据编号</title><type>d:text</type><index enabled="true"/></property>
+        <property name="finance:srcDocCounterpartyName"><title>对方单位名称</title><type>d:text</type><index enabled="true"/></property>
+        <property name="finance:srcDocCounterpartyTaxId"><title>对方纳税人识别号</title><type>d:text</type></property>
+        <property name="finance:srcDocSummary"><title>摘要/事由</title><type>d:text</type></property>
+        <property name="finance:srcDocAmountUpper"><title>大写金额（防篡改）</title><type>d:text</type></property>
+        <property name="finance:srcDocBusinessCategory">
+          <title>业务分类</title><type>d:text</type>
+          <constraints><constraint ref="finance:businessCategoryList"/></constraints>
+        </property>
+        <property name="finance:srcDocExtFields"><title>原始凭证类型扩展字段 (JSON)</title><type>d:text</type></property>
         <!-- v2.6（回收站）：逻辑删除标记。置位 = 已移入回收站（从池/卷/盒列表隐藏），
              清除 = 恢复回池。非空时记录不参与任何正常列表/组卷/检索。 -->
         <property name="finance:deleted"><title>删除时间（回收站）</title><type>d:datetime</type></property>

@@ -37,11 +37,15 @@ public class OperationLogController {
       @RequestParam(required = false) String actorId,
       @RequestParam(required = false) String action,
       @RequestParam(required = false) String orderId,
+      @RequestParam(required = false) String from,
+      @RequestParam(required = false) String to,
       @RequestParam(defaultValue = "0") int skip,
       @RequestParam(defaultValue = "50") int limit) {
-    requireAuditor(userId, ticket);
-    List<Map<String, Object>> items = service.query(actorId, action, orderId, skip, limit);
-    long total = service.count(actorId, action);
+    // 操作日志查询：系统管理员或安全审计员（2026-08-25 操作日志页）；
+    // 验链（/verify）仍仅安全审计员，保持三员分立
+    requireAuditorOrAdmin(userId, ticket);
+    List<Map<String, Object>> items = service.query(actorId, action, orderId, from, to, skip, limit);
+    long total = service.count(actorId, action, from, to);
     return Map.of("items", items, "total", total, "skip", skip, "limit", limit);
   }
 
@@ -61,6 +65,17 @@ public class OperationLogController {
     AuthUser me = perm.me(userId, ticket);
     if (!me.roles().contains(PermissionService.ROLE_AUDITOR)) {
       throw new BizException(HttpStatus.FORBIDDEN, "FORBIDDEN", "安全审计日志仅安全审计员可查（三员分立）");
+    }
+  }
+
+  /** 操作日志闸口：安全审计员或系统管理员（2026-08-25 操作日志页） */
+  private void requireAuditorOrAdmin(String userId, String ticket) {
+    if (userId == null || userId.isBlank() || ticket == null || ticket.isBlank())
+      throw new BizException(HttpStatus.UNAUTHORIZED, "SESSION_EXPIRED", "缺少会话凭据，请重新登录");
+    AuthUser me = perm.me(userId, ticket);
+    if (!me.roles().contains(PermissionService.ROLE_AUDITOR)
+        && !me.roles().contains(PermissionService.ROLE_ADMIN)) {
+      throw new BizException(HttpStatus.FORBIDDEN, "FORBIDDEN", "操作日志仅系统管理员/安全审计员可查");
     }
   }
 }

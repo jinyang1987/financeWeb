@@ -153,13 +153,12 @@ const BorrowManagePage: React.FC = () => {
           <div className="flex items-center gap-3">
             <ScanBarcode className="w-5 h-5 text-slate-600" />
             <h1 className="text-base font-bold text-slate-800">借阅管理</h1>
-            <span className="text-xs text-slate-400">档案管理员履约工作台 · 出库/归还核销/预约/中止</span>
           </div>
           <button
             type="button"
             onClick={handleRunDaily}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-sky-700 bg-sky-50 border border-sky-200 rounded-xl hover:bg-sky-100 transition-colors"
-            title="模拟系统每日定时任务：电子到期自动收回、实体逾期标记、到期前3天催还预警"
+            title="手动触发每日定时任务：电子到期自动收回、实体逾期标记、到期前3天催还预警"
           >
             <PlayCircle className="w-3.5 h-3.5" />执行每日巡检
           </button>
@@ -274,7 +273,7 @@ const BorrowManagePage: React.FC = () => {
                   <span className="text-sm font-bold text-slate-700">逾期黑名单（信用熔断）</span>
                 </div>
                 {blacklistedUsers.length === 0 ? (
-                  <p className="text-xs text-slate-400">当前无被熔断用户。名下有逾期未还实体档案的用户将自动进入黑名单，新建借阅功能被锁死。</p>
+                  <p className="text-xs text-slate-400">当前无被熔断用户</p>
                 ) : (
                   <div className="space-y-2">
                     {blacklistedUsers.map((u) => u && (

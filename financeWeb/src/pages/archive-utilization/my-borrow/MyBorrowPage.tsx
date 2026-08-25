@@ -56,7 +56,6 @@ const MyBorrowPage: React.FC = () => {
           <div className="flex items-center gap-3">
             <ShoppingCart className="w-5 h-5 text-slate-600" />
             <h1 className="text-base font-bold text-slate-800">我的借阅</h1>
-            <span className="text-xs text-slate-400">借阅车统一结算 · 审批进度 · 限时在线调阅</span>
           </div>
           {currentUser && (
             <span className="text-xs text-slate-400">{currentUser.name} · {currentUser.dept} · 工号 {currentUser.empNo}</span>

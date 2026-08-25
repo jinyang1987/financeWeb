@@ -110,6 +110,22 @@ public class InspectionService {
         .param(phase).query().listOfRows();
   }
 
+  /**
+   * 移交环节完整口径（2026-08-25）：移交（推送至保管库）是法定检测节点，
+   * 须执行完整四性检测 = 移交环节启用项 ∪ 归档环节启用项（同 check_type 时移交项优先，
+   * 避免「文件存在性」这类同型检查重复出两份问题明细）。
+   */
+  private List<Map<String, Object>> mergedTransferItems() {
+    Map<String, Map<String, Object>> byType = new LinkedHashMap<>();
+    for (Map<String, Object> it : enabledItems("gd")) {
+      byType.put(str(it.get("check_type")) + "|" + str(it.get("dimension")), it);
+    }
+    for (Map<String, Object> it : enabledItems("yj")) {
+      byType.put(str(it.get("check_type")) + "|" + str(it.get("dimension")), it);
+    }
+    return new ArrayList<>(byType.values());
+  }
+
   // ═══════════════════ 检测方案读取（inspection.plan 微调） ═══════════════════
 
   private record Plan(
@@ -424,8 +440,16 @@ public class InspectionService {
    * 卷级四性检测：卷内件逐项（件级检测项）+ 卷级检测项
    * （凭证号断号 voucher-no-gap / 卷内查重 voucher-no-dup / 件数一致 volume-count-match）。
    * 返回四性状态 + 问题明细；落一行 target_kind='volume' 的汇总报告（detail_json.items 含件级明细）。
+   *
+   * @param phase 检测环节：gd 归档 / yj 移交 / cq 长期保存；
+   *              yj（移交=推送至保管库，法定检测节点，2026-08-25）会合并 gd 环节启用项，
+   *              同 check_type 时 yj 项优先，保证移交时执行完整四性口径。
    */
   public Map<String, Object> runVolume(String ticket, String userId, String volumeId) {
+    return runVolume(ticket, userId, volumeId, "gd");
+  }
+
+  public Map<String, Object> runVolume(String ticket, String userId, String volumeId, String phase) {
     Plan plan = loadPlan();
     Map<String, Object> vol = requireVolume(ticket, volumeId);
     List<Map<String, Object>> children = childRecords(ticket, volumeId);
@@ -441,7 +465,7 @@ public class InspectionService {
     List<RecCtx> ctxs = new ArrayList<>();
     for (Map<String, Object> e : children) ctxs.add(ctxOf(e));
 
-    List<Map<String, Object>> items = enabledItems("gd");
+    List<Map<String, Object>> items = "yj".equals(phase) ? mergedTransferItems() : enabledItems(phase);
     List<ItemResult> all = new ArrayList<>();
 
     // ① 件级检测项 × 卷内每件
@@ -480,7 +504,7 @@ public class InspectionService {
       }
     }
 
-    Map<String, Object> out = finishReport(ticket, volumeId, "volume", "gd", null, all, plan);
+    Map<String, Object> out = finishReport(ticket, volumeId, "volume", phase, null, all, plan);
     // 卷级问题补进报告 detail_json.volumeIssues
     if (!volumeIssues.isEmpty()) {
       jdbc.sql("UPDATE ams.ams_inspection_report SET detail_json = ?::jsonb WHERE id=?::uuid")
