@@ -9,6 +9,7 @@
  */
 
 import type { PackageUnit } from '../types/package';
+import { computeChecksum } from './packageEngine';
 
 interface ManifestInput {
   packageName: string;
@@ -18,8 +19,8 @@ interface ManifestInput {
   seq: number;
 }
 
-/** 生成 DA/T 48 兼容的封装包说明 XML */
-export function generateManifestXML(input: ManifestInput): string {
+/** 生成 DA/T 48 兼容的封装包说明 XML（2026-08-29 T3：文件清单摘要为真实 SHA-256，异步） */
+export async function generateManifestXML(input: ManifestInput): Promise<string> {
   const { packageName, unit, createdBy, createdAt, seq } = input;
 
   const escapeXml = (s: string): string =>
@@ -43,6 +44,9 @@ export function generateManifestXML(input: ManifestInput): string {
 ${comps}
     </file>`;
   }).join('\n');
+
+  // 文件清单本体摘要（真实 SHA-256；文件级哈希以后端固化登记 ams_record_fixity 为准）
+  const fileListDigest = await computeChecksum(files);
 
   // 统计四性检测状态
   const allChecksPassed = unit.records.every(r =>
@@ -103,9 +107,9 @@ ${comps}
 ${files}
   </fileList>
 
-  <!-- ═══ 封装包整体校验信息 ═══ -->
-  <packageChecksum algorithm="SHA-256">
-    <digest>${escapeXml(unit.records.map(r => r.archiveCode).join(','))}</digest>
+  <!-- ═══ 文件清单摘要（SHA-256，文件清单本体的真实摘要；文件级哈希以后端固化登记为准） ═══ -->
+  <packageChecksum algorithm="SHA-256" scope="fileList">
+    <digest>${escapeXml(fileListDigest)}</digest>
     <generatedAt>${escapeXml(createdAt)}</generatedAt>
   </packageChecksum>
 </package>`;

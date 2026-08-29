@@ -1,23 +1,30 @@
-﻿/**
+/**
  * @license SPDX-License-Identifier: Apache-2.0
  *
  * InspectionConfigPage — 四性检测配置
  *
- * 依据 DA/T 70 标准，提供四性检测规则的可视化配置：
- *   方案模板 — 预设模板选择与切换
- *   真实性   — 哈希/签名/日志/区块链
- *   完整性   — 文件/元数据/包结构/关联
- *   可用性   — 格式白名单/转换/渲染验证
- *   安全性   — 病毒/敏感/权限/加密/水印
+ * 2026-08-29 T7 死配置治理重写：
+ *   本页只保留「检测引擎真实消费」的配置项（对照 ams-server InspectionService.loadPlan）：
+ *     真实性 authenticity.hashEnabled        —— 真实性维度总开关（哈希登记/重算比对）
+ *     完整性 completeness.metadataRequiredCheck + requiredFields —— 必填元数据检测
+ *     可用性 usability.formatWhitelist        —— 格式白名单（GD-3-01/YJ-3-01/CQ-3-01）
+ *     安全性 security.sensitiveCheck + sensitiveKeywords —— 敏感信息检测
+ *   检测项的启用/停用走「检测项库」Tab（ams_inspection_item.enabled，逐项真生效）。
  *
- * 配置项全为前端 mock，对接后端后从 API 加载/保存。
+ *   已移除的死配置（保存成功但引擎从不读取，误导合规预期）：
+ *     方案模板切换、哈希算法选择（口径固定 SHA-256）、签名标准/CA 链、区块链存证、
+ *     日志保留时长、文件数量/大小开关（由检测项库 GD-2 系列覆盖）、包结构/主附件关联/编码校验、
+ *     自动格式转换/渲染验证/DPI/字体嵌入、病毒扫描开关/病毒库频率、脱敏/权限/传输加密/动态水印、
+ *     检测节点段配置（检测时机为系统行为：归档=确认组卷自动 gd、移交=gd∪yj 自动、
+ *     长期保存=固化巡检定时任务 + 快速检测页手动，不由本页开关）。
+ *
+ *   未实现能力（电子签名验真/可信时间戳/病毒扫描）在本页如实标注「待接入」，不假装有开关。
  */
 
 import React, { useState, useEffect } from 'react';
 import {
-  Settings, Shield, CheckCircle2, FileText, Lock, Eye,
-  Save, RotateCcw, FileSpreadsheet, ChevronDown, Plus, X,
-  ListChecks, Loader2,
+  Settings, Shield, CheckCircle2, Eye,
+  Save, RotateCcw, X, ListChecks, Loader2, Lock, Info,
 } from 'lucide-react';
 import { http } from '../../services/http';
 import {
@@ -26,73 +33,17 @@ import {
   type InspectionItem,
 } from '../../services/inspectionService';
 
-/** 持久化载荷（ams_config key=inspection.plan；与服务端 InspectionService 消费契约一致） */
+/** 持久化载荷（ams_config key=inspection.plan；与服务端 InspectionService.loadPlan 严格同构） */
 interface PlanPayload {
-  authenticity: AuthenticityConfig;
-  completeness: CompletenessConfig;
-  usability: UsabilityConfig;
-  security: SecurityConfig;
-  nodes: NodeConfig;
+  authenticity: { hashEnabled: boolean };
+  completeness: { metadataRequiredCheck: boolean; requiredFields: string[] };
+  usability: { formatWhitelist: string[] };
+  security: { sensitiveCheck: boolean; sensitiveKeywords: string[] };
 }
 
-// ─── 类型定义 ───────────────────────────────────────────
+type TabKey = 'items' | 'plan';
 
-interface AuthenticityConfig {
-  hashEnabled: boolean;
-  hashAlgorithm: string;
-  signatureEnabled: boolean;
-  signatureStandards: string[];
-  caChainCheck: boolean;
-  auditLogEnabled: boolean;
-  logRetention: string;
-  blockchainEnabled: boolean;
-}
-
-interface CompletenessConfig {
-  fileCountCheck: boolean;
-  fileSizeCheck: boolean;
-  metadataRequiredCheck: boolean;
-  requiredFields: string[];
-  packageStructureCheck: boolean;
-  attachmentRelationCheck: boolean;
-  encodingCheck: boolean;
-}
-
-interface UsabilityConfig {
-  formatWhitelist: string[];
-  autoConvert: boolean;
-  targetFormat: string;
-  renderVerify: boolean;
-  renderTimeout: number;
-  dpiCheck: boolean;
-  fontEmbedCheck: boolean;
-  resolutionCheck: boolean;
-}
-
-interface SecurityConfig {
-  virusScan: boolean;
-  virusUpdateFreq: string;
-  sensitiveCheck: boolean;
-  sensitiveKeywords: string[];
-  desensitize: boolean;
-  classificationCheck: boolean;
-  permissionCheck: boolean;
-  transportEncryption: boolean;
-  dynamicWatermark: boolean;
-}
-
-interface NodeConfig {
-  preArchive: boolean;
-  archiveTrigger: boolean;
-  transferCheck: boolean;
-  longTermSpotCheck: boolean;
-  spotCheckPeriod: 'year' | 'quarter';
-  spotCheckRatio: number;
-}
-
-type TabKey = 'items' | 'template' | 'authenticity' | 'completeness' | 'usability' | 'security';
-
-// ─── 检测项标准库 Tab（V8：环节×四性×检测项，启用状态即检测方案） ───
+// ─── 检测项标准库 Tab（环节×四性×检测项，启用状态即检测方案） ───
 
 const DIM_ORDER = ['real', 'complete', 'usable', 'safe'] as const;
 const DIM_BADGE: Record<string, string> = {
@@ -141,6 +92,9 @@ const ItemsLibraryTab: React.FC = () => {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="text-sm font-semibold text-slate-700">标准检测项库（环节 × 四性）</h3>
+          <p className="text-xs text-slate-400 mt-1">
+            启用的检测项即实际执行的检测方案：归档环节在确认组卷时自动执行、移交环节在移交归盒时自动执行（未过阻断），长期保存环节由固化巡检定时任务与快速检测页执行。
+          </p>
         </div>
         <span className="text-[11px] text-slate-400 shrink-0 mt-0.5">
           {items.filter((i) => i.enabled).length} / {items.length} 项启用
@@ -203,91 +157,25 @@ const ItemsLibraryTab: React.FC = () => {
   );
 };
 
-// ─── 默认配置（电子会计档案模板） ────────────────────────
+// ─── 默认配置（与服务端 defaultPlan 一致） ───────────────────
 
-const DEFAULT_AUTHENTICITY: AuthenticityConfig = {
-  hashEnabled: true,
-  hashAlgorithm: 'SHA-256',
-  signatureEnabled: true,
-  signatureStandards: ['GB/T 25064', 'SM2'],
-  caChainCheck: true,
-  auditLogEnabled: true,
-  logRetention: '永久',
-  blockchainEnabled: false,
+const DEFAULT_PLAN: PlanPayload = {
+  authenticity: { hashEnabled: true },
+  completeness: {
+    metadataRequiredCheck: true,
+    requiredFields: ['题名', '责任者', '日期', '档号', '格式', '凭证号', '金额合计', '会计年度'],
+  },
+  usability: { formatWhitelist: ['OFD', 'PDF/A', 'PDF', 'XML', 'TXT', 'JPG', 'TIFF'] },
+  security: { sensitiveCheck: true, sensitiveKeywords: ['身份证号', '手机号', '银行卡号', '涉密'] },
 };
 
-const DEFAULT_COMPLETENESS: CompletenessConfig = {
-  fileCountCheck: true,
-  fileSizeCheck: true,
-  metadataRequiredCheck: true,
-  requiredFields: ['题名', '责任者', '日期', '档号', '格式', '凭证号', '金额合计', '会计年度'],
-  packageStructureCheck: true,
-  attachmentRelationCheck: true,
-  encodingCheck: true,
-};
-
-const DEFAULT_USABILITY: UsabilityConfig = {
-  formatWhitelist: ['OFD', 'PDF/A', 'PDF', 'XML', 'TXT', 'JPG', 'TIFF'],
-  autoConvert: true,
-  targetFormat: 'OFD',
-  renderVerify: true,
-  renderTimeout: 30,
-  dpiCheck: true,
-  fontEmbedCheck: true,
-  resolutionCheck: false,
-};
-
-const DEFAULT_SECURITY: SecurityConfig = {
-  virusScan: true,
-  virusUpdateFreq: '每日',
-  sensitiveCheck: true,
-  sensitiveKeywords: ['身份证号', '手机号', '银行卡号', '涉密'],
-  desensitize: true,
-  classificationCheck: true,
-  permissionCheck: true,
-  transportEncryption: true,
-  dynamicWatermark: true,
-};
-
-const DEFAULT_NODES: NodeConfig = {
-  preArchive: true,
-  archiveTrigger: true,
-  transferCheck: true,
-  longTermSpotCheck: true,
-  spotCheckPeriod: 'year',
-  spotCheckRatio: 10,
-};
-
-// ─── 可选值常量 ──────────────────────────────────────────
-
-const HASH_ALGORITHMS = ['SHA-256', 'SM3', 'MD5（不推荐）'];
-const SIGNATURE_STANDARDS = ['GB/T 25064', 'SM2', 'SM3', 'SM4'];
-const LOG_RETENTIONS = ['1年', '3年', '5年', '10年', '永久'];
+/** 必填字段清单（2026-08-29 T4：与后端 REQUIRED_FIELD_CHECKS 一一对应，无件级语义的字段已移除） */
 const METADATA_FIELDS = [
   '题名', '责任者', '日期', '档号', '格式',
-  '凭证号', '金额合计', '会计年度', '保管期限',
-  '档案馆名称', '全宗号', '目录号', '案卷号', '件号',
-  '附件数', '页数', '摘要', '密级',
+  '凭证号', '金额合计', '会计年度', '保管期限', '密级',
 ];
-const FORMAT_OPTIONS = ['OFD', 'PDF/A', 'PDF', 'XML', 'TXT', 'JPG', 'TIFF', 'PNG', 'DOC', 'DOCX', 'XLS', 'XLSX'];
-const TARGET_FORMATS = ['OFD', 'PDF/A'];
-const VIRUS_UPDATE_FREQS = ['每小时', '每日', '每周'];
+const FORMAT_OPTIONS = ['OFD', 'PDF/A', 'PDF', 'XML', 'TXT', 'JPG', 'TIFF', 'PNG'];
 const SENSITIVE_KEYWORD_OPTIONS = ['身份证号', '手机号', '银行卡号', '涉密', '军事', '外交', '国家安全', '企业核心商密'];
-
-// ─── 模板预设 ────────────────────────────────────────────
-
-interface TemplatePreset {
-  id: string;
-  name: string;
-  desc: string;
-}
-
-const TEMPLATES: TemplatePreset[] = [
-  { id: 'accounting', name: '电子会计档案模板', desc: '适用于会计凭证/账簿/报表/其他会计资料' },
-  { id: 'official', name: '电子公文模板', desc: '适用于文书类电子档案（OA公文流转）' },
-  { id: 'engineering', name: '工程图纸模板', desc: '适用于CAD/工程图纸类档案' },
-  { id: 'media', name: '照片音视频模板', desc: '适用于照片/音频/视频多媒体档案' },
-];
 
 // ─── 小组件 ──────────────────────────────────────────────
 
@@ -332,97 +220,65 @@ const ConfigRow: React.FC<{ label: string; desc?: string; children: React.ReactN
   </div>
 );
 
-/** 下拉选择 */
-const Select: React.FC<{
-  value: string; options: string[]; onChange: (v: string) => void;
-}> = ({ value, options, onChange }) => (
-  <div className="relative">
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="appearance-none bg-white border border-slate-200 rounded-lg px-3 py-1.5 pr-8 text-sm text-slate-700 outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 cursor-pointer"
-    >
-      {options.map((opt) => (
-        <option key={opt} value={opt}>{opt}</option>
-      ))}
-    </select>
-    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
-  </div>
-);
-
-/** 数字输入 */
-const NumberInput: React.FC<{ value: number; onChange: (v: number) => void; min?: number; max?: number; suffix?: string }> = (
-  { value, onChange, min = 0, max = 100, suffix }
-) => (
-  <div className="flex items-center gap-1">
-    <input
-      type="number"
-      value={value}
-      onChange={(e) => {
-        const n = parseInt(e.target.value, 10);
-        if (!isNaN(n)) onChange(Math.max(min, Math.min(max, n)));
-      }}
-      className="w-16 text-center border border-slate-200 rounded-lg px-2 py-1 text-sm text-slate-700 outline-none focus:border-sky-400"
-      min={min}
-      max={max}
-    />
-    {suffix && <span className="text-xs text-slate-500">{suffix}</span>}
+/** 能力状态说明行（诚实标注：已实现/待接入） */
+const CapabilityNote: React.FC<{ items: Array<{ label: string; state: 'on' | 'pending'; note: string }> }> = ({ items }) => (
+  <div className="mx-4 my-3 border border-slate-200 rounded-lg divide-y divide-slate-100">
+    {items.map((it) => (
+      <div key={it.label} className="flex items-center gap-2 px-3 py-2 text-xs">
+        <span className={`px-1.5 py-0.5 rounded-full font-medium shrink-0 ${
+          it.state === 'on' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+        }`}>
+          {it.state === 'on' ? '已实现' : '待接入'}
+        </span>
+        <span className="font-medium text-slate-600 shrink-0">{it.label}</span>
+        <span className="text-slate-400">{it.note}</span>
+      </div>
+    ))}
   </div>
 );
 
 // ─── 主页面 ──────────────────────────────────────────────
 
 const InspectionConfigPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<TabKey>('template');
-  const [selectedTemplate, setSelectedTemplate] = useState('accounting');
+  const [activeTab, setActiveTab] = useState<TabKey>('items');
+  const [plan, setPlan] = useState<PlanPayload>({
+    authenticity: { ...DEFAULT_PLAN.authenticity },
+    completeness: { ...DEFAULT_PLAN.completeness, requiredFields: [...DEFAULT_PLAN.completeness.requiredFields] },
+    usability: { formatWhitelist: [...DEFAULT_PLAN.usability.formatWhitelist] },
+    security: { ...DEFAULT_PLAN.security, sensitiveKeywords: [...DEFAULT_PLAN.security.sensitiveKeywords] },
+  });
 
-  // 各维度配置状态
-  const [authenticity, setAuthenticity] = useState<AuthenticityConfig>({ ...DEFAULT_AUTHENTICITY });
-  const [completeness, setCompleteness] = useState<CompletenessConfig>({ ...DEFAULT_COMPLETENESS });
-  const [usability, setUsability] = useState<UsabilityConfig>({ ...DEFAULT_USABILITY });
-  const [security, setSecurity] = useState<SecurityConfig>({ ...DEFAULT_SECURITY });
-  const [nodes, setNodes] = useState<NodeConfig>({ ...DEFAULT_NODES });
-
-  // 保存状态
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
-  // 2026-08-25：「立即执行检测」已移除——四性检测统一在移交（推送至保管库）环节自动执行；
-  // 手动检测入口在 档案整理 → 快速检测
+  const [newKeyword, setNewKeyword] = useState('');
 
-  // ── 加载已保存方案（ams_config: inspection.plan，2026-08-16 贯通修复——原为假保存） ──
+  // ── 加载已保存方案（ams_config: inspection.plan；旧格式多余键自动忽略——T7 契约收窄） ──
   useEffect(() => {
     http.get<{ key: string; value: unknown }>('/config/inspection.plan')
       .then((view) => {
         const v = view?.value as Partial<PlanPayload> | undefined;
         if (!v) return;
-        if (v.authenticity) setAuthenticity({ ...DEFAULT_AUTHENTICITY, ...v.authenticity });
-        if (v.completeness) setCompleteness({ ...DEFAULT_COMPLETENESS, ...v.completeness });
-        if (v.usability) setUsability({ ...DEFAULT_USABILITY, ...v.usability });
-        if (v.security) setSecurity({ ...DEFAULT_SECURITY, ...v.security });
-        if (v.nodes) setNodes({ ...DEFAULT_NODES, ...v.nodes });
+        setPlan((prev) => ({
+          authenticity: { ...prev.authenticity, ...(v.authenticity || {}) },
+          completeness: {
+            ...prev.completeness, ...(v.completeness || {}),
+            // 存量必填字段过滤到当前可映射集合（与服务端 loadPlan 自愈同口径）
+            requiredFields: ((v.completeness?.requiredFields) || prev.completeness.requiredFields)
+              .filter((f) => METADATA_FIELDS.includes(f)),
+          },
+          usability: { formatWhitelist: (v.usability?.formatWhitelist) || prev.usability.formatWhitelist },
+          security: { ...prev.security, ...(v.security || {}) },
+        }));
       })
       .catch(() => { /* 404 = 尚未保存过，用默认值 */ });
   }, []);
 
-  // —— 标签增删辅助 ——
-  const addTag = (list: string[], setList: (v: string[]) => void, max: number, newTag: string) => {
-    const trimmed = newTag.trim();
-    if (trimmed && !list.includes(trimmed) && list.length < max) {
-      setList([...list, trimmed]);
-    }
-  };
-  const removeTag = (list: string[], setList: (v: string[]) => void, tag: string) => {
-    setList(list.filter((t) => t !== tag));
-  };
-
-  // —— 保存（真持久化：PUT /config/inspection.plan，服务端检测引擎读取执行） ——
   const handleSave = async () => {
     setSaving(true);
     setSaveError('');
     try {
-      const payload: PlanPayload = { authenticity, completeness, usability, security, nodes };
-      await http.put('/config/inspection.plan', { value: payload });
+      await http.put('/config/inspection.plan', { value: plan });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (e) {
@@ -432,32 +288,19 @@ const InspectionConfigPage: React.FC = () => {
     }
   };
 
-  // —— 恢复默认 ——
   const handleReset = () => {
-    setAuthenticity({ ...DEFAULT_AUTHENTICITY });
-    setCompleteness({ ...DEFAULT_COMPLETENESS });
-    setUsability({ ...DEFAULT_USABILITY });
-    setSecurity({ ...DEFAULT_SECURITY });
-    setNodes({ ...DEFAULT_NODES });
+    setPlan({
+      authenticity: { ...DEFAULT_PLAN.authenticity },
+      completeness: { ...DEFAULT_PLAN.completeness, requiredFields: [...DEFAULT_PLAN.completeness.requiredFields] },
+      usability: { formatWhitelist: [...DEFAULT_PLAN.usability.formatWhitelist] },
+      security: { ...DEFAULT_PLAN.security, sensitiveKeywords: [...DEFAULT_PLAN.security.sensitiveKeywords] },
+    });
   };
 
-  // —— 切换模板 ——
-  const handleTemplateChange = (id: string) => {
-    setSelectedTemplate(id);
-    handleReset(); // 切换模板时重置配置
-  };
-
-  // Tab 配置
   const tabs: { key: TabKey; label: string; icon: React.ReactNode }[] = [
     { key: 'items', label: '检测项库', icon: <ListChecks className="w-4 h-4" /> },
-    { key: 'template', label: '方案模板', icon: <FileSpreadsheet className="w-4 h-4" /> },
-    { key: 'authenticity', label: '真实性', icon: <Shield className="w-4 h-4" /> },
-    { key: 'completeness', label: '完整性', icon: <CheckCircle2 className="w-4 h-4" /> },
-    { key: 'usability', label: '可用性', icon: <Eye className="w-4 h-4" /> },
-    { key: 'security', label: '安全性', icon: <Lock className="w-4 h-4" /> },
+    { key: 'plan', label: '检测方案微调', icon: <Settings className="w-4 h-4" /> },
   ];
-
-  // ─── 渲染 ──────────────────────────────────────────────
 
   return (
     <div className="flex-1 overflow-auto animate-in fade-in duration-200">
@@ -478,459 +321,233 @@ const InspectionConfigPage: React.FC = () => {
           )}
         </div>
         <div className="flex items-center gap-2 mt-2 text-xs text-slate-400">
-          <span>当前方案：{TEMPLATES.find((t) => t.id === selectedTemplate)?.name}</span>
+          <Info className="w-3.5 h-3.5" />
+          本页仅含检测引擎真实消费的配置项；检测项粒度启停在「检测项库」。检测时机为系统行为：归档（确认组卷）与移交（归盒）自动执行、不合格阻断，长期保存环节由固化巡检定时任务执行。
         </div>
       </div>
 
-      {/* Tab 切换 */}
-      <div className="px-6 mt-4">
-        <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1 w-fit">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer ${
-                activeTab === tab.key
-                  ? 'bg-white text-slate-800 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              {tab.icon}
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Tab 内容 */}
-      <div className="px-6 py-4">
-        <div className="bg-white rounded-xl border border-slate-200">
-
-          {/* ======================== 检测项库 ======================== */}
-          {activeTab === 'items' && <ItemsLibraryTab />}
-
-          {/* ======================== 模板 ======================== */}
-          {activeTab === 'template' && (
-            <div className="p-5">
-              <h3 className="text-sm font-semibold text-slate-700 mb-4">选择方案模板</h3>
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                {TEMPLATES.map((tpl) => (
-                  <div
-                    key={tpl.id}
-                    onClick={() => handleTemplateChange(tpl.id)}
-                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                      selectedTemplate === tpl.id
-                        ? 'border-sky-400 bg-sky-50/50 shadow-sm'
-                        : 'border-slate-200 hover:border-slate-300 bg-white'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                        selectedTemplate === tpl.id ? 'border-sky-500' : 'border-slate-300'
-                      }`}>
-                        {selectedTemplate === tpl.id && <div className="w-2 h-2 rounded-full bg-sky-500" />}
-                      </div>
-                      <span className="text-sm font-semibold text-slate-700">{tpl.name}</span>
-                    </div>
-                    <p className="text-xs text-slate-500 ml-6">{tpl.desc}</p>
-                  </div>
-                ))}
-              </div>
-
-              <h3 className="text-sm font-semibold text-slate-700 mb-3">当前方案概览</h3>
-              <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
-                <div className="flex justify-between py-1.5 border-b border-slate-100">
-                  <span className="text-slate-500">真实性</span>
-                  <span className="text-slate-700">
-                    {[
-                      authenticity.hashEnabled && 'SHA-256',
-                      authenticity.signatureEnabled && `签名(${authenticity.signatureStandards.join('/')})`,
-                      authenticity.blockchainEnabled && '区块链',
-                    ].filter(Boolean).join(' + ') || '未启用'}
-                  </span>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-100">
-                  <span className="text-slate-500">完整性</span>
-                  <span className="text-slate-700">
-                    {[
-                      completeness.fileCountCheck && '文件校验',
-                      completeness.metadataRequiredCheck && `元数据(${completeness.requiredFields.length}字段)`,
-                      completeness.packageStructureCheck && '包结构',
-                    ].filter(Boolean).join(' + ') || '未启用'}
-                  </span>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-100">
-                  <span className="text-slate-500">可用性</span>
-                  <span className="text-slate-700">
-                    {[
-                      `格式白名单(${usability.formatWhitelist.length}种)`,
-                      usability.autoConvert && `自动转${usability.targetFormat}`,
-                      usability.renderVerify && '渲染验证',
-                    ].filter(Boolean).join(' + ')}
-                  </span>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-100">
-                  <span className="text-slate-500">安全性</span>
-                  <span className="text-slate-700">
-                    {[
-                      security.virusScan && '病毒扫描',
-                      security.sensitiveCheck && '敏感筛查',
-                      security.permissionCheck && 'RBAC',
-                    ].filter(Boolean).join(' + ') || '未启用'}
-                  </span>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-100">
-                  <span className="text-slate-500">检测节点</span>
-                  <span className="text-slate-700">
-                    {[
-                      nodes.preArchive && '整理前置检查',
-                      nodes.transferCheck && '移交（推送至保管库）',
-                      nodes.longTermSpotCheck && `长期(${nodes.spotCheckPeriod === 'year' ? '每年' : '每季度'} ${nodes.spotCheckRatio}%)`,
-                    ].filter(Boolean).join(' → ')}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ======================== 真实性 ======================== */}
-          {activeTab === 'authenticity' && (
-            <div className="divide-y divide-slate-100">
-              <div className="p-5">
-                <h3 className="text-sm font-semibold text-slate-700 mb-4">真实性检测配置</h3>
-
-                <ConfigRow label="启用哈希校验" desc="SHA-256 哈希值比对，防止文件篡改">
-                  <Toggle checked={authenticity.hashEnabled} onChange={() => setAuthenticity({ ...authenticity, hashEnabled: !authenticity.hashEnabled })} />
-                </ConfigRow>
-                {authenticity.hashEnabled && (
-                  <ConfigRow label="哈希算法" desc="选择哈希算法标准">
-                    <Select value={authenticity.hashAlgorithm} options={HASH_ALGORITHMS} onChange={(v) => setAuthenticity({ ...authenticity, hashAlgorithm: v })} />
-                  </ConfigRow>
-                )}
-
-                <ConfigRow label="启用数字签名验证" desc="电子签章 / CA 证书有效性验证">
-                  <Toggle checked={authenticity.signatureEnabled} onChange={() => setAuthenticity({ ...authenticity, signatureEnabled: !authenticity.signatureEnabled })} />
-                </ConfigRow>
-                {authenticity.signatureEnabled && (
-                  <>
-                    <ConfigRow label="签名标准" desc="选择适用的签名/签章标准（可多选）">
-                      <div className="flex flex-wrap gap-1.5">
-                        {SIGNATURE_STANDARDS.map((std) => {
-                          const checked = authenticity.signatureStandards.includes(std);
-                          return (
-                            <button
-                              key={std}
-                              type="button"
-                              onClick={() => {
-                                const next = checked
-                                  ? authenticity.signatureStandards.filter((s) => s !== std)
-                                  : [...authenticity.signatureStandards, std];
-                                setAuthenticity({ ...authenticity, signatureStandards: next });
-                              }}
-                              className={`px-2.5 py-1 text-xs rounded-full border transition-colors cursor-pointer ${
-                                checked
-                                  ? 'bg-sky-50 text-sky-700 border-sky-300'
-                                  : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
-                              }`}
-                            >
-                              {std}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </ConfigRow>
-                    <ConfigRow label="CA 证书链校验" desc="验证证书链完整性和有效期">
-                      <Toggle checked={authenticity.caChainCheck} onChange={() => setAuthenticity({ ...authenticity, caChainCheck: !authenticity.caChainCheck })} />
-                    </ConfigRow>
-                  </>
-                )}
-
-                <ConfigRow label="操作日志追溯" desc="记录创建/修改/流转操作日志">
-                  <Toggle checked={authenticity.auditLogEnabled} onChange={() => setAuthenticity({ ...authenticity, auditLogEnabled: !authenticity.auditLogEnabled })} />
-                </ConfigRow>
-                {authenticity.auditLogEnabled && (
-                  <ConfigRow label="日志保留时长">
-                    <Select value={authenticity.logRetention} options={LOG_RETENTIONS} onChange={(v) => setAuthenticity({ ...authenticity, logRetention: v })} />
-                  </ConfigRow>
-                )}
-
-                <ConfigRow label="区块链存证" desc="操作日志写入不可篡改链（实验性功能）">
-                  <Toggle checked={authenticity.blockchainEnabled} onChange={() => setAuthenticity({ ...authenticity, blockchainEnabled: !authenticity.blockchainEnabled })} />
-                </ConfigRow>
-              </div>
-            </div>
-          )}
-
-          {/* ======================== 完整性 ======================== */}
-          {activeTab === 'completeness' && (
-            <div className="divide-y divide-slate-100">
-              <div className="p-5">
-                <h3 className="text-sm font-semibold text-slate-700 mb-4">完整性检测配置</h3>
-
-                <ConfigRow label="文件数量校验" desc="主件 + 附件数量匹配检查">
-                  <Toggle checked={completeness.fileCountCheck} onChange={() => setCompleteness({ ...completeness, fileCountCheck: !completeness.fileCountCheck })} />
-                </ConfigRow>
-                <ConfigRow label="文件大小校验" desc="文件大小合规性检查">
-                  <Toggle checked={completeness.fileSizeCheck} onChange={() => setCompleteness({ ...completeness, fileSizeCheck: !completeness.fileSizeCheck })} />
-                </ConfigRow>
-                <ConfigRow label="元数据必填校验" desc="DA/T 13 标准元数据字段检查">
-                  <Toggle checked={completeness.metadataRequiredCheck} onChange={() => setCompleteness({ ...completeness, metadataRequiredCheck: !completeness.metadataRequiredCheck })} />
-                </ConfigRow>
-                {completeness.metadataRequiredCheck && (
-                  <div className="py-3 px-4">
-                    <span className="text-xs text-slate-500 mb-2 block">必填字段清单</span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {METADATA_FIELDS.map((field) => {
-                        const checked = completeness.requiredFields.includes(field);
-                        return (
-                          <button
-                            key={field}
-                            type="button"
-                            onClick={() => {
-                              const next = checked
-                                ? completeness.requiredFields.filter((f) => f !== field)
-                                : [...completeness.requiredFields, field];
-                              setCompleteness({ ...completeness, requiredFields: next });
-                            }}
-                            className={`px-2.5 py-1 text-xs rounded-full border transition-colors cursor-pointer ${
-                              checked
-                                ? 'bg-sky-50 text-sky-700 border-sky-300'
-                                : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
-                            }`}
-                          >
-                            {field}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                <ConfigRow label="包结构校验" desc="ZIP / XML 封装规范检查">
-                  <Toggle checked={completeness.packageStructureCheck} onChange={() => setCompleteness({ ...completeness, packageStructureCheck: !completeness.packageStructureCheck })} />
-                </ConfigRow>
-                <ConfigRow label="主附件关联校验" desc="通过唯一 ID 绑定校验主附件关系">
-                  <Toggle checked={completeness.attachmentRelationCheck} onChange={() => setCompleteness({ ...completeness, attachmentRelationCheck: !completeness.attachmentRelationCheck })} />
-                </ConfigRow>
-                <ConfigRow label="编码格式校验" desc="UTF-8 编码，防止乱码">
-                  <Toggle checked={completeness.encodingCheck} onChange={() => setCompleteness({ ...completeness, encodingCheck: !completeness.encodingCheck })} />
-                </ConfigRow>
-              </div>
-            </div>
-          )}
-
-          {/* ======================== 可用性 ======================== */}
-          {activeTab === 'usability' && (
-            <div className="divide-y divide-slate-100">
-              <div className="p-5">
-                <h3 className="text-sm font-semibold text-slate-700 mb-4">可用性检测配置</h3>
-
-                <div className="py-3 px-4">
-                  <span className="text-sm font-medium text-slate-700">格式白名单</span>
-                  <div className="flex flex-wrap gap-1.5 mt-2 mb-2">
-                    {usability.formatWhitelist.map((fmt) => (
-                      <TagBadge
-                        key={fmt}
-                        label={fmt}
-                        onRemove={() => removeTag(usability.formatWhitelist, (v) => setUsability({ ...usability, formatWhitelist: v }), fmt)}
-                      />
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <select
-                      className="text-xs border border-slate-200 rounded-lg px-2 py-1 outline-none focus:border-sky-400"
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        if (v) { addTag(usability.formatWhitelist, (list) => setUsability({ ...usability, formatWhitelist: list }), 20, v); e.target.value = ''; }
-                      }}
-                    >
-                      <option value="">+ 添加格式</option>
-                      {FORMAT_OPTIONS.filter((f) => !usability.formatWhitelist.includes(f)).map((f) => (
-                        <option key={f} value={f}>{f}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <ConfigRow label="自动格式转换" desc="非长期格式（.doc / .xls）自动转换为长期格式">
-                  <Toggle checked={usability.autoConvert} onChange={() => setUsability({ ...usability, autoConvert: !usability.autoConvert })} />
-                </ConfigRow>
-                {usability.autoConvert && (
-                  <ConfigRow label="转换目标格式" desc="自动转换的目标长期格式">
-                    <Select value={usability.targetFormat} options={TARGET_FORMATS} onChange={(v) => setUsability({ ...usability, targetFormat: v })} />
-                  </ConfigRow>
-                )}
-
-                <ConfigRow label="渲染验证" desc="调用标准阅读器渲染，截图 + 文本提取验证">
-                  <Toggle checked={usability.renderVerify} onChange={() => setUsability({ ...usability, renderVerify: !usability.renderVerify })} />
-                </ConfigRow>
-                {usability.renderVerify && (
-                  <ConfigRow label="渲染超时阈值" desc="单个文件渲染验证超时时间">
-                    <NumberInput value={usability.renderTimeout} onChange={(v) => setUsability({ ...usability, renderTimeout: v })} min={5} max={120} suffix="秒" />
-                  </ConfigRow>
-                )}
-
-                <ConfigRow label="扫描件 DPI 检测" desc="扫描件分辨率 ≥ 300 DPI">
-                  <Toggle checked={usability.dpiCheck} onChange={() => setUsability({ ...usability, dpiCheck: !usability.dpiCheck })} />
-                </ConfigRow>
-                <ConfigRow label="字体嵌入检测" desc="OFD 必备字体（标宋/仿宋/楷体/黑体）嵌入检查">
-                  <Toggle checked={usability.fontEmbedCheck} onChange={() => setUsability({ ...usability, fontEmbedCheck: !usability.fontEmbedCheck })} />
-                </ConfigRow>
-                <ConfigRow label="分辨率检测" desc="图像文件分辨率合规检查">
-                  <Toggle checked={usability.resolutionCheck} onChange={() => setUsability({ ...usability, resolutionCheck: !usability.resolutionCheck })} />
-                </ConfigRow>
-              </div>
-            </div>
-          )}
-
-          {/* ======================== 安全性 ======================== */}
-          {activeTab === 'security' && (
-            <div className="divide-y divide-slate-100">
-              <div className="p-5">
-                <h3 className="text-sm font-semibold text-slate-700 mb-4">安全性检测配置</h3>
-
-                <ConfigRow label="病毒扫描" desc="集成 ClamAV 引擎，实时扫描文件">
-                  <Toggle checked={security.virusScan} onChange={() => setSecurity({ ...security, virusScan: !security.virusScan })} />
-                </ConfigRow>
-                {security.virusScan && (
-                  <ConfigRow label="病毒库更新频率">
-                    <Select value={security.virusUpdateFreq} options={VIRUS_UPDATE_FREQS} onChange={(v) => setSecurity({ ...security, virusUpdateFreq: v })} />
-                  </ConfigRow>
-                )}
-
-                <ConfigRow label="敏感信息筛查" desc="基于正则/词库筛查敏感信息">
-                  <Toggle checked={security.sensitiveCheck} onChange={() => setSecurity({ ...security, sensitiveCheck: !security.sensitiveCheck })} />
-                </ConfigRow>
-                {security.sensitiveCheck && (
-                  <>
-                    <div className="py-3 px-4">
-                      <span className="text-xs text-slate-500 mb-2 block">敏感词库</span>
-                      <div className="flex flex-wrap gap-1.5 mb-2">
-                        {security.sensitiveKeywords.map((kw) => (
-                          <TagBadge
-                            key={kw}
-                            label={kw}
-                            onRemove={() => removeTag(security.sensitiveKeywords, (v) => setSecurity({ ...security, sensitiveKeywords: v }), kw)}
-                          />
-                        ))}
-                      </div>
-                      <select
-                        className="text-xs border border-slate-200 rounded-lg px-2 py-1 outline-none focus:border-sky-400"
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          if (v) { addTag(security.sensitiveKeywords, (list) => setSecurity({ ...security, sensitiveKeywords: list }), 20, v); e.target.value = ''; }
-                        }}
-                      >
-                        <option value="">+ 添加敏感词</option>
-                        {SENSITIVE_KEYWORD_OPTIONS.filter((k) => !security.sensitiveKeywords.includes(k)).map((k) => (
-                          <option key={k} value={k}>{k}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <ConfigRow label="脱敏处理" desc="检测到敏感信息时自动脱敏处理">
-                      <Toggle checked={security.desensitize} onChange={() => setSecurity({ ...security, desensitize: !security.desensitize })} />
-                    </ConfigRow>
-                  </>
-                )}
-
-                <ConfigRow label="密级匹配校验" desc="档案密级与用户安全级别匹配检查">
-                  <Toggle checked={security.classificationCheck} onChange={() => setSecurity({ ...security, classificationCheck: !security.classificationCheck })} />
-                </ConfigRow>
-                <ConfigRow label="权限校验" desc="RBAC 归档 / 检测操作权限校验">
-                  <Toggle checked={security.permissionCheck} onChange={() => setSecurity({ ...security, permissionCheck: !security.permissionCheck })} />
-                </ConfigRow>
-                <ConfigRow label="传输加密" desc="HTTPS 强制加密传输">
-                  <Toggle checked={security.transportEncryption} onChange={() => setSecurity({ ...security, transportEncryption: !security.transportEncryption })} />
-                </ConfigRow>
-                <ConfigRow label="动态水印" desc="预览/下载时自动添加动态水印">
-                  <Toggle checked={security.dynamicWatermark} onChange={() => setSecurity({ ...security, dynamicWatermark: !security.dynamicWatermark })} />
-                </ConfigRow>
-              </div>
-            </div>
-          )}
-
-        </div>
-
-        {/* ======================== 检测节点配置（始终显示） ======================== */}
-        <div className="bg-white rounded-xl border border-slate-200 mt-4 p-5">
-          <h3 className="text-sm font-semibold text-slate-700 mb-4">检测节点配置</h3>
-
-          <div className="divide-y divide-slate-100">
-            <ConfigRow label="前置检查（整理阶段）" desc="组卷时的基础校验：元数据必填项 + 附件关联 + 凭证号连续性（非正式四性检测）">
-              <Toggle checked={nodes.preArchive} onChange={() => setNodes({ ...nodes, preArchive: !nodes.preArchive })} />
-            </ConfigRow>
-            <ConfigRow label="移交检测（推送至保管库）" desc="正式四性检测节点：移交时自动执行全部启用检测项，未通过不得入库">
-              <Toggle checked={nodes.transferCheck} onChange={() => setNodes({ ...nodes, transferCheck: !nodes.transferCheck })} />
-            </ConfigRow>
-            <ConfigRow label="长期保存抽检" desc="定期随机抽取档案复测可用性/真实性/安全性">
-              <Toggle checked={nodes.longTermSpotCheck} onChange={() => setNodes({ ...nodes, longTermSpotCheck: !nodes.longTermSpotCheck })} />
-            </ConfigRow>
-            {nodes.longTermSpotCheck && (
-              <div className="flex items-center gap-6 py-3 px-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-slate-500">抽检周期：</span>
-                  <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
-                    <button
-                      type="button"
-                      onClick={() => setNodes({ ...nodes, spotCheckPeriod: 'year' })}
-                      className={`px-3 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer ${
-                        nodes.spotCheckPeriod === 'year' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-500'
-                      }`}
-                    >
-                      每年
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setNodes({ ...nodes, spotCheckPeriod: 'quarter' })}
-                      className={`px-3 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer ${
-                        nodes.spotCheckPeriod === 'quarter' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-500'
-                      }`}
-                    >
-                      每季度
-                    </button>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-slate-500">抽取比例：</span>
-                  <NumberInput value={nodes.spotCheckRatio} onChange={(v) => setNodes({ ...nodes, spotCheckRatio: v })} min={1} max={100} suffix="%" />
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* ======================== 底部操作区 ======================== */}
-        <div className="flex items-center justify-between mt-6 pb-6">
-          <div className="flex items-center gap-2">
+      {/* Tab 栏 + 操作 */}
+      <div className="px-6 mt-3 flex items-center gap-2 border-b border-slate-200">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => setActiveTab(t.key)}
+            className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
+              activeTab === t.key
+                ? 'border-sky-500 text-sky-700'
+                : 'border-transparent text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            {t.icon}
+            {t.label}
+          </button>
+        ))}
+        <div className="flex-1" />
+        {activeTab === 'plan' && (
+          <div className="flex items-center gap-2 pb-1.5">
             <button
               type="button"
               onClick={handleReset}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
+              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-500 bg-slate-100 rounded-lg hover:bg-slate-200"
             >
-              <RotateCcw className="w-4 h-4" />
-              恢复默认
+              <RotateCcw className="w-3.5 h-3.5" />恢复默认
             </button>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-slate-400">
-              检测在移交（推送至保管库）时自动执行 · 手动检测请前往 档案整理 → 快速检测
-            </span>
             <button
               type="button"
               onClick={() => void handleSave()}
               disabled={saving}
-              className="flex items-center gap-1.5 px-5 py-2 text-sm font-bold text-white bg-sky-600 rounded-lg hover:bg-sky-700 transition-colors cursor-pointer shadow-sm disabled:opacity-50"
+              className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium text-white bg-sky-600 rounded-lg hover:bg-sky-700 disabled:opacity-50"
             >
-              <Save className="w-4 h-4" />
-              {saving ? '保存中…' : '保存配置'}
+              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+              保存配置
             </button>
           </div>
-        </div>
+        )}
+      </div>
+
+      {/* 内容区 */}
+      <div className="p-6 max-w-5xl mx-auto">
+        {activeTab === 'items' && (
+          <div className="bg-white border border-slate-200 rounded-xl">
+            <ItemsLibraryTab />
+          </div>
+        )}
+
+        {activeTab === 'plan' && (
+          <div className="space-y-4">
+            {/* ── 真实性 ── */}
+            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+              <div className="flex items-center gap-2 px-5 py-3 border-b border-slate-100">
+                <Shield className="w-4 h-4 text-sky-500" />
+                <span className="text-sm font-bold text-slate-800">真实性</span>
+              </div>
+              <ConfigRow label="真实性维度检测" desc="文件摘要登记（GD-1-02）+ 重算比对（GD-1-04/YJ-1-02/CQ-1-02）；哈希口径固定 SHA-256，与固化登记表一致">
+                <Toggle
+                  checked={plan.authenticity.hashEnabled}
+                  onChange={() => setPlan({ ...plan, authenticity: { hashEnabled: !plan.authenticity.hashEnabled } })}
+                />
+              </ConfigRow>
+              <CapabilityNote items={[
+                { label: '文件摘要登记/重算比对', state: 'on', note: '建件/推送/同步入口自动登记 SHA-256；检测时重算逐位比对' },
+                { label: '定期固化巡检', state: 'on', note: '服务端定时任务（ams.fixity.cron，默认每周日 02:30）；快速检测页可手动触发' },
+                { label: '电子签名验真 / 可信时间戳', state: 'pending', note: '需接入 CA/国家授时中心服务；当前采集签名存在性标记（数电票 XML 解析）' },
+                { label: '病毒扫描', state: 'pending', note: '需接入杀毒引擎（如 ClamAV）；接入前安全性维度不含病毒项' },
+              ]} />
+            </div>
+
+            {/* ── 完整性 ── */}
+            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+              <div className="flex items-center gap-2 px-5 py-3 border-b border-slate-100">
+                <CheckCircle2 className="w-4 h-4 text-violet-500" />
+                <span className="text-sm font-bold text-slate-800">完整性</span>
+              </div>
+              <ConfigRow label="必填元数据校验" desc="DA/T 94 核心必填项缺漏检测（GD-2-01/YJ-2-01）">
+                <Toggle
+                  checked={plan.completeness.metadataRequiredCheck}
+                  onChange={() => setPlan({ ...plan, completeness: { ...plan.completeness, metadataRequiredCheck: !plan.completeness.metadataRequiredCheck } })}
+                />
+              </ConfigRow>
+              {plan.completeness.metadataRequiredCheck && (
+                <div className="py-3 px-4">
+                  <span className="text-xs text-slate-500 mb-2 block">必填字段清单（仅含引擎可映射字段，逐字段真实校验）</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {METADATA_FIELDS.map((field) => {
+                      const checked = plan.completeness.requiredFields.includes(field);
+                      return (
+                        <button
+                          key={field}
+                          type="button"
+                          onClick={() => {
+                            const next = checked
+                              ? plan.completeness.requiredFields.filter((f) => f !== field)
+                              : [...plan.completeness.requiredFields, field];
+                            setPlan({ ...plan, completeness: { ...plan.completeness, requiredFields: next } });
+                          }}
+                          className={`px-2.5 py-1 text-xs rounded-full border transition-colors cursor-pointer ${
+                            checked
+                              ? 'bg-sky-50 text-sky-700 border-sky-300'
+                              : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          {field}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              <CapabilityNote items={[
+                { label: '凭证号断号/卷内查重/件数一致', state: 'on', note: '卷级真校验（GD-2-02/GD-2-03/YJ-2-02），在检测项库启停' },
+                { label: '有目无文（文件存在性）', state: 'on', note: 'GD-1-01/YJ-1-01，内容字节数核验' },
+              ]} />
+            </div>
+
+            {/* ── 可用性 ── */}
+            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+              <div className="flex items-center gap-2 px-5 py-3 border-b border-slate-100">
+                <Eye className="w-4 h-4 text-emerald-500" />
+                <span className="text-sm font-bold text-slate-800">可用性</span>
+              </div>
+              <div className="py-3 px-4">
+                <span className="text-xs text-slate-500 mb-2 block">归档格式白名单（GD-3-01/YJ-3-01/CQ-3-01，按上传声明格式校验）</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {FORMAT_OPTIONS.map((fmt) => {
+                    const checked = plan.usability.formatWhitelist.includes(fmt);
+                    return (
+                      <button
+                        key={fmt}
+                        type="button"
+                        onClick={() => {
+                          const next = checked
+                            ? plan.usability.formatWhitelist.filter((f) => f !== fmt)
+                            : [...plan.usability.formatWhitelist, fmt];
+                          setPlan({ ...plan, usability: { formatWhitelist: next } });
+                        }}
+                        className={`px-2.5 py-1 text-xs rounded-full border font-mono transition-colors cursor-pointer ${
+                          checked
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                            : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        {fmt}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <CapabilityNote items={[
+                { label: '格式校验口径', state: 'on', note: '按上传时声明的 mimeType 校验（内容嗅探加固见修复计划第五批 T16）' },
+                { label: '自动格式转换 / 渲染验证', state: 'pending', note: '版式转换引擎未接入；PDF/A 与 PDF 当前同口径' },
+              ]} />
+            </div>
+
+            {/* ── 安全性 ── */}
+            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+              <div className="flex items-center gap-2 px-5 py-3 border-b border-slate-100">
+                <Lock className="w-4 h-4 text-rose-500" />
+                <span className="text-sm font-bold text-slate-800">安全性</span>
+              </div>
+              <ConfigRow label="敏感信息检测" desc="身份证/银行卡号模式（GD-4-01）+ 自定义敏感词（GD-4-02），基于 OCR/XML 解析文本">
+                <Toggle
+                  checked={plan.security.sensitiveCheck}
+                  onChange={() => setPlan({ ...plan, security: { ...plan.security, sensitiveCheck: !plan.security.sensitiveCheck } })}
+                />
+              </ConfigRow>
+              {plan.security.sensitiveCheck && (
+                <div className="py-3 px-4 space-y-2">
+                  <span className="text-xs text-slate-500 block">敏感关键词表</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {plan.security.sensitiveKeywords.map((kw) => (
+                      <TagBadge
+                        key={kw}
+                        label={kw}
+                        onRemove={() => setPlan({ ...plan, security: { ...plan.security, sensitiveKeywords: plan.security.sensitiveKeywords.filter((k) => k !== kw) } })}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      value={newKeyword}
+                      onChange={(e) => setNewKeyword(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          const v = newKeyword.trim();
+                          if (v && !plan.security.sensitiveKeywords.includes(v)) {
+                            setPlan({ ...plan, security: { ...plan.security, sensitiveKeywords: [...plan.security.sensitiveKeywords, v] } });
+                          }
+                          setNewKeyword('');
+                        }
+                      }}
+                      placeholder="输入关键词回车添加"
+                      className="px-2.5 py-1 text-xs border border-slate-200 rounded-lg w-44 focus:outline-none focus:ring-1 focus:ring-rose-300"
+                    />
+                    <div className="flex flex-wrap gap-1">
+                      {SENSITIVE_KEYWORD_OPTIONS.filter((k) => !plan.security.sensitiveKeywords.includes(k)).slice(0, 4).map((k) => (
+                        <button
+                          key={k}
+                          type="button"
+                          onClick={() => setPlan({ ...plan, security: { ...plan.security, sensitiveKeywords: [...plan.security.sensitiveKeywords, k] } })}
+                          className="px-2 py-0.5 text-[11px] text-slate-400 border border-dashed border-slate-200 rounded-full hover:text-rose-600 hover:border-rose-300 cursor-pointer"
+                        >
+                          +{k}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              <CapabilityNote items={[
+                { label: '操作审计链', state: 'on', note: '全操作仅追加日志 + SHA-256 哈希链（ams_operation_log），检索门户可查证' },
+                { label: '病毒扫描', state: 'pending', note: '需接入杀毒引擎；接入前归档环节不含病毒检测项（诚实声明，不设假开关）' },
+              ]} />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
 export default InspectionConfigPage;
-

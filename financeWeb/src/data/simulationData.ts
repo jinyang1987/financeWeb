@@ -139,8 +139,8 @@ function makeRecord(spec: RecordSpec, ctx: { volumeId: string; volumeCode: strin
       type: archiveType,
       size: `${pick(id, 120, 980)}KB`,
       contentType: source === 'digitized' ? 'pdf' : 'ofd',
-      hash: `sha256:${hashSeed(id).toString(16)}`,
-      signatureVerified: true,
+      hash: '', // 2026-08-29 T3：仿真数据不伪造文件哈希（真实固化值由后端登记）
+      signatureVerified: false, // 仿真数据不伪造验签结论（验签属 CA 接入，见修复总计划外围项）
       signer: spec.preparer || pickOne(id, PREPARERS),
     }],
     auditLogs: [{
@@ -226,7 +226,7 @@ function addVolume(spec: VolumeSpec, boxId: string, recordSpecs: RecordSpec[]): 
     createdDate: spec.createdDate,
     createdBy: '陈静',
     status: 'transferred',
-    digitalHash: `sha256:${hashSeed(spec.id).toString(16)}`,
+    digitalHash: '', // 2026-08-29 T3：仿真数据不伪造哈希（真实固化值由后端 ams_record_fixity 登记）
     scanned: true,
     carrierType: spec.carrierType,
     securityLevel: spec.securityLevel || '普通',

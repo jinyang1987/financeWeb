@@ -122,6 +122,12 @@ public class AlfrescoNodeClient {
     http.delete(withTicket(baseUrl + apiV1 + "/nodes/" + nodeId + "?permanent=true", ticket));
   }
 
+  /** 重命名节点（PUT /nodes/{id} body {name}；cm:name 仅显示名，与档号无关） */
+  public void renameNode(String ticket, String nodeId, String name) {
+    http.exchange(withTicket(baseUrl + apiV1 + "/nodes/" + nodeId, ticket),
+        HttpMethod.PUT, new HttpEntity<>(Map.of("name", name)), Map.class);
+  }
+
   /**
    * 更新节点属性（PUT /nodes/{id}，body {properties:{...}}）。
    * 属性值为 null 时 Alfresco 语义为清除该属性。

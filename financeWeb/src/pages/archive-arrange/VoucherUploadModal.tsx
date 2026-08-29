@@ -524,16 +524,31 @@ const VoucherUploadModal: React.FC<VoucherUploadModalProps> = ({ open, onClose, 
 
   // 单文件识别：OCR → 规则归类 → 按 id 回写（带状态守卫，并发安全）
   const ocrOne = async (item: UploadFileItem) => {
+    // 2026-08-29 T2：XML 源文件（数电票等）不走 OCR（OCR 只认 PDF/影像）；
+    // 票面要素由后端建件时解析 XML 回填，前端预置「原始凭证/数电票」类型，人工校验确认
+    const isXml = item.name.toLowerCase().endsWith('.xml');
     let scanText = '';
     let degradedMsg = '';
-    try {
-      const scan = await scanRecordOcr(item.file);
-      scanText = scan.ocrText || '';
-    } catch (e: any) {
-      // ★ 区分失败原因（2026-08-19）：401/403 权限/会话问题与 OCR 服务不可用不再混为一谈
-      degradedMsg = e?.message || 'OCR 服务不可用';
+    if (!isXml) {
+      try {
+        const scan = await scanRecordOcr(item.file);
+        scanText = scan.ocrText || '';
+      } catch (e: any) {
+        // ★ 区分失败原因（2026-08-19）：401/403 权限/会话问题与 OCR 服务不可用不再混为一谈
+        degradedMsg = e?.message || 'OCR 服务不可用';
+      }
     }
-    const result = classifyDocument({ fileName: item.name, ocrText: scanText });
+    const result = isXml
+      ? {
+          category: '原始凭证' as const,
+          voucherNo: '', amount: '', date: '',
+          confidence: 60, // 未读内容，封顶 60 强制人工过目
+          hits: ['XML 源文件（票面要素由后端解析回填）'],
+          source: 'filename' as const,
+          docTypeCode: 'vat-electronic-invoice',
+          docTypeName: '全面数字化电子发票（数电票）',
+        }
+      : classifyDocument({ fileName: item.name, ocrText: scanText });
     setFiles((prev) => prev.map((f) => {
       if (f.id !== item.id || f.status !== 'processing') return f;
       return {

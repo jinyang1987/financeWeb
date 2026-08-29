@@ -35,10 +35,13 @@ public class SourceDocService {
 
   private final AlfrescoNodeClient nodes;
   private final RepoLayout layout;
+  private final com.finance.ams.fixity.FixityService fixity;
 
-  public SourceDocService(AlfrescoNodeClient nodes, RepoLayout layout) {
+  public SourceDocService(AlfrescoNodeClient nodes, RepoLayout layout,
+                          com.finance.ams.fixity.FixityService fixity) {
     this.nodes = nodes;
     this.layout = layout;
+    this.fixity = fixity;
   }
 
   /**
@@ -105,6 +108,12 @@ public class SourceDocService {
     if (bytes != null && bytes.length > 0 && mimetype != null) {
       try {
         nodes.putContent(ticket, (String) entry.get("id"), bytes, mimetype);
+        // 固化登记（2026-08-29 T1）：子件与件同口径，SHA-256 落固化登记表
+        try {
+          fixity.register(String.valueOf(entry.get("id")), bytes, mimetype, "sourcedoc");
+        } catch (Exception fe) {
+          log.error("原始凭证固化登记失败（内容已入库，待补登记）: {}", entry.get("id"), fe);
+        }
       } catch (Exception e) {
         log.warn("原始凭证内容写入失败（节点已建）: {}", e.getMessage());
       }

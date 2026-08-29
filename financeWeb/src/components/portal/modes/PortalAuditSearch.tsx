@@ -114,8 +114,24 @@ const PortalAuditSearch: React.FC = () => {
   };
 
   const handleExport = () => {
-    const content = trail.map((n) => `· [${n.timestamp}] ${n.label} — ${n.sublabel}（操作人：${n.operator}）`).join('\n');
-    alert(`合规取证包导出\n\n审计链路共 ${trail.length} 条记录：\n${content}\n\n包含：\n- 操作日志哈希链（JSON）\n- 数字签名验证报告（.sig）`);
+    // 2026-08-29 T3：真实导出操作日志哈希链记录（去掉伪造的「数字签名验证报告」承诺）。
+    // 导出内容即当前审计链查询结果；签名验真属 CA/时间戳接入（见修复总计划外围项），未接入前不伪造。
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      scope: '操作日志哈希链（ams_operation_log，仅追加+链式哈希）',
+      keyword: keyword || undefined,
+      total,
+      items: trail.map((n) => ({
+        timestamp: n.timestamp, action: n.label, detail: n.sublabel, operator: n.operator,
+      })),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `审计链导出-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (

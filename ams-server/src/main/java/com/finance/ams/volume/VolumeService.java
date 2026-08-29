@@ -63,17 +63,20 @@ public class VolumeService {
   private final ConfigService config;
   private final ApplicationEventPublisher events;
   private final InspectionService inspection;
+  private final com.finance.ams.fixity.FixityService fixity;
   private final ObjectMapper json = new ObjectMapper();
 
   public VolumeService(AlfrescoNodeClient nodes, RepoLayout layout,
                        CodeSerialService serials, ConfigService config,
-                       ApplicationEventPublisher events, InspectionService inspection) {
+                       ApplicationEventPublisher events, InspectionService inspection,
+                       com.finance.ams.fixity.FixityService fixity) {
     this.nodes = nodes;
     this.layout = layout;
     this.serials = serials;
     this.config = config;
     this.events = events;
     this.inspection = inspection;
+    this.fixity = fixity;
   }
 
   // ═══════════════════ 建卷 / 更新 / 删除 ═══════════════════
@@ -267,11 +270,7 @@ public class VolumeService {
 
     for (int i = 0; i < recordIds.size(); i++) {
       String recordId = recordIds.get(i);
-      try {
-        nodes.moveNode(ticket, recordId, volumeId);
-      } catch (HttpClientErrorException e) {
-        throw RepoLayout.translate("加件入卷失败: " + recordId, e);
-      }
+      moveWithRenameRetry(ticket, recordId, volumeId, "加件入卷失败: " + recordId);
       updateProps(ticket, recordId, Map.of(
           "finance:recordStatus", "待审核",
           "finance:volumeItemNo", insertAt + i + 1));
@@ -289,11 +288,7 @@ public class VolumeService {
 
     Map<String, Object> fonds = layout.findFondsOf(ticket, volumeId);
     String poolId = layout.pool(ticket, str(fonds.get("id")));
-    try {
-      nodes.moveNode(ticket, recordId, poolId);
-    } catch (HttpClientErrorException e) {
-      throw RepoLayout.translate("拆件回池失败", e);
-    }
+    moveWithRenameRetry(ticket, recordId, poolId, "拆件回池失败");
     Map<String, Object> clear = new LinkedHashMap<>();
     clear.put("finance:recordStatus", "仅件数据");
     clear.put("finance:volumeItemNo", null);
@@ -356,6 +351,17 @@ public class VolumeService {
     }));
     if (records.isEmpty()) throw BizException.badRequest("VOLUME_EMPTY", "空案卷不可确认组卷");
 
+    // ── 归档环节四性检测（2026-08-29 T5，DA/T 70-2018 归档必检；DA/T 94-2022 第 7.5/16.1 条）──
+    // 确认组卷 = 本系统归档动作：先执行归档口径（gd）检测，不合格即阻断——卷保持草稿、不赋号，
+    // 问题明细落检测报告（档案整理→快速检测 可查）。移交环节另有 gd∪yj 全口径复核（transfer）。
+    Map<String, Object> gdReport = inspection.runVolume(ticket, userId, volumeId, "gd");
+    if (!Boolean.TRUE.equals(gdReport.get("allPass"))) {
+      Object issues = gdReport.get("issues");
+      int issueCount = issues instanceof List<?> l ? l.size() : 0;
+      throw BizException.conflict("INSPECTION_FAILED",
+          "归档四性检测未通过：" + issueCount + " 项问题，已阻断组卷确认。请到 档案整理→快速检测 查看明细并整改后重新确认");
+    }
+
     Map<String, Object> fonds = layout.findFondsOf(ticket, volumeId);
     String fondsCode = prop(fonds, "finance:code");
     String cat = prop(vol, "finance:volumeTypeCode");
@@ -389,6 +395,16 @@ public class VolumeService {
       }
       log.info("确认组卷（按配置未赋号）: {}（{} 件，操作人 {}）", volumeId, records.size(), userId);
     }
+    // 卷级聚合摘要登记（2026-08-29 T1 真实性底座）：卷内件哈希按件号序拼接取 SHA-256，
+    // 写卷级 finance:digitalHash；移交检测（volume-hash-verify）与定期巡检按同一口径复核。
+    // 任一件未固化登记则聚合无意义——跳过并告警（存量治理由 /inspection/fixity/backfill 收口）。
+    try {
+      String agg = fixity.aggregateForVolume(records);
+      if (agg != null) upd.put("finance:digitalHash", agg);
+      else log.warn("卷级聚合摘要未登记（存在未固化登记件）: {}", volumeId);
+    } catch (Exception e) {
+      log.error("卷级聚合摘要登记失败: {}", volumeId, e);
+    }
     upd.put("finance:volumeStatus", "confirmed");
     updateProps(ticket, volumeId, upd);
 
@@ -417,6 +433,7 @@ public class VolumeService {
     Map<String, Object> upd = new LinkedHashMap<>();
     upd.put("finance:volumeCode", pendingVolumeCode(fondsCode));
     upd.put("finance:volumeStatus", "draft");
+    upd.put("finance:digitalHash", null); // 卷级聚合摘要作废（撤销后卷内结构可变，重新确认时再登记）
     updateProps(ticket, volumeId, upd);
     log.info("撤销确认: {}", volumeId);
     events.publishEvent(RecordsChangedEvent.refreshVolume(volumeId)); // V10 读模型同步
@@ -435,11 +452,7 @@ public class VolumeService {
     for (Map<String, Object> r : records) {
       String recordId = str(r.get("id"));
       ids.add(recordId);
-      try {
-        nodes.moveNode(ticket, recordId, poolId);
-      } catch (HttpClientErrorException e) {
-        throw RepoLayout.translate("拆卷回池失败: " + recordId, e);
-      }
+      moveWithRenameRetry(ticket, recordId, poolId, "拆卷回池失败: " + recordId);
       Map<String, Object> clear = new LinkedHashMap<>();
       clear.put("finance:recordStatus", "仅件数据");
       clear.put("finance:volumeItemNo", null);
@@ -507,11 +520,7 @@ public class VolumeService {
     // 移件：按原卷内顺序入新卷顺排（件状态保持「待审核」不变）
     for (int i = 0; i < sel.picked().size(); i++) {
       String rid = str(sel.picked().get(i).get("id"));
-      try {
-        nodes.moveNode(ticket, rid, newVolId);
-      } catch (HttpClientErrorException e) {
-        throw RepoLayout.translate("拆分移件失败: " + rid, e);
-      }
+      moveWithRenameRetry(ticket, rid, newVolId, "拆分移件失败: " + rid);
       updateProps(ticket, rid, Map.of("finance:volumeItemNo", i + 1));
     }
 
@@ -577,11 +586,7 @@ public class VolumeService {
       for (Map<String, Object> r : recs) {
         String rid = str(r.get("id"));
         movedIds.add(rid);
-        try {
-          nodes.moveNode(ticket, rid, targetVolumeId);
-        } catch (HttpClientErrorException e) {
-          throw RepoLayout.translate("合并移件失败: " + rid, e);
-        }
+        moveWithRenameRetry(ticket, rid, targetVolumeId, "合并移件失败: " + rid);
         updateProps(ticket, rid, Map.of("finance:volumeItemNo", nextNo++));
         merged++;
       }
@@ -626,11 +631,7 @@ public class VolumeService {
     int nextNo = childRecords(ticket, targetVolumeId).size() + 1;
     for (Map<String, Object> r : sel.picked()) {
       String rid = str(r.get("id"));
-      try {
-        nodes.moveNode(ticket, rid, targetVolumeId);
-      } catch (HttpClientErrorException e) {
-        throw RepoLayout.translate("转卷移件失败: " + rid, e);
-      }
+      moveWithRenameRetry(ticket, rid, targetVolumeId, "转卷移件失败: " + rid);
       updateProps(ticket, rid, Map.of("finance:volumeItemNo", nextNo++));
     }
 
@@ -772,11 +773,7 @@ public class VolumeService {
     }
     String boxId = str(box.get("id"));
 
-    try {
-      nodes.moveNode(ticket, volumeId, boxId);
-    } catch (HttpClientErrorException e) {
-      throw RepoLayout.translate("移交归盒失败", e);
-    }
+    moveWithRenameRetry(ticket, volumeId, boxId, "移交归盒失败");
     updateProps(ticket, volumeId, Map.of("finance:volumeStatus", "transferred"));
     int boxVolCount = intProp(box, "finance:volumeCount") != null ? intProp(box, "finance:volumeCount") : 0;
     int boxItemCount = intProp(box, "finance:boxTotalItems") != null ? intProp(box, "finance:boxTotalItems") : 0;
@@ -801,11 +798,7 @@ public class VolumeService {
     int totalItems = intProp(vol, "finance:volumeTotalItems") != null ? intProp(vol, "finance:volumeTotalItems") : 0;
 
     String dirId = layout.ensurePath(ticket, str(fonds.get("id")), RepoLayout.VOLUMES_ROOT, cat, String.valueOf(year));
-    try {
-      nodes.moveNode(ticket, volumeId, dirId);
-    } catch (HttpClientErrorException e) {
-      throw RepoLayout.translate("退回案卷失败", e);
-    }
+    moveWithRenameRetry(ticket, volumeId, dirId, "退回案卷失败");
     updateProps(ticket, volumeId, Map.of("finance:volumeStatus", "draft"));
 
     // 卷内件回退草稿态（与撤销确认语义一致）
@@ -1029,6 +1022,36 @@ public class VolumeService {
         throw RepoLayout.translate("创建节点失败", e);
       }
     }
+  }
+
+  /**
+   * 节点移动（重名重试，2026-08-29 冒烟实测修复）：目标父目录存在同名节点时自动追加
+   * 序号后缀再移动。案卷库/盒库同维度目录下同名卷随批次累积会撞名（如自动组卷的同名卷
+   * 归盒、拆件回池与收集池现存件同名），cm:name 仅显示名（档号不动），改名安全。
+   */
+  private void moveWithRenameRetry(String ticket, String nodeId, String targetId, String errPrefix) {
+    try {
+      nodes.moveNode(ticket, nodeId, targetId);
+      return;
+    } catch (HttpClientErrorException.Conflict ignored) {
+      // 进入重名重试
+    } catch (HttpClientErrorException e) {
+      throw RepoLayout.translate(errPrefix, e);
+    }
+    String base = str(nodes.getNode(ticket, nodeId).get("name"));
+    for (int i = 2; i <= 20; i++) {
+      try {
+        nodes.renameNode(ticket, nodeId, base + " (" + i + ")");
+        nodes.moveNode(ticket, nodeId, targetId);
+        log.info("目标目录重名，已改名移动: {} → {} ({})", nodeId, targetId, base + " (" + i + ")");
+        return;
+      } catch (HttpClientErrorException.Conflict ignored) {
+        // 继续下一个序号
+      } catch (HttpClientErrorException e) {
+        throw RepoLayout.translate(errPrefix, e);
+      }
+    }
+    throw BizException.badRequest("NAME_CONFLICT", errPrefix + "：目标目录同名节点过多");
   }
 
   /** cm:name 合法化（与 RecordService 同规约） */

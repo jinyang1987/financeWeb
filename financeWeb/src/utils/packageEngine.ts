@@ -302,17 +302,17 @@ export function generatePackageName(unit: PackageUnit): string {
 }
 
 // ═══════════════════════════════════════════════════════════
-// SHA-256 摘要（mock：字符串哈希）
+// SHA-256 摘要（2026-08-29 T3：真实现——WebCrypto，替代原位移假哈希）
 // ═══════════════════════════════════════════════════════════
 
-export function computeChecksum(data: string): string {
-  // 简易哈希模拟（浏览器环境可用 Web Crypto API 的 SHA-256）
-  let hash = 0;
-  for (let i = 0; i < data.length; i++) {
-    const chr = data.charCodeAt(i);
-    hash = ((hash << 5) - hash) + chr;
-    hash |= 0;
-  }
-  const hex = (hash >>> 0).toString(16).padStart(8, '0');
-  return `sha256:${hex}${'0'.repeat(56)}`;
+/**
+ * 计算文本的 SHA-256（64 位小写 hex，与后端 HashUtil.sha256Hex 同口径）。
+ * 浏览器 WebCrypto 异步 API；调用方必须 await。
+ * 注意：这是对「传入内容」的真实摘要——封装包内文件本体哈希以后端固化登记
+ * （ams_record_fixity）为准，前端摘要不构成文件级防篡改证据。
+ */
+export async function computeChecksum(data: string): Promise<string> {
+  const bytes = new TextEncoder().encode(data);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }

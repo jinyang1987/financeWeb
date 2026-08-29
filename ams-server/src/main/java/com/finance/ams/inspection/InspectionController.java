@@ -32,7 +32,7 @@ public class InspectionController {
       @RequestBody Map<String, String> body) {
     AuthUser me = perm.me(userId, ticket);
     perm.requireFunction(me, "volume-workspace");
-    return service.run(ticket, body.get("nodeId"), body.get("phase"));
+    return service.run(ticket, userId, body.get("nodeId"), body.get("phase"));
   }
 
   /** 批量检测当前全宗收集池（配置页「立即执行检测」入口，2026-08-16） */
@@ -48,16 +48,22 @@ public class InspectionController {
     if (fondsCode == null || fondsCode.isBlank()) {
       throw BizException.badRequest("VALIDATION_FAILED", "fondsCode 不能为空");
     }
-    return service.runBatch(ticket, fondsCode, body.get("phase"));
+    return service.runBatch(ticket, userId, fondsCode, body.get("phase"));
   }
 
   @GetMapping("/reports")
-  public List<Map<String, Object>> reports(
+  public Object reports(
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
-      @RequestParam(required = false) String target) {
+      @RequestParam(required = false) String target,
+      @RequestParam(required = false) Integer page,
+      @RequestParam(required = false) Integer size) {
     AuthUser me = perm.me(userId, ticket);
     perm.requireOperation(me, PermissionService.Op.catalog);
+    // T4：带 page/size 时返回分页结构 {items,total,page,size}；缺省保持旧数组形态（前端兼容期）
+    if (page != null || size != null) {
+      return service.reportsPaged(target, page == null ? 0 : page, size == null ? 20 : size);
+    }
     return service.reports(target);
   }
 
@@ -108,7 +114,7 @@ public class InspectionController {
       @RequestBody Map<String, Object> body) {
     AuthUser me = perm.me(userId, ticket);
     perm.requireFunction(me, "volume-workspace", "quick-check");
-    return service.review(
+    return service.review(ticket,
         str(body == null ? null : body.get("reportId")),
         str(body == null ? null : body.get("dimension")),
         body != null && Boolean.TRUE.equals(body.get("pass")),

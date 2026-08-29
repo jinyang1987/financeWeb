@@ -72,6 +72,16 @@ export interface ReportDetail {
   items?: Array<{ code: string; name: string; dimension: string; pass: boolean; note?: string; target?: string }>;
   volumeIssues?: Array<{ code: string; note: string }>;
   reviews?: Array<{ dimension: string; status: string; reason: string; reviewer: string; at: string }>;
+  /** 2026-08-29 T6：人工复检行标记（复检写新行不改历史；本行即复检记录） */
+  reviewOf?: string;
+  dimension?: string;
+  status?: string;
+  reason?: string;
+  reviewer?: string;
+  at?: string;
+  prior?: { real: boolean; complete: boolean; usable: boolean; safe: boolean };
+  /** 报告随档归档的 Alfresco 文件节点 id（可下载） */
+  reportFileNode?: string;
 }
 
 export function parseReportDetail(json: string | null | undefined): ReportDetail {
@@ -99,13 +109,21 @@ export async function runVolumeInspection(volumeId: string, phase: string = 'yj'
   return http.post<VolumeInspectionResult>('/inspection/run-volume', { volumeId, phase });
 }
 
-/** 检测报告列表（target 缺省=最近 100 条；传 nodeId=该节点历史） */
+/** 检测报告列表（target 缺省=最近 1000 条；传 nodeId=该节点历史） */
 export async function fetchInspectionReports(target?: string): Promise<InspectionReport[]> {
   const qs = target ? `?target=${encodeURIComponent(target)}` : '';
   return http.get<InspectionReport[]>(`/inspection/reports${qs}`);
 }
 
-/** 人工复检（留痕：复检人/原因/时间） */
+/** 检测报告分页（2026-08-29 T4：服务端分页） */
+export interface PagedReports { items: InspectionReport[]; total: number; page: number; size: number }
+export async function fetchInspectionReportsPaged(page: number, size: number, target?: string): Promise<PagedReports> {
+  const qs = new URLSearchParams({ page: String(page), size: String(size) });
+  if (target) qs.set('target', target);
+  return http.get<PagedReports>(`/inspection/reports?${qs.toString()}`);
+}
+
+/** 人工复检（2026-08-29 T6：复检写新报告行，历史行不修改；返回新行） */
 export async function reviewInspection(reportId: string, dimension: string, pass: boolean, reason: string) {
   return http.post('/inspection/review', { reportId, dimension, pass, reason });
 }

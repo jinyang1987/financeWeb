@@ -44,11 +44,16 @@ public class InspectionService {
   private static final Logger log = LoggerFactory.getLogger(InspectionService.class);
   private static final List<String> DEFAULT_FORMAT_WHITELIST = List.of(
       "application/pdf", "application/ofd", "text/xml", "application/xml",
-      "image/jpeg", "image/png", "image/tiff");
+      "text/plain", "image/jpeg", "image/png", "image/tiff");
   private static final List<String> DEFAULT_REQUIRED = List.of("档号", "凭证号", "会计年度");
   private static final List<String> SECURITY_LEVELS = List.of("普通", "内部", "秘密", "机密");
 
-  /** 中文必填标签 → 节点属性核查 */
+  /**
+   * 中文必填标签 → 节点属性核查。
+   * 2026-08-29 T4 治理：配置页 18 个可选字段与映射表对齐——无件级语义的字段
+   * （档案馆名称/全宗号/目录号/案卷号/件号/附件数/页数/摘要）已从配置页移除，
+   * loadPlan 同时过滤存量的未知标签（不再静默跳过造成「以为检了实际没检」）。
+   */
   private static final Map<String, java.util.function.Function<Map<String, Object>, Boolean>> REQUIRED_FIELD_CHECKS = Map.of(
       "题名", p -> !str(p.get("finance:title")).isBlank() || !str(p.get("cm:name")).isBlank(),
       "档号", p -> !str(p.get("finance:archiveCode")).isBlank(),
@@ -57,8 +62,21 @@ public class InspectionService {
       "金额合计", p -> p.get("finance:amount") != null,
       "责任者", p -> !str(p.get("finance:preparer")).isBlank(),
       "日期", p -> !str(p.get("finance:voucherDate")).isBlank() || !str(p.get("finance:createdDate")).isBlank(),
-      "格式", p -> !str(p.get("cm:mimeType")).isBlank()
+      "格式", p -> !str(p.get("cm:mimeType")).isBlank(),
+      "保管期限", p -> !str(p.get("finance:retention")).isBlank(),
+      "密级", p -> !str(p.get("finance:securityLevel")).isBlank()
   );
+
+  /** 检测环节白名单（T4：未知 phase 必须报错——空集恒真会出具假合格报告） */
+  private static final List<String> VALID_PHASES = List.of("gd", "yj", "cq");
+
+  private static String checkedPhase(String phase) {
+    String ph = phase == null || phase.isBlank() ? "gd" : phase.trim();
+    if (!VALID_PHASES.contains(ph)) {
+      throw BizException.badRequest("VALIDATION_FAILED", "检测环节 phase 仅支持 gd（归档）/yj（移交）/cq（长期保存），收到: " + phase);
+    }
+    return ph;
+  }
 
   /** 格式标签 → mimeType 匹配前缀 */
   private static final Map<String, List<String>> FORMAT_TOKEN_MAP = Map.of(
@@ -78,14 +96,20 @@ public class InspectionService {
   private final JdbcClient jdbc;
   private final ConfigService config;
   private final RecordService records;
+  private final com.finance.ams.fixity.FixityService fixity;
+  private final com.finance.ams.alfresco.RepoLayout layout;
   private final ObjectMapper json = new ObjectMapper();
 
   public InspectionService(AlfrescoNodeClient nodes, DataSource dataSource,
-                           ConfigService config, RecordService records) {
+                           ConfigService config, RecordService records,
+                           com.finance.ams.fixity.FixityService fixity,
+                           com.finance.ams.alfresco.RepoLayout layout) {
     this.nodes = nodes;
     this.jdbc = JdbcClient.create(dataSource);
     this.config = config;
     this.records = records;
+    this.fixity = fixity;
+    this.layout = layout;
   }
 
   // ═══════════════════ 检测项库（V8） ═══════════════════
@@ -137,12 +161,19 @@ public class InspectionService {
       var entry = config.get("inspection.plan");
       if (entry.isEmpty()) return defaultPlan();
       JsonNode root = json.readTree(entry.get().valueJson());
+      List<String> required = readStringArray(root.path("completeness").path("requiredFields"), DEFAULT_REQUIRED);
+      // T4 自愈：过滤无检测映射的存量标签（旧配置可能含已移除字段），杜绝静默漏检
+      List<String> known = required.stream().filter(REQUIRED_FIELD_CHECKS::containsKey).toList();
+      if (known.size() != required.size()) {
+        List<String> dropped = required.stream().filter(f -> !REQUIRED_FIELD_CHECKS.containsKey(f)).toList();
+        log.warn("检测方案含无映射必填字段，已忽略: {}", dropped);
+      }
       return new Plan(
           root.path("authenticity").path("hashEnabled").asBoolean(true),
           root.path("completeness").path("metadataRequiredCheck").asBoolean(true),
           true,
           root.path("security").path("sensitiveCheck").asBoolean(true),
-          readStringArray(root.path("completeness").path("requiredFields"), DEFAULT_REQUIRED),
+          known,
           readStringArray(root.path("usability").path("formatWhitelist"), List.of()),
           readStringArray(root.path("security").path("sensitiveKeywords"), List.of()));
     } catch (Exception e) {
@@ -187,15 +218,22 @@ public class InspectionService {
 
   /** 件级执行（volume 级 check_type 在 runVolume 单独处理，此处遇到返回 null 跳过） */
   private ItemResult execRecord(String checkType, String code, String name, String dimension,
-                                RecCtx r, Plan plan) {
+                                RecCtx r, Plan plan, String ticket) {
     Map<String, Object> p = r.props();
     switch (checkType) {
       case "file-present":
         return new ItemResult(code, name, dimension, r.fileSize() > 0,
             r.fileSize() > 0 ? "" : "无电子文件内容（0 字节）", r.nodeId());
       case "hash-registered": {
-        boolean has = !str(p.get("finance:digitalHash")).isBlank() || !str(p.get("finance:contentHash")).isBlank();
+        // 2026-08-29 T1：登记口径 = PG 固化登记表（ams_record_fixity）；属性为遗留兜底
+        boolean has = fixity.registered(r.nodeId())
+            || !str(p.get("finance:digitalHash")).isBlank() || !str(p.get("finance:contentHash")).isBlank();
         return new ItemResult(code, name, dimension, has, has ? "" : "未登记文件摘要（无法校验防篡改）", r.nodeId());
+      }
+      case "hash-verify": {
+        // 真比对（DA/T 70-2018 5.1.1.1 固化信息有效性）：下载内容重算 SHA-256 与登记值逐位比对
+        var result = fixity.verify(ticket, r.nodeId());
+        return new ItemResult(code, name, dimension, result.ok(), result.note(), r.nodeId());
       }
       case "archive-code-format": {
         String code_ = str(p.get("finance:archiveCode"));
@@ -287,7 +325,7 @@ public class InspectionService {
 
   // ═══════════════════ 单件检测 ═══════════════════
 
-  public Map<String, Object> run(String ticket, String nodeId, String phase) {
+  public Map<String, Object> run(String ticket, String userId, String nodeId, String phase) {
     Plan plan = loadPlan();
     Map<String, Object> node;
     try {
@@ -296,21 +334,21 @@ public class InspectionService {
       throw BizException.badRequest("NODE_NOT_FOUND", "节点不存在: " + nodeId);
     }
     RecCtx ctx = ctxOf(node);
-    String ph = phase != null ? phase : "gd";
+    String ph = checkedPhase(phase);
 
     List<ItemResult> results = new ArrayList<>();
     for (Map<String, Object> item : enabledItems(ph)) {
       ItemResult r = execRecord(str(item.get("check_type")), str(item.get("code")), str(item.get("name")),
-          str(item.get("dimension")), ctx, plan);
+          str(item.get("dimension")), ctx, plan, ticket);
       if (r != null) results.add(r);
     }
 
-    return finishReport(ticket, nodeId, "record", ph, ctx, results, plan);
+    return finishReport(ticket, nodeId, "record", ph, ctx, results, plan, userId);
   }
 
   /** 汇总四性状态 + 落库 + 件 aspect 回写 */
   private Map<String, Object> finishReport(String ticket, String nodeId, String kind, String phase,
-                                           RecCtx ctx, List<ItemResult> results, Plan plan) {
+                                           RecCtx ctx, List<ItemResult> results, Plan plan, String operator) {
     boolean real = dimPass(results, "real", plan.authenticityOn());
     boolean complete = dimPass(results, "complete", plan.completenessOn());
     boolean usable = dimPass(results, "usable", plan.usabilityOn());
@@ -319,6 +357,7 @@ public class InspectionService {
 
     String reportId = UUID.randomUUID().toString();
     String now = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+    String detail = detailJson(allPass, results, null);
 
     jdbc.sql("""
         INSERT INTO ams.ams_inspection_report (id, target_node, target_kind, phase,
@@ -327,10 +366,26 @@ public class InspectionService {
         """)
         .param(reportId).param(nodeId).param(kind).param(phase)
         .param(real).param(complete).param(usable).param(safe)
-        .param(detailJson(allPass, results, null))
-        .param("")
+        .param(detail)
+        .param(operator == null ? "" : operator)
         .param(now)
         .update();
+
+    // 报告随档归档（2026-08-29 T6，DA/T 70 记录留存 + DA/T 94 附录 E）：
+    // 报告 JSON 写入 Alfresco /{全宗}/_检测报告/{年}/ 长期留存，detail_json.reportFileNode 回填。
+    // 归档失败不阻断检测主流程（PG 行为主记录），log.error 留痕。
+    String reportFileNode = archiveReportFile(ticket, nodeId, phase, reportId, detail, operator);
+    if (reportFileNode != null) {
+      try {
+        Map<String, Object> d = json.readValue(detail, Map.class);
+        d.put("reportFileNode", reportFileNode);
+        detail = json.writeValueAsString(d);
+        jdbc.sql("UPDATE ams.ams_inspection_report SET detail_json = ?::jsonb WHERE id = ?::uuid")
+            .param(detail).param(reportId).update();
+      } catch (Exception e) {
+        log.warn("报告文件节点回填失败: {}", reportId, e);
+      }
+    }
 
     if (ctx != null) {
       try {
@@ -354,7 +409,33 @@ public class InspectionService {
     out.put("allPass", allPass);
     out.put("checkedAt", now);
     out.put("issues", issuesOf(results));
+    if (reportFileNode != null) out.put("reportFileNode", reportFileNode);
     return out;
+  }
+
+  /**
+   * 报告随档归档（T6）：JSON 写入 /{全宗}/_检测报告/{年}/ 长期留存。
+   * 文件为 cm:content（不带 finance 自定义属性，避开模型约束）；失败返回 null 不阻断主流程。
+   */
+  private String archiveReportFile(String ticket, String nodeId, String phase,
+                                   String reportId, String detail, String operator) {
+    try {
+      Map<String, Object> fonds = layout.findFondsOf(ticket, nodeId);
+      if (fonds == null || str(fonds.get("id")).isBlank()) return null;
+      String year = String.valueOf(java.time.LocalDate.now().getYear());
+      String dirId = layout.ensurePath(ticket, str(fonds.get("id")), "_检测报告", year);
+      String name = "四性检测报告-" + phase + "-" + reportId.substring(0, 8) + ".json";
+      Map<String, Object> created = nodes.createNode(ticket, dirId, name, "cm:content", Map.of(
+          "cm:title", "四性检测报告（环节 " + phase + "，对象 " + nodeId + "）",
+          "cm:description", "报告ID " + reportId + "；检测人 " + (operator == null ? "" : operator)));
+      String fileNodeId = String.valueOf(created.get("id"));
+      nodes.putContent(ticket, fileNodeId,
+          detail.getBytes(java.nio.charset.StandardCharsets.UTF_8), "application/json");
+      return fileNodeId;
+    } catch (Exception e) {
+      log.error("检测报告随档归档失败（PG 主记录已落库）: report={}", reportId, e);
+      return null;
+    }
   }
 
   /** 维度判定：维度总开关关闭→记通过；该维度无检测项→通过；否则全项通过 */
@@ -408,14 +489,14 @@ public class InspectionService {
   // ═══════════════════ 批量检测（收集池） ═══════════════════
 
   /** 对当前全宗收集池全部件执行检测（配置页「立即执行检测」的真实实现） */
-  public Map<String, Object> runBatch(String ticket, String fondsCode, String phase) {
+  public Map<String, Object> runBatch(String ticket, String userId, String fondsCode, String phase) {
     var pool = records.listPool(ticket,
         new RecordService.PoolQuery(fondsCode, null, null, null, null, 0, 5000));
     int checked = 0, passed = 0, failed = 0;
     List<String> failedNames = new ArrayList<>();
     for (Map<String, Object> item : pool.items()) {
       try {
-        Map<String, Object> r = run(ticket, String.valueOf(item.get("nodeId")), phase != null ? phase : "gd");
+        Map<String, Object> r = run(ticket, userId, String.valueOf(item.get("nodeId")), checkedPhase(phase));
         checked++;
         if (Boolean.TRUE.equals(r.get("allPass"))) passed++;
         else { failed++; failedNames.add(String.valueOf(item.get("name"))); }
@@ -451,6 +532,7 @@ public class InspectionService {
 
   public Map<String, Object> runVolume(String ticket, String userId, String volumeId, String phase) {
     Plan plan = loadPlan();
+    String ph = checkedPhase(phase);
     Map<String, Object> vol = requireVolume(ticket, volumeId);
     List<Map<String, Object>> children = childRecords(ticket, volumeId);
     if (children.isEmpty()) {
@@ -465,14 +547,14 @@ public class InspectionService {
     List<RecCtx> ctxs = new ArrayList<>();
     for (Map<String, Object> e : children) ctxs.add(ctxOf(e));
 
-    List<Map<String, Object>> items = "yj".equals(phase) ? mergedTransferItems() : enabledItems(phase);
+    List<Map<String, Object>> items = "yj".equals(ph) ? mergedTransferItems() : enabledItems(ph);
     List<ItemResult> all = new ArrayList<>();
 
     // ① 件级检测项 × 卷内每件
     for (RecCtx ctx : ctxs) {
       for (Map<String, Object> item : items) {
         ItemResult r = execRecord(str(item.get("check_type")), str(item.get("code")), str(item.get("name")),
-            str(item.get("dimension")), ctx, plan);
+            str(item.get("dimension")), ctx, plan, ticket);
         if (r != null) all.add(r);
       }
       // 件 aspect 回写（与本件结果一致）
@@ -500,17 +582,26 @@ public class InspectionService {
         case "voucher-no-gap" -> all.add(checkVoucherGap(code, name, dim, ctxs, volumeIssues));
         case "voucher-no-dup" -> all.add(checkVoucherDup(code, name, dim, ctxs, volumeIssues));
         case "volume-count-match" -> all.add(checkVolumeCount(code, name, dim, vol, ctxs, volumeIssues));
+        case "volume-hash-verify" -> all.add(checkVolumeHash(code, name, dim, vol, ctxs, volumeIssues));
         default -> { /* 件级类型已在①执行 */ }
       }
     }
 
-    Map<String, Object> out = finishReport(ticket, volumeId, "volume", phase, null, all, plan);
-    // 卷级问题补进报告 detail_json.volumeIssues
+    Map<String, Object> out = finishReport(ticket, volumeId, "volume", ph, null, all, plan, userId);
+    // 卷级问题补进报告 detail_json.volumeIssues（保留 finishReport 已归档的 reportFileNode 引用）
     if (!volumeIssues.isEmpty()) {
-      jdbc.sql("UPDATE ams.ams_inspection_report SET detail_json = ?::jsonb WHERE id=?::uuid")
-          .param(detailJson(Boolean.TRUE.equals(out.get("allPass")), all, volumeIssues))
-          .param(String.valueOf(out.get("reportId")))
-          .update();
+      try {
+        Map<String, Object> d = json.readValue(
+            detailJson(Boolean.TRUE.equals(out.get("allPass")), all, volumeIssues), Map.class);
+        Object rfn = out.get("reportFileNode");
+        if (rfn != null && !str(rfn).isBlank()) d.put("reportFileNode", rfn);
+        jdbc.sql("UPDATE ams.ams_inspection_report SET detail_json = ?::jsonb WHERE id=?::uuid")
+            .param(json.writeValueAsString(d))
+            .param(String.valueOf(out.get("reportId")))
+            .update();
+      } catch (Exception e) {
+        log.warn("卷级问题明细回填失败: {}", out.get("reportId"), e);
+      }
     }
     out.put("itemCount", ctxs.size());
     log.info("卷级四性检测: {}（{} 件）→ 真{} 完{} 用{} 安{}（操作人 {}）",
@@ -589,11 +680,55 @@ public class InspectionService {
         ok ? "" : "卷头登记 " + declared + " 件 ≠ 实际 " + ctxs.size() + " 件", "volume");
   }
 
+  /**
+   * 卷级聚合摘要复核（2026-08-29 T1）：卷内件哈希（按件号序）聚合值 vs 卷级 finance:digitalHash。
+   * 聚合口径与 FixityService.aggregateForVolume 严格一致（HashUtil.aggregateSha256）。
+   * 卷级摘要未登记（T1 前确认的历史卷）记「不适用」通过——治理路径：固化补登记后撤销确认重赋。
+   */
+  @SuppressWarnings("unchecked")
+  private ItemResult checkVolumeHash(String code, String name, String dim,
+                                     Map<String, Object> vol, List<RecCtx> ctxs,
+                                     List<Map<String, Object>> volumeIssues) {
+    Object props = vol.get("properties");
+    String registered = props instanceof Map<?, ?> pm && pm.get("finance:digitalHash") != null
+        ? String.valueOf(pm.get("finance:digitalHash")) : "";
+    if (registered.isBlank()) {
+      return new ItemResult(code, name, dim, true, "卷级聚合摘要未登记（确认组卷时登记），不适用", "volume");
+    }
+    List<String> hashes = new ArrayList<>();
+    for (RecCtx ctx : ctxs) {
+      var row = fixity.lookup(ctx.nodeId());
+      if (row == null) {
+        Map<String, Object> vi = new LinkedHashMap<>();
+        vi.put("code", code);
+        vi.put("note", "件未登记摘要，无法复核卷级聚合: " + ctx.name());
+        volumeIssues.add(vi);
+        return new ItemResult(code, name, dim, false, "件未登记摘要，无法复核卷级聚合: " + ctx.name(), "volume");
+      }
+      hashes.add(String.valueOf(row.get("sha256")));
+    }
+    String actual = com.finance.ams.util.HashUtil.aggregateSha256(hashes);
+    boolean ok = registered.equalsIgnoreCase(actual);
+    if (!ok) {
+      Map<String, Object> vi = new LinkedHashMap<>();
+      vi.put("code", code);
+      vi.put("note", "卷级聚合摘要不一致（卷内件或顺序在赋号后被改动）");
+      volumeIssues.add(vi);
+    }
+    return new ItemResult(code, name, dim, ok,
+        ok ? "" : "卷级聚合摘要不一致：登记值与卷内件重算值不符", "volume");
+  }
+
   // ═══════════════════ 人工复检（留痕） ═══════════════════
 
-  /** 人工复检：更新某维度结论 + 复检人/原因/时间写入 detail_json.reviews */
-  @SuppressWarnings("unchecked")
-  public Map<String, Object> review(String reportId, String dimension, boolean pass, String reason, String reviewer) {
+  /**
+   * 人工复检（2026-08-29 T6 改造：写新行，不改历史）。
+   * 历史报告行只读（司法采信要求检测记录不可篡改）；复检结论以「新报告行」落地：
+   * 同 target_node、target_kind 沿用、phase 沿用、detail_json 记录 reviewOf 原报告 +
+   * 复检维度/结论/原因/复检人/前后结论对照。目标节点的四性当前态回写跟进复检结论
+   * （节点属性是当前状态不是历史，允许跟进；历史轨迹以报告行序列为准）。
+   */
+  public Map<String, Object> review(String ticket, String reportId, String dimension, boolean pass, String reason, String reviewer) {
     if (!List.of("real", "complete", "usable", "safe").contains(dimension)) {
       throw BizException.badRequest("VALIDATION_FAILED", "复检维度须为 real/complete/usable/safe");
     }
@@ -605,42 +740,52 @@ public class InspectionService {
         .orElseThrow(() -> BizException.badRequest("REPORT_NOT_FOUND", "检测报告不存在: " + reportId));
 
     String now = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-    Map<String, Object> detail;
-    try {
-      detail = json.readValue(str(row.get("detail_json")), Map.class);
-    } catch (Exception e) {
-      detail = new LinkedHashMap<>();
-    }
-    List<Object> reviews = detail.get("reviews") instanceof List<?> l ? new ArrayList<>(l) : new ArrayList<>();
-    reviews.add(Map.of(
-        "dimension", dimension,
-        "status", pass ? "pass" : "fail",
-        "reason", reason,
-        "reviewer", reviewer == null ? "" : reviewer,
-        "at", now));
-    detail.put("reviews", reviews);
-    detail.put("allPass", computeAllPass(row, dimension, pass));
+    boolean real = dimension.equals("real") ? pass : bool(row.get("real"));
+    boolean complete = dimension.equals("complete") ? pass : bool(row.get("complete"));
+    boolean usable = dimension.equals("usable") ? pass : bool(row.get("usable"));
+    boolean safe = dimension.equals("safe") ? pass : bool(row.get("safe"));
 
-    String dimCol = switch (dimension) {
-      case "real" -> "real"; case "complete" -> "complete";
-      case "usable" -> "usable"; default -> "safe";
-    };
-    jdbc.sql("UPDATE ams.ams_inspection_report SET " + dimCol + "=?, detail_json=?::jsonb WHERE id=?::uuid")
-        .param(pass)
+    Map<String, Object> detail = new LinkedHashMap<>();
+    detail.put("reviewOf", reportId);
+    detail.put("dimension", dimension);
+    detail.put("status", pass ? "pass" : "fail");
+    detail.put("reason", reason);
+    detail.put("reviewer", reviewer == null ? "" : reviewer);
+    detail.put("at", now);
+    detail.put("prior", Map.of("real", bool(row.get("real")), "complete", bool(row.get("complete")),
+        "usable", bool(row.get("usable")), "safe", bool(row.get("safe"))));
+    detail.put("allPass", real && complete && usable && safe);
+    detail.put("summary", "人工复检：" + dimension + " → " + (pass ? "通过" : "不通过") + "（" + reason + "）");
+
+    String newId = UUID.randomUUID().toString();
+    jdbc.sql("""
+        INSERT INTO ams.ams_inspection_report (id, target_node, target_kind, phase,
+          real, complete, usable, safe, detail_json, operator, created_at)
+        VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?::timestamptz)
+        """)
+        .param(newId)
+        .param(str(row.get("target_node"))).param(str(row.get("target_kind"))).param(str(row.get("phase")))
+        .param(real).param(complete).param(usable).param(safe)
         .param(writeJson(detail))
-        .param(reportId)
+        .param(reviewer == null ? "" : reviewer)
+        .param(now)
         .update();
-    log.info("人工复检: 报告 {} 维度 {} → {}（{}：{}）", reportId, dimension, pass, reviewer, reason);
-    return jdbc.sql("SELECT * FROM ams.ams_inspection_report WHERE id=?::uuid")
-        .param(reportId).query().listOfRows().get(0);
-  }
 
-  private static boolean computeAllPass(Map<String, Object> row, String dim, boolean pass) {
-    boolean real = dim.equals("real") ? pass : bool(row.get("real"));
-    boolean complete = dim.equals("complete") ? pass : bool(row.get("complete"));
-    boolean usable = dim.equals("usable") ? pass : bool(row.get("usable"));
-    boolean safe = dim.equals("safe") ? pass : bool(row.get("safe"));
-    return real && complete && usable && safe;
+    // 节点当前态跟进复检结论（仅当目标节点仍存在）
+    String targetNode = str(row.get("target_node"));
+    if (!targetNode.isBlank() && ticket != null && !ticket.isBlank()) {
+      try {
+        nodes.updateNode(ticket, targetNode, Map.of(
+            "finance:checkReal", real, "finance:checkComplete", complete,
+            "finance:checkUsable", usable, "finance:checkSafe", safe,
+            "finance:checkedAt", now, "finance:checkReportRef", newId));
+      } catch (Exception e) {
+        log.warn("复检结论回写节点失败（报告已落库）: {}", targetNode, e.getMessage());
+      }
+    }
+    log.info("人工复检（新行）: 原报告 {} 维度 {} → {}（{}：{}）", reportId, dimension, pass, reviewer, reason);
+    return jdbc.sql("SELECT * FROM ams.ams_inspection_report WHERE id=?::uuid")
+        .param(newId).query().listOfRows().get(0);
   }
 
   private String writeJson(Map<String, Object> detail) {
@@ -658,8 +803,29 @@ public class InspectionService {
       return jdbc.sql("SELECT * FROM ams.ams_inspection_report WHERE target_node=? ORDER BY created_at DESC")
           .param(targetNodeId).query().listOfRows();
     }
-    return jdbc.sql("SELECT * FROM ams.ams_inspection_report ORDER BY created_at DESC LIMIT 100")
+    return jdbc.sql("SELECT * FROM ams.ams_inspection_report ORDER BY created_at DESC LIMIT 1000")
         .query().listOfRows();
+  }
+
+  /** 分页报告（T4：快速检测页服务端分页，替代 LIMIT 100 截断） */
+  public Map<String, Object> reportsPaged(String targetNodeId, int page, int size) {
+    int p = Math.max(0, page);
+    int s = Math.max(1, Math.min(size, 100));
+    boolean byTarget = targetNodeId != null && !targetNodeId.isBlank();
+    String where = byTarget ? " WHERE target_node = ?" : "";
+    long total = byTarget
+        ? jdbc.sql("SELECT count(*) FROM ams.ams_inspection_report" + where).param(targetNodeId).query(Long.class).single()
+        : jdbc.sql("SELECT count(*) FROM ams.ams_inspection_report").query(Long.class).single();
+    var q = jdbc.sql("SELECT * FROM ams.ams_inspection_report" + where
+        + " ORDER BY created_at DESC LIMIT ? OFFSET ?");
+    if (byTarget) q = q.param(targetNodeId);
+    List<Map<String, Object>> items = q.param(s).param(p * s).query().listOfRows();
+    Map<String, Object> out = new LinkedHashMap<>();
+    out.put("items", items);
+    out.put("total", total);
+    out.put("page", p);
+    out.put("size", s);
+    return out;
   }
 
   // ═══════════════════ 内部工具 ═══════════════════

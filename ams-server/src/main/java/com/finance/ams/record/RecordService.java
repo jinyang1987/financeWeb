@@ -49,6 +49,7 @@ public class RecordService {
   private final AlfrescoNodeClient nodes;
   private final RepoLayout layout;
   private final ApplicationEventPublisher events;
+  private final com.finance.ams.fixity.FixityService fixity;
 
   /** 全宗号 → 全宗节点 id */
   private final Map<String, String> fondsCache = new ConcurrentHashMap<>();
@@ -57,10 +58,12 @@ public class RecordService {
   /** 根目录（会计档案管理）节点 id */
   private volatile String rootNodeId;
 
-  public RecordService(AlfrescoNodeClient nodes, RepoLayout layout, ApplicationEventPublisher events) {
+  public RecordService(AlfrescoNodeClient nodes, RepoLayout layout, ApplicationEventPublisher events,
+                       com.finance.ams.fixity.FixityService fixity) {
     this.nodes = nodes;
     this.layout = layout;
     this.events = events;
+    this.fixity = fixity;
   }
 
   // ═══════════════════ 上传建件 ═══════════════════
@@ -168,6 +171,50 @@ public class RecordService {
       if (notBlank(sd.extFieldsJson())) props.put("finance:srcDocExtFields", sd.extFieldsJson());
     }
 
+    // ═══ 数电票/电子发票 XML 源文件识别（2026-08-29 T2）═══
+    // 财政部规定：数电票归档必须保存含数字签名的 XML 源文件。此处对 XML 做防御性解析：
+    // 票面要素回填 srcDoc*（调用方显式传入优先）、纯文本进 ocrText（全文索引管道）、
+    // 签名元素存在性记入扩展字段。解析失败按原始字节归档，绝不阻断归档。
+    if (isXmlContent(mimetype, filename)) {
+      try {
+        var px = com.finance.ams.sourcedoc.XmlInvoiceParser.parse(bytes);
+        if (!px.plainText().isBlank()) {
+          props.put("finance:ocrText", com.finance.ams.sourcedoc.XmlInvoiceParser.capText(px.plainText(), 40000));
+        }
+        if (px.looksLikeInvoice()) {
+          if (isBlankProp(props, "finance:srcDocTypeCode")) {
+            props.put("finance:srcDocTypeCode", "vat-electronic-invoice");
+            props.put("finance:srcDocTypeName", "全面数字化电子发票（数电票）");
+          }
+          props.put("finance:srcDocExtFields", JSON.writeValueAsString(
+              mergeExtFields(props.get("finance:srcDocExtFields"), px)));
+          if (isBlankProp(props, "finance:srcDocNo") && px.fields().containsKey("invoiceNo")) {
+            props.put("finance:srcDocNo", px.fields().get("invoiceNo"));
+          }
+          // 收票入账场景：对方单位=销售方（出票场景由业务系统显式传入覆盖）
+          if (isBlankProp(props, "finance:srcDocCounterpartyName") && px.fields().containsKey("sellerName")) {
+            props.put("finance:srcDocCounterpartyName", px.fields().get("sellerName"));
+          }
+          if (isBlankProp(props, "finance:srcDocCounterpartyTaxId") && px.fields().containsKey("sellerTaxId")) {
+            props.put("finance:srcDocCounterpartyTaxId", px.fields().get("sellerTaxId"));
+          }
+          if (!props.containsKey("finance:amount") && px.fields().containsKey("totalAmount")) {
+            try {
+              props.put("finance:amount", Double.parseDouble(px.fields().get("totalAmount")));
+            } catch (NumberFormatException ignored) { /* 价税合计非数字时跳过 */ }
+          }
+          if (isBlankProp(props, "finance:voucherDate") && px.fields().containsKey("issueDate")) {
+            String d = px.fields().get("issueDate");
+            if (d.matches("\\d{4}-\\d{2}-\\d{2}")) props.put("finance:voucherDate", d);
+          }
+        }
+        log.info("XML 源文件解析: {} → 发票识别={} 签名元素={} 提取字段={}",
+            filename, px.looksLikeInvoice(), px.hasSignature(), px.fields().keySet());
+      } catch (Exception e) {
+        log.warn("XML 解析失败，按原始字节归档（不影响归档）: {} — {}", filename, e.getMessage());
+      }
+    }
+
     Map<String, Object> entry = createWithRenameRetry(ticket, poolId, sanitizeName(filename), "finance:record", props);
     String nodeId = (String) entry.get("id");
     try {
@@ -175,6 +222,14 @@ public class RecordService {
     } catch (Exception e) {
       try { nodes.deleteNode(ticket, nodeId); } catch (Exception ignored) { /* 回滚尽力而为 */ }
       throw translate("内容写入失败，节点已回滚", e);
+    }
+    // 固化登记（2026-08-29 T1 真实性底座）：SHA-256 + 字节数 + 格式落 PG 固化登记表，
+    // 覆盖手工上传/开放推送/用友同步三入口（均汇聚于本方法）。登记失败不阻断建件，
+    // 由存量补登记（POST /inspection/fixity/backfill）与定期巡检收口。
+    try {
+      fixity.register(nodeId, bytes, mimetype, userId);
+    } catch (Exception e) {
+      log.error("固化登记失败（文件已入库，待补登记）: {}", nodeId, e);
     }
     log.info("建件成功: {} → {}（{}，{} 字节，操作人 {}）", cmd.voucherNo(), nodeId, filename, bytes.length, userId);
     events.publishEvent(RecordsChangedEvent.refreshOne(nodeId)); // V10 读模型同步
@@ -977,6 +1032,43 @@ public class RecordService {
   private static boolean notBlank(String s) {
     return s != null && !s.isBlank();
   }
+
+  /** XML 内容判定（T2）：mime 含 xml 或扩展名 .xml */
+  private static boolean isXmlContent(String mimetype, String filename) {
+    String mt = mimetype == null ? "" : mimetype.toLowerCase();
+    String fn = filename == null ? "" : filename.toLowerCase();
+    return mt.contains("xml") || fn.endsWith(".xml");
+  }
+
+  /** 属性空白判定（props 值为 null 或空白字符串） */
+  private static boolean isBlankProp(Map<String, Object> props, String key) {
+    Object v = props.get(key);
+    return v == null || String.valueOf(v).isBlank();
+  }
+
+  /**
+   * 合并原始凭证扩展字段（T2）：调用方显式 JSON 优先，XML 解析字段补空白；
+   * 追加 _xmlParsed/_signaturePresent 两个解析标记键（下划线前缀避免与票面要素冲突）。
+   */
+  @SuppressWarnings("unchecked")
+  private static Map<String, Object> mergeExtFields(Object existingJson, com.finance.ams.sourcedoc.XmlInvoiceParser.Parsed px) {
+    Map<String, Object> ext = new LinkedHashMap<>();
+    if (existingJson != null && !String.valueOf(existingJson).isBlank()) {
+      try {
+        Map<String, Object> parsed = JSON.readValue(String.valueOf(existingJson), Map.class);
+        if (parsed != null) ext.putAll(parsed);
+      } catch (Exception ignored) { /* 旧值非 JSON 时以解析结果为准重建 */ }
+    }
+    for (Map.Entry<String, String> e : px.fields().entrySet()) {
+      ext.putIfAbsent(e.getKey(), e.getValue());
+    }
+    ext.put("_xmlParsed", true);
+    ext.put("_signaturePresent", px.hasSignature());
+    return ext;
+  }
+
+  private static final com.fasterxml.jackson.databind.ObjectMapper JSON =
+      new com.fasterxml.jackson.databind.ObjectMapper();
 
   /** Alfresco 异常 → 业务异常（401/403 翻译为会话/权限错误，其余透传状态） */
   // ═══════════════════ 组件挂接（先组件再组卷，2026-08-20） ═══════════════════

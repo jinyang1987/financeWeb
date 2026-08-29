@@ -396,8 +396,16 @@ public class YonyouSyncService {
         fields.put("docTypeName", "外来电子附件");
         fields.put("parentVoucherNo", voucherNo);
         fields.put("attachmentSequence", seq);
-        String mime = fileName.toLowerCase().endsWith(".pdf") ? "application/pdf"
-            : fileName.toLowerCase().endsWith(".ofd") ? "application/ofd" : "application/octet-stream";
+        // mime 推断（2026-08-29 T2 修正：数电票 XML 源文件不得错标为 octet-stream——
+        // 错标会导致格式合规检测误报且影响预览/索引路由）
+        String lower = fileName.toLowerCase();
+        String mime = lower.endsWith(".pdf") ? "application/pdf"
+            : lower.endsWith(".ofd") ? "application/ofd"
+            : lower.endsWith(".xml") ? "application/xml"
+            : lower.endsWith(".jpg") || lower.endsWith(".jpeg") ? "image/jpeg"
+            : lower.endsWith(".png") ? "image/png"
+            : lower.endsWith(".tif") || lower.endsWith(".tiff") ? "image/tiff"
+            : "application/octet-stream";
         sourceDocs.create(ticket, recordNodeId, fields, fileName.isBlank() ? "附件-" + seq : fileName, mime, bytes);
         ok++;
       } catch (Exception e) {

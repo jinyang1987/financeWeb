@@ -119,7 +119,7 @@ export const usePackageStore = create<PackageStore>((set, get) => ({
 
   generatePackages: () => {
     set({ isGenerating: true });
-    setTimeout(() => {
+    setTimeout(async () => {
       const state = get();
       // 自动对未校验的单元执行校验
       let units = state.packageUnits.map(u =>
@@ -147,7 +147,7 @@ export const usePackageStore = create<PackageStore>((set, get) => ({
         seq++;
         const pkgName = generatePackageName(unit);
         const pkgId = `pkg-${now.slice(0, 10)}-${String(seq).padStart(3, '0')}`;
-        const manifestXML = generateManifestXML({
+        const manifestXML = await generateManifestXML({
           packageName: pkgName,
           unit,
           createdBy: '档案管理员',
@@ -167,7 +167,7 @@ export const usePackageStore = create<PackageStore>((set, get) => ({
           totalSize: unit.totalSize,
           createdAt: now,
           createdBy: '档案管理员',
-          checksum: computeChecksum(manifestXML),
+          checksum: await computeChecksum(manifestXML),
           status: 'generated' as PackageStatus,
           manifestXML,
         });

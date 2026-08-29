@@ -117,7 +117,7 @@ export const initialSourceDocuments: SourceDocument[] = [
         "size": "28.1 KB",
         "contentType": "xml",
         "hash": "a1b2c3d4",
-        "signatureVerified": true,
+        "signatureVerified": false,
         "signer": "国家税务总局数字印章"
       }
     ],
@@ -167,7 +167,7 @@ export const initialSourceDocuments: SourceDocument[] = [
         "size": "156.3 KB",
         "contentType": "pdf",
         "hash": "c3d4e5f6",
-        "signatureVerified": true,
+        "signatureVerified": false,
         "signer": "张三"
       }
     ],
@@ -214,7 +214,7 @@ export const initialSourceDocuments: SourceDocument[] = [
         "size": "89.2 KB",
         "contentType": "pdf",
         "hash": "e5f6g7h8",
-        "signatureVerified": true,
+        "signatureVerified": false,
         "signer": "李采购"
       }
     ],
@@ -260,7 +260,7 @@ export const initialSourceDocuments: SourceDocument[] = [
         "size": "234.7 KB",
         "contentType": "pdf",
         "hash": "g7h8i9j0",
-        "signatureVerified": true,
+        "signatureVerified": false,
         "signer": "王销售"
       }
     ],
@@ -305,7 +305,7 @@ export const initialSourceDocuments: SourceDocument[] = [
         "size": "15.8 KB",
         "contentType": "xml",
         "hash": "i9j0k1l2",
-        "signatureVerified": true,
+        "signatureVerified": false,
         "signer": "国家税务总局数字印章"
       }
     ],
@@ -353,7 +353,7 @@ export const initialSourceDocuments: SourceDocument[] = [
         "size": "26.5 KB",
         "contentType": "xml",
         "hash": "k1l2m3n4",
-        "signatureVerified": true,
+        "signatureVerified": false,
         "signer": "国家税务总局数字印章"
       }
     ],
@@ -402,7 +402,7 @@ export const initialSourceDocuments: SourceDocument[] = [
         "size": "78.3 KB",
         "contentType": "pdf",
         "hash": "m3n4o5p6",
-        "signatureVerified": true,
+        "signatureVerified": false,
         "signer": "招商银行电子章"
       }
     ],
@@ -447,7 +447,7 @@ export const initialSourceDocuments: SourceDocument[] = [
         "size": "112.6 KB",
         "contentType": "pdf",
         "hash": "o5p6q7r8",
-        "signatureVerified": true
+        "signatureVerified": false
       }
     ],
     "extFields": {
@@ -492,7 +492,7 @@ export const initialSourceDocuments: SourceDocument[] = [
         "size": "45.2 KB",
         "contentType": "pdf",
         "hash": "q7r8s9t0",
-        "signatureVerified": true,
+        "signatureVerified": false,
         "signer": "国家税务总局数字印章"
       }
     ],
@@ -539,7 +539,7 @@ export const initialSourceDocuments: SourceDocument[] = [
         "size": "345.8 KB",
         "contentType": "unknown",
         "hash": "s9t0u1v2",
-        "signatureVerified": true,
+        "signatureVerified": false,
         "signer": "张薪酬"
       }
     ],
@@ -2569,7 +2569,7 @@ export const initialRecords: ArchiveRecord[] = [
         "size": "2.3 MB",
         "contentType": "xml",
         "hash": "abc123def",
-        "signatureVerified": true,
+        "signatureVerified": false,
         "signer": "财务主管"
       }
     ],
@@ -2618,7 +2618,7 @@ export const initialRecords: ArchiveRecord[] = [
         "size": "5.1 MB",
         "contentType": "pdf",
         "hash": "def456abc",
-        "signatureVerified": true,
+        "signatureVerified": false,
         "signer": "CFO电子签章"
       }
     ],

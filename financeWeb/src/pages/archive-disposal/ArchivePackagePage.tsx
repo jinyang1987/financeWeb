@@ -367,7 +367,8 @@ const ArchivePackagePage: React.FC = () => {
                       </span>
                     </div>
 
-                    {/* 操作栏 */}
+                    {/* 操作栏（2026-08-29 T3 诚实化：下载=封装说明 XML 真实产物；
+                        ZIP 封装包/在线移交属第五批 T15 真实封装落地后开放，不再留死按钮） */}
                     <div className="flex items-center gap-2 px-4 py-2">
                       <button
                         onClick={() => setShowManifestId(showManifestId === pkg.id ? null : pkg.id)}
@@ -377,19 +378,28 @@ const ArchivePackagePage: React.FC = () => {
                         封装说明
                       </button>
                       <button
+                        onClick={() => {
+                          const blob = new Blob([pkg.manifestXML], { type: 'application/xml;charset=utf-8' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `${pkg.packageName}-封装说明.xml`;
+                          a.click();
+                          URL.revokeObjectURL(url);
+                        }}
                         className="flex items-center gap-1 px-2 py-1 text-[11px] text-slate-500 hover:text-sky-600 hover:bg-sky-50 rounded transition-colors"
-                        title="下载 ZIP 封装包"
+                        title="下载封装说明 XML（DA/T 48；文件清单摘要为真实 SHA-256）"
                       >
                         <Download className="w-3 h-3" />
-                        下载
+                        下载封装说明
                       </button>
-                      <button
-                        className="flex items-center gap-1 px-2 py-1 text-[11px] text-slate-500 hover:text-sky-600 hover:bg-sky-50 rounded transition-colors"
-                        title="推送至移交"
+                      <span
+                        className="flex items-center gap-1 px-2 py-1 text-[11px] text-slate-300 cursor-not-allowed"
+                        title="移交数据包（ZIP+包级摘要）属第五批真实封装任务（T15）落地后开放；当前请走 档案利用→移交管理 批次流程"
                       >
                         <Send className="w-3 h-3" />
                         移交
-                      </button>
+                      </span>
                       <div className="flex-1" />
                       <button
                         onClick={() => removePackage(pkg.id)}
@@ -405,8 +415,7 @@ const ArchivePackagePage: React.FC = () => {
                       <div className="border-t border-slate-100 px-4 py-3 bg-slate-50/80">
                         <div className="text-[10px] text-slate-400 uppercase mb-1 font-semibold">封装说明 XML</div>
                         <pre className="text-[10px] text-slate-600 bg-white border border-slate-200 rounded-lg p-3 max-h-[240px] overflow-auto font-mono whitespace-pre-wrap">
-                          {pkg.manifestXML.slice(0, 2000)}
-                          {pkg.manifestXML.length > 2000 && '\n\n... (截断，完整内容请下载封装包查看)'}
+                          {pkg.manifestXML}
                         </pre>
                       </div>
                     )}
