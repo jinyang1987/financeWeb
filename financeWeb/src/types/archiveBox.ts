@@ -48,6 +48,20 @@ export interface ArchiveBox {
   createdBy: string;
   /** 备注 */
   remarks?: string;
+
+  // ── 盒级人工字段（2026-08-29 T9，B20-B23/B26-B29 零落点补齐） ──
+  /** 装盒人 */
+  packer?: string;
+  /** 装盒日期 */
+  packDate?: string;
+  /** 整理人 */
+  arranger?: string;
+  /** 审核人 */
+  auditor?: string;
+  /** 审核日期 */
+  auditDate?: string;
+  /** 双套制关联（另一载体套号，如纸质↔电子对应套号） */
+  dualSetRef?: string;
 }
 
 /** 盒状态中文标签 */

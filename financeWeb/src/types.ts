@@ -151,6 +151,8 @@ export interface ArchiveRecord {
   srcDocAmountUpper?: string;
   /** 原始凭证业务分类 */
   srcDocBusinessCategory?: string;
+  /** 原始凭证摘要/事由（finance:srcDocSummary 原值；summary 为 cm:description） */
+  srcDocSummary?: string;
 }
 
 export interface CategoryNode {

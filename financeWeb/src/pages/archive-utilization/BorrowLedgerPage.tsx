@@ -141,9 +141,9 @@ const BorrowLedgerPage: React.FC = () => {
                     </td>
                     <td className="px-4 py-3 font-mono text-[13px] font-bold text-slate-800">{o.orderNo}</td>
                     <td className="px-4 py-3 text-sm text-slate-800">{o.applicantName}<span className="text-slate-400 ml-1">{o.applicantDept}</span></td>
-                    <td className="px-4 py-3 text-[13px] text-slate-600">{o.reasonType}</td>
-                    <td className="px-4 py-3 text-[13px] text-slate-600">{o.items.length} 件</td>
-                    <td className="px-4 py-3 text-[13px] text-slate-600 max-w-[180px] truncate" title={approverChain(o)}>{approverChain(o) || '—'}</td>
+                    <td className="px-4 py-3.5 text-sm text-slate-600">{o.reasonType}</td>
+                    <td className="px-4 py-3.5 text-sm text-slate-600">{o.items.length} 件</td>
+                    <td className="px-4 py-3.5 text-sm text-slate-600 max-w-[180px] truncate" title={approverChain(o)}>{approverChain(o) || '—'}</td>
                     <td className="px-4 py-3 font-mono text-[13px] text-slate-600 whitespace-nowrap">{o.startDate} ~ {o.endDate}</td>
                     <td className="px-4 py-3">
                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[o.status]}`}>

@@ -261,7 +261,7 @@ const TransferManagePage: React.FC = () => {
                                   <td className="px-4 py-3 text-sm text-slate-800">{v.title}</td>
                                   <td className="px-4 py-3 font-mono text-[13px] text-slate-600">{v.volumeCode || '—'}</td>
                                   <td className="px-4 py-3 font-mono text-[13px] text-slate-600">{v.totalItems}</td>
-                                  <td className="px-4 py-3 text-[13px] text-slate-600">{v.status === 'missing' ? '已删除' : v.status}</td>
+                                  <td className="px-4 py-3.5 text-sm text-slate-600">{v.status === 'missing' ? '已删除' : v.status}</td>
                                 </tr>
                               ))}
                             </tbody>

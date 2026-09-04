@@ -430,7 +430,7 @@ export const FanzongManager: React.FC = () => {
           </span>
         )}
       </td>
-      <td className="px-4 py-3 text-[13px] text-slate-600">
+      <td className="px-4 py-3.5 text-sm text-slate-600">
         {f.type === 'custodial' && f.custodianCode ? (
           <span>由 <span className="font-mono font-bold text-slate-700">{f.custodianCode}</span> 代管</span>
         ) : (

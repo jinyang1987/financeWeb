@@ -105,15 +105,34 @@ public class VolumeController {
 
   // ── 更新 / 删除 ──
 
+  /**
+   * PUT /volumes/{id} — 更新案卷元数据（2026-08-29 T9 扩卷级缺项字段；T10 归档后锁）。
+   * T10 审计留痕：服务端返回旧值/新值 diff，落操作日志（DA/T 94-2022 附录 E.7）。
+   */
   @PutMapping("/{volumeId}")
   @SuppressWarnings("unchecked")
   public Map<String, Object> update(
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
       @PathVariable String volumeId,
-      @RequestBody Map<String, String> body) {
-    guard(userId, ticket, "volume-workspace");
-    return service.update(ticket, volumeId, body);
+      @RequestBody Map<String, String> body,
+      HttpServletRequest request) {
+    AuthUser me = guard(userId, ticket, "volume-workspace");
+    Map<String, Object> result = service.update(ticket, volumeId, body);
+    @SuppressWarnings("unchecked")
+    List<Map<String, Object>> changes = (List<Map<String, Object>>) result.get("changes");
+    if (changes != null && !changes.isEmpty()) {
+      String detail = "修改 " + changes.size() + " 项：";
+      for (Map<String, Object> c : changes) {
+        detail += str(c.get("prop")) + "「" + str(c.get("old")) + "」→「" + str(c.get("new")) + "」；";
+      }
+      if (detail.length() > 900) detail = detail.substring(0, 900) + "…";
+      oplog.append(me.account(), me.name(), "案卷元数据修改", volumeId, null,
+          detail, OperationLogService.clientIp(request));
+    }
+    @SuppressWarnings("unchecked")
+    Map<String, Object> view = (Map<String, Object>) result.get("view");
+    return view;
   }
 
   @DeleteMapping("/{volumeId}")

@@ -53,6 +53,11 @@ export interface VolumeDto {
   createdBy: string;
   scanned: boolean;
   digitalHash: string;
+  // ── v2.9 卷级缺项（2026-08-29 T9，DA/T 94 V12/V15/V16/V20） ──
+  establishingUnit?: string;   // 立档单位
+  checker?: string;            // 检查人
+  checkDate?: string;          // 检查日期
+  remarks?: string;            // 备注（卷级）
   boxId: string;
   boxNo: string;
   createdAt: string;
@@ -116,6 +121,9 @@ export async function fetchVolumes(params: {
 export async function updateVolumeApi(volumeId: string, patch: Partial<{
   title: string; retention: string; dateFrom: string; dateTo: string;
   cabinetNo: string; shelfNo: string; securityLevel: string; carrierType: string;
+  // v2.9 卷级缺项（T9）：仅草稿卷可改（已确认/移交卷服务端硬锁，实体位置字段除外）
+  totalPages: number; pageStart: number; pageEnd: number;
+  establishingUnit: string; checker: string; checkDate: string; scanned: boolean; remarks: string;
 }>): Promise<Volume> {
   const dto = await http.put<VolumeDto>(`/volumes/${volumeId}`, patch);
   return dtoToVolume(dto);
@@ -232,6 +240,11 @@ export function dtoToVolume(dto: VolumeDto): Volume {
     scanned: !!dto.scanned,
     carrierType: (dto.carrierType || undefined) as Volume['carrierType'],
     securityLevel: dto.securityLevel || undefined,
+    // v2.9 卷级缺项（T9）
+    establishingUnit: dto.establishingUnit || '',
+    checker: dto.checker || '',
+    checkDate: dto.checkDate || '',
+    remarks: dto.remarks || '',
     categoryConfigId: '',
   };
 }

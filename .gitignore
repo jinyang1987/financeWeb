@@ -56,3 +56,9 @@ env/
 # ===== 本地构建产物 / 备份（不入库） =====
 ams-server/_build/
 ams-server/target_bak*/
+
+# ===== 冒烟/构建临时输出（不入库） =====
+*.out
+ams-server/_build2/
+financeWeb/dist_old_*/
+financeWeb/dist_v28/

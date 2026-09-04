@@ -431,7 +431,7 @@ export const QuickComponentModal: React.FC<QuickComponentProps> = ({
                           )}
                         </div>
                         <div className="mt-1.5 pl-2.5">
-                          <div className="text-[12px] font-semibold text-slate-700">{fmtAmount(s.amount)}</div>
+                          <div className="text-[13px] font-semibold text-slate-700">{fmtAmount(s.amount)}</div>
                           <div className="text-[11px] text-slate-500 truncate mt-0.5">{s.summary || '—'}</div>
                         </div>
                       </div>

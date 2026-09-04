@@ -154,7 +154,7 @@ const ApprovalCenterPage: React.FC = () => {
                           {item.mediaType === 'electronic' ? '纯电子' : item.mediaType === 'paper' ? '纯实体' : '混合'}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-[13px]">
+                      <td className="px-4 py-3.5 text-sm">
                         {item.mediaType === 'electronic'
                           ? <span className="text-slate-300">—</span>
                           : item.stockStatus === 'in_stock'
@@ -166,7 +166,7 @@ const ApprovalCenterPage: React.FC = () => {
                           {item.securityLevel}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-[13px] text-slate-600">
+                      <td className="px-4 py-3.5 text-sm text-slate-600">
                         {item.electronicPerms.map((p) => PERM_LABELS[p]).join('/') || '—'}
                         {item.physicalMode !== 'none' && (
                           <span className="text-amber-700 font-medium"> + {PHYSICAL_MODE_LABELS[item.physicalMode]}</span>

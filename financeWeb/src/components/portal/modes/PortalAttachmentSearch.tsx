@@ -333,7 +333,7 @@ const PortalAttachmentSearch: React.FC<PortalAttachmentSearchProps> = ({ onOpenD
                             </span>
                           </td>
                           <td className="px-4 py-3 text-center font-mono text-[13px] text-slate-600">{doc.transactionDate}</td>
-                          <td className="px-4 py-3 text-[13px] text-slate-600 truncate" title={doc.counterpartyName}>
+                          <td className="px-4 py-3.5 text-sm text-slate-600 truncate" title={doc.counterpartyName}>
                             {doc.counterpartyName || '—'}
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-800 truncate" title={doc.summary}>

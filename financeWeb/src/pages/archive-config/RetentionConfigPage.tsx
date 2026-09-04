@@ -565,7 +565,7 @@ const RetentionConfigPage: React.FC<{ embedded?: boolean }> = ({ embedded = fals
                               {item.attribution}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-[13px] text-slate-600">{item.remark}</td>
+                          <td className="px-4 py-3.5 text-sm text-slate-600">{item.remark}</td>
                         </tr>
                       ))}
                     </tbody>

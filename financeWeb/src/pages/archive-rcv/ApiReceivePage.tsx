@@ -84,14 +84,14 @@ const BatchItemsTable: React.FC<{ batchId: number }> = ({ batchId }) => {
           <tbody>
             {detail.items.map((it) => (
               <tr key={it.id} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
-                <td className="px-4 py-3 text-[13px] text-slate-600">{it.item_type === 'voucher' ? '记账凭证' : '财务报表'}</td>
+                <td className="px-4 py-3.5 text-sm text-slate-600">{it.item_type === 'voucher' ? '记账凭证' : '财务报表'}</td>
                 <td className="px-4 py-3 font-mono text-[13px] text-slate-800">{it.voucher_no || '—'}</td>
-                <td className="px-4 py-3 text-[13px] text-slate-600 max-w-[220px] truncate" title={it.summary || ''}>{it.summary || '—'}</td>
+                <td className="px-4 py-3.5 text-sm text-slate-600 max-w-[220px] truncate" title={it.summary || ''}>{it.summary || '—'}</td>
                 <td className="px-4 py-3 text-right font-mono text-[13px] text-slate-800">{fmtAmount(it.amount)}</td>
                 <td className={`px-4 py-3 text-center text-[13px] font-medium ${ITEM_STATUS[it.status]?.cls || ''}`}>
                   {ITEM_STATUS[it.status]?.label || it.status}
                 </td>
-                <td className="px-4 py-3 text-[13px] text-slate-600 max-w-[176px]">
+                <td className="px-4 py-3.5 text-sm text-slate-600 max-w-[176px]">
                   {it.archive_code && <div className="font-mono truncate" title={it.archive_code}>{it.archive_code}</div>}
                   {it.error && <div className="text-red-500 truncate" title={it.error}>{it.error}</div>}
                 </td>
@@ -407,7 +407,7 @@ const ApiReceivePage: React.FC = () => {
                       <td className="px-4 py-3 text-right font-mono text-[13px] text-slate-400">{b.skip_count}</td>
                       <td className="px-4 py-3 text-right font-mono text-[13px] text-red-600">{b.fail_count}</td>
                       <td className="px-4 py-3 text-right font-mono text-[13px] text-slate-600">{b.report_count}</td>
-                      <td className="px-4 py-3 text-[13px] text-slate-600 max-w-[240px] truncate" title={b.message || ''}>{b.message || '—'}</td>
+                      <td className="px-4 py-3.5 text-sm text-slate-600 max-w-[240px] truncate" title={b.message || ''}>{b.message || '—'}</td>
                       <td className="px-4 py-3 font-mono text-[13px] text-slate-600">{fmtTime(b.started_at)}</td>
                       <td className="px-4 py-3 text-center">
                         {expanded ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}

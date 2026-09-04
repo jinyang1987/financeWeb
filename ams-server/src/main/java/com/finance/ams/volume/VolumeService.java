@@ -132,22 +132,76 @@ public class VolumeService {
     return toView(entry, cmd.fondsCode(), "", "");
   }
 
-  /** 更新案卷元数据（仅草稿/已确认可改题名等非状态字段） */
+  /**
+   * 更新案卷元数据（2026-08-29 T9 扩卷级缺项 V11 总页数/V12 立档单位/V15 检查人/V16 检查日期/
+   * V18 数字化状态/V20 备注；T10 归档后锁拉齐 + 审计留痕）。
+   *
+   * 卷级归档后锁（与件级 RecordService 同口径拉齐）：draft 之外仅放行实体位置类字段
+   * （cabinetNo/shelfNo——上架摆位属保管行为而非元数据变更），题名/期限/日期等
+   * 已固化元数据须先撤销确认回草稿再改；无修改审批机制前一律硬锁。
+   * 返回 {view, changes:[{prop,old,new}]} 供 Controller 落操作日志（旧值/新值）。
+   */
   public Map<String, Object> update(String ticket, String volumeId, Map<String, String> f) {
     Map<String, Object> vol = requireVolume(ticket, volumeId);
+    String status = prop(vol, "finance:volumeStatus");
+    boolean draft = "draft".equals(status);
     Map<String, Object> props = new LinkedHashMap<>();
-    if (notBlank(f.get("title"))) props.put("finance:title", f.get("title"));
-    if (notBlank(f.get("retention"))) {
-      props.put("finance:volumeRetention", f.get("retention"));
-      props.put("finance:retentionCode", CategoryCodes.inferRetentionCode(f.get("retention")));
+    if (draft) {
+      if (notBlank(f.get("title"))) props.put("finance:title", f.get("title"));
+      if (notBlank(f.get("retention"))) {
+        props.put("finance:volumeRetention", f.get("retention"));
+        props.put("finance:retentionCode", CategoryCodes.inferRetentionCode(f.get("retention")));
+      }
+      if (f.get("dateFrom") != null) props.put("finance:dateFrom", checkedYearMonth(f.get("dateFrom"), "卷内日期起"));
+      if (f.get("dateTo") != null) props.put("finance:dateTo", checkedYearMonth(f.get("dateTo"), "卷内日期止"));
+      if (f.get("securityLevel") != null) props.put("finance:volumeSecurityLevel", f.get("securityLevel"));
+      if (f.get("carrierType") != null) props.put("finance:volumeCarrierType", f.get("carrierType"));
+      // V11 卷内页数/起止页号（DA/T 94 V11）
+      Integer totalPages = asIntNullable(f.get("totalPages"));
+      if (totalPages != null) {
+        if (totalPages < 0) throw BizException.badRequest("VALIDATION_FAILED", "卷内页数不能为负");
+        props.put("finance:totalPages", totalPages);
+      }
+      Integer pageStart = asIntNullable(f.get("pageStart"));
+      if (pageStart != null) props.put("finance:pageStart", pageStart);
+      Integer pageEnd = asIntNullable(f.get("pageEnd"));
+      if (pageEnd != null) props.put("finance:pageEnd", pageEnd);
+      // V12 立档单位（DA/T 94 V12）
+      if (f.get("establishingUnit") != null) props.put("finance:establishingUnit", f.get("establishingUnit"));
+      // V15 检查人 / V16 检查日期（DA/T 94 卷脊检查项）
+      if (f.get("checker") != null) props.put("finance:checker", f.get("checker"));
+      if (f.get("checkDate") != null) {
+        if (notBlank(f.get("checkDate")) && !f.get("checkDate").matches("^\\d{4}-\\d{2}-\\d{2}$"))
+          throw BizException.badRequest("VALIDATION_FAILED", "检查日期格式不合法（应为 yyyy-MM-dd）");
+        props.put("finance:checkDate", f.get("checkDate"));
+      }
+      // V18 数字化状态
+      if (f.get("scanned") != null) props.put("finance:scanned", Boolean.parseBoolean(f.get("scanned")));
+      // V20 备注
+      if (f.get("remarks") != null) props.put("finance:volumeRemark", f.get("remarks"));
+    } else {
+      // 已确认/已移交：仅放行实体位置类字段（保管摆位）
+      if (f.get("cabinetNo") != null) props.put("finance:cabinetNo", f.get("cabinetNo"));
+      if (f.get("shelfNo") != null) props.put("finance:shelfNo", f.get("shelfNo"));
+      if (props.isEmpty()) {
+        throw new BizException(HttpStatus.CONFLICT, "VOLUME_LOCKED",
+            "案卷状态「" + status + "」已固化，题名/期限等元数据不可修改；如需调整请先撤销确认回草稿（实体位置字段除外）");
+      }
     }
-    if (f.get("dateFrom") != null) props.put("finance:dateFrom", checkedYearMonth(f.get("dateFrom"), "卷内日期起"));
-    if (f.get("dateTo") != null) props.put("finance:dateTo", checkedYearMonth(f.get("dateTo"), "卷内日期止"));
-    if (f.get("cabinetNo") != null) props.put("finance:cabinetNo", f.get("cabinetNo"));
-    if (f.get("shelfNo") != null) props.put("finance:shelfNo", f.get("shelfNo"));
-    if (f.get("securityLevel") != null) props.put("finance:volumeSecurityLevel", f.get("securityLevel"));
-    if (f.get("carrierType") != null) props.put("finance:volumeCarrierType", f.get("carrierType"));
+    if (f.get("cabinetNo") != null && draft) props.put("finance:cabinetNo", f.get("cabinetNo"));
+    if (f.get("shelfNo") != null && draft) props.put("finance:shelfNo", f.get("shelfNo"));
     if (props.isEmpty()) throw BizException.badRequest("VALIDATION_FAILED", "没有可更新的字段");
+    // 旧值快照（T10 审计留痕：仅记录本次实际触碰且发生变化的属性）
+    Object oldProps = vol.get("properties");
+    List<Map<String, Object>> changes = new ArrayList<>();
+    for (Map.Entry<String, Object> en : props.entrySet()) {
+      String oldVal = oldProps instanceof Map<?, ?> p && p.get(en.getKey()) != null
+          ? String.valueOf(p.get(en.getKey())) : "";
+      String newVal = en.getValue() == null ? "" : String.valueOf(en.getValue());
+      if (!oldVal.equals(newVal)) {
+        changes.add(Map.of("prop", en.getKey(), "old", oldVal, "new", newVal));
+      }
+    }
     Map<String, Object> entry;
     try {
       entry = nodes.updateNode(ticket, volumeId, props);
@@ -156,7 +210,10 @@ public class VolumeService {
     }
     String fondsCode = fondsCodeOf(ticket, vol);
     BoxRef box = boxOf(ticket, volumeId);
-    return toView(entry, fondsCode, box.id(), box.no());
+    Map<String, Object> out = new LinkedHashMap<>();
+    out.put("view", toView(entry, fondsCode, box.id(), box.no()));
+    out.put("changes", changes);
+    return out;
   }
 
   /** 删除空草稿案卷（有件卷走拆卷 decompose） */
@@ -1094,6 +1151,11 @@ public class VolumeService {
     view.put("createdBy", prop(entry, "finance:createdBy"));
     view.put("scanned", boolProp(entry, "finance:scanned"));
     view.put("digitalHash", prop(entry, "finance:digitalHash"));
+    // T9 卷级缺项（DA/T 94 V12/V15/V16/V20）：立档单位/检查人/检查日期/备注
+    view.put("establishingUnit", prop(entry, "finance:establishingUnit"));
+    view.put("checker", prop(entry, "finance:checker"));
+    view.put("checkDate", prop(entry, "finance:checkDate"));
+    view.put("remarks", prop(entry, "finance:volumeRemark"));
     view.put("boxId", boxId);
     view.put("boxNo", boxNo);
     view.put("createdAt", entry.get("createdAt"));
@@ -1141,6 +1203,12 @@ public class VolumeService {
     if (!(props instanceof Map)) return null;
     Object v = ((Map<String, Object>) props).get(name);
     return v instanceof Number n ? n.intValue() : null;
+  }
+
+  /** 字符串 → Integer（容忍数字字符串；空白/非法返回 null） */
+  private static Integer asIntNullable(String s) {
+    if (s == null || s.isBlank()) return null;
+    try { return Integer.valueOf(s.trim()); } catch (NumberFormatException e) { return null; }
   }
 
   @SuppressWarnings("unchecked")

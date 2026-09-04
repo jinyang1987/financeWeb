@@ -76,6 +76,16 @@ export interface Volume {
   /** 是否已完成数字化扫描 */
   scanned: boolean;
 
+  // ── 卷级缺项（2026-08-29 T9，DA/T 94 卷级元数据 V12/V15/V16/V20） ──
+  /** 立档单位（V12） */
+  establishingUnit?: string;
+  /** 检查人（V15） */
+  checker?: string;
+  /** 检查日期（V16） */
+  checkDate?: string;
+  /** 备注（V20） */
+  remarks?: string;
+
   // ── 借阅/库房扩展（2026-07-18 借阅全生命周期） ──
   /** 介质类型：纯电子 | 纯实体 | 混合（实体已数字化） */
   carrierType?: 'paper' | 'electronic' | 'mixed';

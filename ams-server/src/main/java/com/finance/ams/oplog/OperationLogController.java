@@ -41,9 +41,11 @@ public class OperationLogController {
       @RequestParam(required = false) String to,
       @RequestParam(defaultValue = "0") int skip,
       @RequestParam(defaultValue = "50") int limit) {
-    // 操作日志查询：系统管理员或安全审计员（2026-08-25 操作日志页）；
-    // 验链（/verify）仍仅安全审计员，保持三员分立
-    requireAuditorOrAdmin(userId, ticket);
+    // 缺陷 #24 修复（2026-08-29 批次三）：2026-08-25 曾放宽为 admin 可查（requireAuditorOrAdmin），
+    // 违背三员硬分立（smoke_rbac C2 抓到：admin 读审计日志应 403）。收紧回仅安全审计员——
+    // 管理者不能审计自己（等保口径）；前端操作日志页挂在「安全审计日志」（sys-log）菜单下，
+    // 该菜单本就仅审计员可见，普通用户的借阅日志全局加载为静默容错（403 被捕获），无 UI 断链。
+    requireAuditor(userId, ticket);
     List<Map<String, Object>> items = service.query(actorId, action, orderId, from, to, skip, limit);
     long total = service.count(actorId, action, from, to);
     return Map.of("items", items, "total", total, "skip", skip, "limit", limit);
@@ -65,17 +67,6 @@ public class OperationLogController {
     AuthUser me = perm.me(userId, ticket);
     if (!me.roles().contains(PermissionService.ROLE_AUDITOR)) {
       throw new BizException(HttpStatus.FORBIDDEN, "FORBIDDEN", "安全审计日志仅安全审计员可查（三员分立）");
-    }
-  }
-
-  /** 操作日志闸口：安全审计员或系统管理员（2026-08-25 操作日志页） */
-  private void requireAuditorOrAdmin(String userId, String ticket) {
-    if (userId == null || userId.isBlank() || ticket == null || ticket.isBlank())
-      throw new BizException(HttpStatus.UNAUTHORIZED, "SESSION_EXPIRED", "缺少会话凭据，请重新登录");
-    AuthUser me = perm.me(userId, ticket);
-    if (!me.roles().contains(PermissionService.ROLE_AUDITOR)
-        && !me.roles().contains(PermissionService.ROLE_ADMIN)) {
-      throw new BizException(HttpStatus.FORBIDDEN, "FORBIDDEN", "操作日志仅系统管理员/安全审计员可查");
     }
   }
 }

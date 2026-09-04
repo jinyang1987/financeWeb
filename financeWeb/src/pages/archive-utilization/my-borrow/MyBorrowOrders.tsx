@@ -196,16 +196,16 @@ const MyBorrowOrders: React.FC = () => {
                           {order.items.map((item) => (
                             <tr key={item.id} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
                               <td className="px-4 py-3 text-sm text-slate-800 max-w-[240px] truncate">{item.title}</td>
-                              <td className="px-4 py-3 text-[13px] text-slate-600">{item.archiveType}</td>
-                              <td className="px-4 py-3 text-[13px] text-slate-600">
+                              <td className="px-4 py-3.5 text-sm text-slate-600">{item.archiveType}</td>
+                              <td className="px-4 py-3.5 text-sm text-slate-600">
                                 {item.mediaType === 'electronic' ? '纯电子' : item.mediaType === 'paper' ? '纯实体' : '混合'}
                               </td>
-                              <td className="px-4 py-3 text-[13px]">
+                              <td className="px-4 py-3.5 text-sm">
                                 <span className={item.securityLevel === '普通' ? 'text-slate-400' : 'text-amber-600 font-medium'}>
                                   {item.securityLevel}
                                 </span>
                               </td>
-                              <td className="px-4 py-3 text-[13px] text-slate-600">
+                              <td className="px-4 py-3.5 text-sm text-slate-600">
                                 {item.electronicPerms.map((p) => PERM_LABELS[p]).join('/') || '—'}
                                 {item.physicalMode !== 'none' && ` + ${PHYSICAL_MODE_LABELS[item.physicalMode]}`}
                               </td>

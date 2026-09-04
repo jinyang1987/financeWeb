@@ -145,6 +145,13 @@
         <property name="finance:boxTotalItems"><title>盒内件数</title><type>d:int</type><default>0</default></property>
         <property name="finance:volumeCodeRange"><title>卷级档号起止范围</title><type>d:text</type></property>
         <property name="finance:boxRemark"><title>盒备注</title><type>d:text</type></property>
+        <!-- v2.9 盒级人工字段（2026-08-29 T9，B20-B23/B26-B29 零落点补齐） -->
+        <property name="finance:boxPacker"><title>装盒人</title><type>d:text</type></property>
+        <property name="finance:boxPackDate"><title>装盒日期</title><type>d:date</type></property>
+        <property name="finance:boxArranger"><title>整理人</title><type>d:text</type></property>
+        <property name="finance:boxAuditor"><title>审核人</title><type>d:text</type></property>
+        <property name="finance:boxAuditDate"><title>审核日期</title><type>d:date</type></property>
+        <property name="finance:dualSetRef"><title>双套制关联（另一载体套号）</title><type>d:text</type></property>
       </properties>
     </type>
 
@@ -197,6 +204,11 @@
         <property name="finance:createdBy"><title>组卷人</title><type>d:text</type></property>
         <property name="finance:digitalHash"><title>数字化副本整体哈希</title><type>d:text</type></property>
         <property name="finance:scanned"><title>是否完成数字化扫描</title><type>d:boolean</type><default>false</default></property>
+        <!-- v2.9 卷级缺项（2026-08-29 T9，DA/T 94 卷级元数据零落点补齐） -->
+        <property name="finance:establishingUnit"><title>立档单位（V12）</title><type>d:text</type></property>
+        <property name="finance:checker"><title>检查人（V15）</title><type>d:text</type></property>
+        <property name="finance:checkDate"><title>检查日期（V16）</title><type>d:date</type></property>
+        <property name="finance:volumeRemark"><title>备注（V20）</title><type>d:text</type></property>
       </properties>
       <associations>
         <child-association name="finance:volumeItems">

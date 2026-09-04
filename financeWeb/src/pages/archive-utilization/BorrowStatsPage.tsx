@@ -285,14 +285,14 @@ const BorrowStatsPage: React.FC = () => {
                   <tr key={log.id} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
                     <td className="px-4 py-3 font-mono text-[13px] text-slate-600 whitespace-nowrap">{log.timestamp}</td>
                     <td className="px-4 py-3 text-sm font-medium text-slate-800 whitespace-nowrap">{log.actorName}</td>
-                    <td className="px-4 py-3 text-[13px] text-slate-600 whitespace-nowrap">{log.actorRoleLabel}</td>
+                    <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap">{log.actorRoleLabel}</td>
                     <td className="px-4 py-3">
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap ${LOG_ACTION_COLORS[log.action] || 'bg-slate-100 text-slate-600'}`}>
                         {log.action}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-[13px] text-slate-600 max-w-[220px] truncate" title={log.target}>{log.target}</td>
-                    <td className="px-4 py-3 text-[13px] text-slate-600 max-w-[240px] truncate" title={log.detail}>{log.detail || '—'}</td>
+                    <td className="px-4 py-3.5 text-sm text-slate-600 max-w-[220px] truncate" title={log.target}>{log.target}</td>
+                    <td className="px-4 py-3.5 text-sm text-slate-600 max-w-[240px] truncate" title={log.detail}>{log.detail || '—'}</td>
                   </tr>
                 ))}
               </tbody>

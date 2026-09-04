@@ -60,22 +60,23 @@ export const FieldGrid: React.FC<FieldGridProps> = ({ fields, columns = 2, class
 
   return (
     <div className={`border border-slate-200 rounded-lg overflow-hidden ${className || ''}`}>
-      <table className="w-full text-xs border-collapse">
+      {/* T17 界面风格优化（2026-08-29）：标签列 120px/600、值 14px，长文本换行不截断 */}
+      <table className="w-full text-sm border-collapse">
         <tbody>
           {rows.map((row, ri) => (
             <tr key={ri} className={ri > 0 ? 'border-t border-slate-100' : ''}>
               {row.map((f, fi) => (
                 <React.Fragment key={fi}>
                   <th
-                    className="bg-slate-50 text-slate-500 font-medium text-left px-3 py-1.5 align-top whitespace-nowrap border-r border-slate-100"
-                    style={{ width: columns === 1 ? '120px' : '88px' }}
+                    className="bg-slate-50 text-slate-600 font-semibold text-left px-3 py-2 align-top whitespace-nowrap border-r border-slate-100"
+                    style={{ width: columns === 1 ? '120px' : '110px' }}
                     scope="row"
                   >
                     {f.label}
                   </th>
                   <td
                     colSpan={(f.span! - 1) * 2 + 1}
-                    className={`px-3 py-1.5 align-top text-slate-700 break-all ${f.mono ? 'font-mono' : ''} ${f.valueClassName || ''}`}
+                    className={`px-3 py-2 align-top text-slate-700 break-words ${f.mono ? 'font-mono' : ''} ${f.valueClassName || ''}`}
                   >
                     {empty(f.value)}
                   </td>
@@ -146,7 +147,8 @@ export const DetailRows: React.FC<DetailRowsProps> = ({
 
   return (
     <div className={`border border-slate-200 rounded-lg overflow-hidden ${className || ''}`}>
-      <table className="w-full text-xs">
+      {/* T17：表头 14px/600 灰底、行分隔横线（2026-08-29） */}
+      <table className="w-full text-sm">
         <thead>
           <tr className="bg-slate-50 border-b border-slate-200">
             {heads.map((h, i) => (
@@ -162,7 +164,7 @@ export const DetailRows: React.FC<DetailRowsProps> = ({
               {row.map((cell, ci) => (
                 <td
                   key={ci}
-                  className={`px-3 py-1.5 text-slate-700 ${alignCls(alignOf(ci))} ${monoCols?.includes(ci) ? 'font-mono' : ''}`}
+                  className={`px-3 py-2 text-slate-700 ${alignCls(alignOf(ci))} ${monoCols?.includes(ci) ? 'font-mono' : ''}`}
                 >
                   {cell === null || cell === undefined || cell === ''
                     ? <span className="text-slate-300">—</span>

@@ -621,8 +621,8 @@ const WatermarkConfigPage: React.FC = () => {
                         ].map(([v, ex, src]) => (
                           <tr key={v} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
                             <td className="px-4 py-3 font-mono text-[13px] text-sky-700">{v}</td>
-                            <td className="px-4 py-3 text-[13px] text-slate-600">{ex}</td>
-                            <td className="px-4 py-3 text-[13px] text-slate-600">{src}</td>
+                            <td className="px-4 py-3.5 text-sm text-slate-600">{ex}</td>
+                            <td className="px-4 py-3.5 text-sm text-slate-600">{src}</td>
                           </tr>
                         ))}
                       </tbody>

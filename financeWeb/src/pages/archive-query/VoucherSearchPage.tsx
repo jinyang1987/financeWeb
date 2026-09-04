@@ -146,13 +146,13 @@ const VoucherSearchPage: React.FC = () => {
         <table className="w-full text-sm">
           <thead className="sticky top-0 z-10 bg-slate-100 text-left">
             <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-              <th className="px-4 py-3 text-[13px] font-semibold">凭证号</th>
-              <th className="px-4 py-3 text-[13px] font-semibold">日期</th>
-              <th className="px-4 py-3 text-[13px] font-semibold">会计科目</th>
-              <th className="px-4 py-3 text-[13px] font-semibold">摘要</th>
-              <th className="px-4 py-3 text-[13px] font-semibold text-right">金额</th>
-              <th className="px-4 py-3 text-[13px] font-semibold">制单人</th>
-              <th className="px-4 py-3 text-[13px] font-semibold">档案状态</th>
+              <th className="px-4 py-3 text-sm font-semibold">凭证号</th>
+              <th className="px-4 py-3 text-sm font-semibold">日期</th>
+              <th className="px-4 py-3 text-sm font-semibold">会计科目</th>
+              <th className="px-4 py-3 text-sm font-semibold">摘要</th>
+              <th className="px-4 py-3 text-sm font-semibold text-right">金额</th>
+              <th className="px-4 py-3 text-sm font-semibold">制单人</th>
+              <th className="px-4 py-3 text-sm font-semibold">档案状态</th>
             </tr>
           </thead>
           <tbody>
@@ -160,14 +160,14 @@ const VoucherSearchPage: React.FC = () => {
               <tr key={row.id} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
                 <td className="px-4 py-3 font-mono text-[13px] font-bold text-slate-800">{row.voucherNo}</td>
                 <td className="px-4 py-3 font-mono text-[13px] text-slate-600 whitespace-nowrap">{row.year}-{row.month}</td>
-                <td className="px-4 py-3 text-[13px] text-slate-600 whitespace-nowrap">
+                <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap">
                   <Tag className="w-3 h-3 inline mr-1 text-slate-400" />{row.accountSubject || '—'}
                 </td>
                 <td className="px-4 py-3 text-sm text-slate-800 max-w-[220px] truncate" title={row.remarks}>{row.remarks}</td>
                 <td className="px-4 py-3 font-mono text-[13px] font-medium text-slate-800 text-right whitespace-nowrap">
                   ¥{row.amount.toLocaleString('zh-CN', { minimumFractionDigits: 2 })}
                 </td>
-                <td className="px-4 py-3 text-[13px] text-slate-600">{row.preparer || '—'}</td>
+                <td className="px-4 py-3.5 text-sm text-slate-600">{row.preparer || '—'}</td>
                 <td className="px-4 py-3"><ArchiveStatusTags record={row} /></td>
               </tr>
             ))}

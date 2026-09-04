@@ -156,9 +156,9 @@ const ReportConfigPage: React.FC = () => {
               <tr key={row.id} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
                 <td className="px-4 py-3 font-mono text-[13px] text-slate-800">{row.id}</td>
                 <td className="px-4 py-3 text-sm text-slate-800">{row.name}</td>
-                <td className="px-4 py-3 text-[13px] text-slate-600">{row.type}</td>
-                <td className="px-4 py-3 text-[13px] text-slate-600">{row.scope}</td>
-                <td className="px-4 py-3 text-[13px] text-slate-600">{row.format}</td>
+                <td className="px-4 py-3.5 text-sm text-slate-600">{row.type}</td>
+                <td className="px-4 py-3.5 text-sm text-slate-600">{row.scope}</td>
+                <td className="px-4 py-3.5 text-sm text-slate-600">{row.format}</td>
                 <td className="px-4 py-3 font-mono text-[13px] text-slate-600">{row.createTime}</td>
                 <td className="px-4 py-3">
                   <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyles[row.status]}`}>

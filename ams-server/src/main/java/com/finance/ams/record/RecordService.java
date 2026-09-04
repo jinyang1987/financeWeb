@@ -967,6 +967,7 @@ public class RecordService {
     view.put("srcDocAmountUpper", prop(entry, "finance:srcDocAmountUpper"));
     view.put("srcDocBusinessCategory", prop(entry, "finance:srcDocBusinessCategory"));
     view.put("srcDocExtFields", prop(entry, "finance:srcDocExtFields"));
+    view.put("srcDocSummary", prop(entry, "finance:srcDocSummary"));
     // 往来单位/单据号/摘要：OCR 回写值优先，缺省时回落到原始凭证 srcDoc* 值
     String cp = prop(entry, "finance:counterpartyName");
     view.put("counterpartyName", cp.isEmpty() ? srcDocCounterparty : cp);
@@ -1071,6 +1072,121 @@ public class RecordService {
       new com.fasterxml.jackson.databind.ObjectMapper();
 
   /** Alfresco 异常 → 业务异常（401/403 翻译为会话/权限错误，其余透传状态） */
+  // ═══════════════════ 纯元数据建档 / 补充文件（2026-08-29 T10） ═══════════════════
+
+  /**
+   * 纯元数据建档（T10）：不传文件直接建 finance:record 节点（元数据先行，文件后补）。
+   * 适用：纸质件先登记台账、电子文件到档后再经 POST /records/{id}/content 补齐。
+   * 节点名取凭证字号（同名自动加后缀）；无内容时四性检测 file-present/hash-verify
+   * 将如实判不通过——补齐文件前不可确认组卷，属预期合规约束而非缺陷。
+   */
+  public Map<String, Object> createMetadataOnly(String userId, String ticket, CreateCmd cmd) {
+    // 与上传建件同口径校验（文件相关项跳过）
+    if (!notBlank(cmd.fondsCode())) throw BizException.badRequest("VALIDATION_FAILED", "fondsCode 不能为空");
+    if (!notBlank(cmd.voucherNo())) throw BizException.badRequest("VALIDATION_FAILED", "凭证字号不能为空");
+    if (!notBlank(cmd.archiveType())) throw BizException.badRequest("VALIDATION_FAILED", "档案类型不能为空");
+    if (cmd.year() == null || cmd.year() < 1900 || cmd.year() > 2100)
+      throw BizException.badRequest("VALIDATION_FAILED", "会计年度不合法");
+    if (cmd.month() != null && (cmd.month() < 1 || cmd.month() > 12))
+      throw BizException.badRequest("VALIDATION_FAILED", "会计月份须在 1-12 之间");
+    if (notBlank(cmd.retention()) && !List.of("永久", "30年", "10年").contains(cmd.retention()))
+      throw BizException.badRequest("VALIDATION_FAILED", "保管期限仅支持：永久/30年/10年");
+    if (notBlank(cmd.source()) && !List.of("digital-native", "digitized").contains(cmd.source()))
+      throw BizException.badRequest("VALIDATION_FAILED", "来源标记仅支持：digital-native/digitized");
+    if (notBlank(cmd.carrierType()) && !List.of("electronic", "paper").contains(cmd.carrierType()))
+      throw BizException.badRequest("VALIDATION_FAILED", "载体类型仅支持：electronic/paper");
+
+    String fondsId = resolveFonds(ticket, cmd.fondsCode());
+    String poolId = ensurePool(ticket, fondsId);
+
+    Map<String, Object> props = new LinkedHashMap<>();
+    props.put("finance:archiveCode", cmd.fondsCode().toUpperCase() + PENDING_CODE_SUFFIX
+        + UUID.randomUUID().toString().substring(0, 8));
+    props.put("finance:voucherNo", cmd.voucherNo());
+    props.put("finance:archiveType", cmd.archiveType());
+    if (notBlank(cmd.department())) props.put("finance:department", cmd.department());
+    if (cmd.amount() != null) props.put("finance:amount", cmd.amount());
+    props.put("finance:year", cmd.year());
+    if (cmd.month() != null) props.put("finance:month", cmd.month());
+    if (notBlank(cmd.retention())) props.put("finance:retention", cmd.retention());
+    props.put("finance:recordStatus", "仅件数据");
+    props.put("finance:source", notBlank(cmd.source()) ? cmd.source() : "digital-native");
+    props.put("finance:carrierType", notBlank(cmd.carrierType()) ? cmd.carrierType() : "paper");
+    if (notBlank(cmd.preparer())) props.put("finance:preparer", cmd.preparer());
+    if (notBlank(cmd.voucherCategory())) props.put("finance:voucherCategory", cmd.voucherCategory());
+    if (notBlank(cmd.remarks())) props.put("finance:recordRemark", cmd.remarks());
+    props.put("finance:numbered", false);
+    // 原始凭证富元数据（与上传建件同构）
+    SourceDocMeta sd = cmd.sourceDocMeta();
+    if (sd != null) {
+      if (notBlank(sd.docTypeCode())) props.put("finance:srcDocTypeCode", sd.docTypeCode());
+      if (notBlank(sd.docTypeName())) props.put("finance:srcDocTypeName", sd.docTypeName());
+      if (notBlank(sd.docNo())) props.put("finance:srcDocNo", sd.docNo());
+      if (notBlank(sd.counterpartyName())) props.put("finance:srcDocCounterpartyName", sd.counterpartyName());
+      if (notBlank(sd.counterpartyTaxId())) props.put("finance:srcDocCounterpartyTaxId", sd.counterpartyTaxId());
+      if (notBlank(sd.summary())) props.put("finance:srcDocSummary", sd.summary());
+      if (notBlank(sd.amountUpper())) props.put("finance:srcDocAmountUpper", sd.amountUpper());
+      if (notBlank(sd.businessCategory())) props.put("finance:srcDocBusinessCategory", sd.businessCategory());
+      if (notBlank(sd.extFieldsJson())) props.put("finance:srcDocExtFields", sd.extFieldsJson());
+    }
+    VoucherMeta vm = cmd.voucherMeta();
+    if (vm != null) {
+      if (notBlank(vm.voucherWord())) props.put("finance:voucherWord", vm.voucherWord());
+      if (notBlank(vm.voucherDate())) props.put("finance:voucherDate", vm.voucherDate());
+      if (notBlank(vm.period())) props.put("finance:period", vm.period());
+      if (notBlank(vm.auditor())) props.put("finance:auditor", vm.auditor());
+      if (notBlank(vm.tallyMan())) props.put("finance:tallyMan", vm.tallyMan());
+      if (notBlank(vm.description())) props.put("cm:description", vm.description());
+    }
+
+    String nodeName = sanitizeName(cmd.voucherNo());
+    Map<String, Object> entry = createWithRenameRetry(ticket, poolId, nodeName, "finance:record", props);
+    String nodeId = (String) entry.get("id");
+    log.info("纯元数据建档: {} → {}（无内容，待补文件；操作人 {}）", cmd.voucherNo(), nodeId, userId);
+    events.publishEvent(RecordsChangedEvent.refreshOne(nodeId)); // V10 读模型同步
+    return toView(entry, null, 0);
+  }
+
+  /**
+   * 补充文件（T10 配套）：为无内容的纯元数据件写入电子文件内容。
+   * 守卫：仅「仅件数据」状态且当前确无内容的件可补；写入成功即固化登记
+   * （与上传建件同链路），此后内容不可替换（归档链路不可变原则）。
+   * 有无内容判定走固化登记表（ams_record_fixity）——Alfresco 对无内容节点
+   * 也会返回默认 content.mimeType（application/octet-stream），不能作为判据。
+   */
+  public Map<String, Object> attachContent(String userId, String ticket, String nodeId,
+                                           String filename, String mimetype, byte[] bytes) {
+    Map<String, Object> entry = requireRecordEntry(ticket, nodeId);
+    String status = prop(entry, "finance:recordStatus");
+    if (!"仅件数据".equals(status)) {
+      throw BizException.badRequest("NOT_EDITABLE",
+          "该件状态「" + status + "」不可补充文件（已组卷/已归档件内容不可变）");
+    }
+    if (fixity.registered(nodeId)) {
+      throw new BizException(HttpStatus.CONFLICT, "CONTENT_EXISTS",
+          "该件已有电子文件，内容不可替换（如需更换请先拆件/删除重建）");
+    }
+    if (!notBlank(filename) || bytes == null || bytes.length == 0) {
+      throw BizException.badRequest("VALIDATION_FAILED", "文件名与内容不能为空");
+    }
+    try {
+      nodes.putContent(ticket, nodeId, bytes, mimetype == null ? "application/octet-stream" : mimetype);
+      nodes.updateNode(ticket, nodeId, Map.of("cm:name", sanitizeName(filename)));
+    } catch (HttpClientErrorException e) {
+      throw translate("补充文件失败", e);
+    }
+    // 固化登记（与上传建件同口径；失败不阻断，由 backfill/巡检收口）
+    try {
+      fixity.register(nodeId, bytes, mimetype, userId);
+    } catch (Exception e) {
+      log.error("补充文件固化登记失败（文件已入库，待补登记）: {}", nodeId, e);
+    }
+    log.info("补充文件: {} → {}（{} 字节，操作人 {}）", nodeId, filename, bytes.length, userId);
+    events.publishEvent(RecordsChangedEvent.refreshOne(nodeId)); // V10 读模型同步
+    return toView(nodes.getNode(ticket, nodeId), mimetype, bytes.length);
+  }
+
+  /** Alfresco 异常 → 业务异常（401/403 翻译为会话/权限错误，其余透传状态） */
   // ═══════════════════ 组件挂接（先组件再组卷，2026-08-20） ═══════════════════
 
   /**
@@ -1119,9 +1235,12 @@ public class RecordService {
   }
 
   /**
-   * 件级元数据录入/修改（2026-08-25 组卷工作台「元数据录入」）。
+   * 件级元数据录入/修改（2026-08-25 组卷工作台「元数据录入」；2026-08-29 T8 白名单扩 srcDoc*）。
    * 仅白名单字段可改；仅收集池件与草稿卷内件（仅件数据/待审核）可编辑——
    * 已确认/已移交件须先退回工作台再改，避免改写已固化的正式档案元数据。
+   *
+   * T10 审计留痕：返回 {view, changes:[{prop,field,old,new}]}，Controller 落操作日志
+   * （旧值/新值，DA/T 94-2022 附录 E.7 元数据修改留痕要求）。
    */
   public Map<String, Object> updateMetadata(String ticket, String nodeId, Map<String, Object> fields) {
     Map<String, Object> entry = requireRecordEntry(ticket, nodeId);
@@ -1150,6 +1269,18 @@ public class RecordService {
     putStr(fields, "archiveType", "finance:archiveType", props);
     putStr(fields, "remarks", "finance:recordRemark", props);
     putStr(fields, "summary", "cm:description", props);
+    // T8 原始凭证富元数据（srcDoc* 白名单；原始凭证录入界面配套）。
+    // 摘要双落点：srcDoc 件的「摘要/事由」以 srcDocSummary 为准，cm:description 仍可经 summary 覆写。
+    putStr(fields, "docTypeCode", "finance:srcDocTypeCode", props);
+    putStr(fields, "docTypeName", "finance:srcDocTypeName", props);
+    putStr(fields, "documentNo", "finance:srcDocNo", props);
+    putStr(fields, "counterpartyName", "finance:srcDocCounterpartyName", props);
+    putStr(fields, "counterpartyTaxId", "finance:srcDocCounterpartyTaxId", props);
+    putStr(fields, "srcDocSummary", "finance:srcDocSummary", props);
+    putStr(fields, "amountUpper", "finance:srcDocAmountUpper", props);
+    putStr(fields, "businessCategory", "finance:srcDocBusinessCategory", props);
+    // 类型扩展字段（JSON 串，原样落 finance:srcDocExtFields；形状由前端类型字段集保证）
+    putStr(fields, "extFields", "finance:srcDocExtFields", props);
     // 数值字段（容忍数字字符串）
     Integer year = asInt(fields.get("year"));
     if (year != null) props.put("finance:year", year);
@@ -1160,9 +1291,22 @@ public class RecordService {
     }
     Double amount = asDouble(fields.get("amount"));
     if (amount != null) props.put("finance:amount", amount);
+    Integer attachedBillCount = asInt(fields.get("attachedBillCount"));
+    if (attachedBillCount != null && attachedBillCount >= 0) props.put("finance:attachedBillCount", attachedBillCount);
 
     if (props.isEmpty()) {
       throw BizException.badRequest("VALIDATION_FAILED", "无可修改的有效字段（仅支持件级白名单元数据）");
+    }
+    // 旧值快照（T10 审计留痕：仅记录本次实际触碰的属性）
+    Object oldProps = entry.get("properties");
+    List<Map<String, Object>> changes = new ArrayList<>();
+    for (Map.Entry<String, Object> en : props.entrySet()) {
+      String oldVal = oldProps instanceof Map<?, ?> p && p.get(en.getKey()) != null
+          ? String.valueOf(p.get(en.getKey())) : "";
+      String newVal = en.getValue() == null ? "" : String.valueOf(en.getValue());
+      if (!oldVal.equals(newVal)) {
+        changes.add(Map.of("prop", en.getKey(), "old", oldVal, "new", newVal));
+      }
     }
     try {
       nodes.updateNode(ticket, nodeId, props);
@@ -1170,8 +1314,11 @@ public class RecordService {
       throw translate("元数据修改失败", e);
     }
     events.publishEvent(RecordsChangedEvent.refreshOne(nodeId)); // V10 读模型同步
-    log.info("件元数据录入: {} 修改 {} 项字段", nodeId, props.size());
-    return toView(nodes.getNode(ticket, nodeId), null, -1);
+    log.info("件元数据录入: {} 修改 {} 项字段（实际变更 {} 项）", nodeId, props.size(), changes.size());
+    Map<String, Object> out = new LinkedHashMap<>();
+    out.put("view", toView(nodes.getNode(ticket, nodeId), null, -1));
+    out.put("changes", changes);
+    return out;
   }
 
   private static void putStr(Map<String, Object> fields, String key, String propName, Map<String, Object> out) {

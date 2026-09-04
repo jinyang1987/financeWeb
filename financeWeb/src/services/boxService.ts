@@ -33,6 +33,13 @@ export interface BoxDto {
   totalItems: number | null;
   volumeCodeRange: string;
   remarks: string;
+  // ── v2.9 盒级人工字段（2026-08-29 T9，B20-B23/B26-B29） ──
+  packer?: string;             // 装盒人
+  packDate?: string;           // 装盒日期
+  arranger?: string;           // 整理人
+  auditor?: string;            // 审核人
+  auditDate?: string;          // 审核日期
+  dualSetRef?: string;         // 双套制关联（另一载体套号）
   createdAt: string;
   modifiedAt: string;
 }
@@ -67,6 +74,24 @@ export async function fetchBoxVolumes(boxId: string): Promise<BoxVolumeDto[]> {
 }
 
 // ─── 盒写操作（2026-08-16 贯通修复，真服务端持久化） ───
+
+/** 盒元数据可编辑字段（T9 人工字段白名单；盒号/类别/年度/期限由移交流程维护，不在编辑范围） */
+export interface BoxMetadataPatch {
+  boxName?: string;
+  securityLevel?: string;
+  remarks?: string;
+  packer?: string;
+  packDate?: string;
+  arranger?: string;
+  auditor?: string;
+  auditDate?: string;
+  dualSetRef?: string;
+}
+
+/** 盒级元数据录入/修改（2026-08-29 T9 补写端点；服务端落审计留痕） */
+export async function updateBoxMetadata(boxId: string, patch: BoxMetadataPatch): Promise<ArchiveBox> {
+  return dtoToBox(await http.put<BoxDto>(`/boxes/${boxId}`, patch));
+}
 
 /** 封盒（active → sealed） */
 export async function sealBoxApi(boxId: string): Promise<ArchiveBox> {
@@ -128,5 +153,12 @@ export function dtoToBox(dto: BoxDto): ArchiveBox {
     createdDate: dto.createdAt ? dto.createdAt.slice(0, 10) : '',
     createdBy: '',
     remarks: dto.remarks || undefined,
+    // v2.9 盒级人工字段（T9）
+    packer: dto.packer || undefined,
+    packDate: dto.packDate || undefined,
+    arranger: dto.arranger || undefined,
+    auditor: dto.auditor || undefined,
+    auditDate: dto.auditDate || undefined,
+    dualSetRef: dto.dualSetRef || undefined,
   };
 }

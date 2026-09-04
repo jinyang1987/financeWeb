@@ -21,7 +21,7 @@ import {
   Loader2, CheckCircle2, Trash2, Upload, Shield, Send, Clock,
   RefreshCw, Trash, Link2, Eye, AlertTriangle, Paperclip,
   ArrowUp, ArrowDown, FolderOutput, Split, Merge, Ungroup, ListChecks,
-  MapPin, Warehouse,
+  MapPin, Warehouse, ClipboardList, FilePlus2, Pencil,
 } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
 import { useArchiveStore } from '../../stores/archiveStore';
@@ -56,6 +56,7 @@ import type { ArchiveRecord } from '../../types';
 import VoucherUploadModal from './VoucherUploadModal';
 import VolumePrintModal from './VolumePrintModal';
 import MetadataEntryModal from './MetadataEntryModal';
+import MetadataCreateModal from './MetadataCreateModal';
 import QuickComponentModal from '../../components/QuickComponentModal';
 import { deleteRecord } from '../../services/recordService';
 import {
@@ -227,6 +228,10 @@ interface UnassignedPoolProps {
   unlinkableCount: number;
   onLinkSelection: () => void;
   onUnlinkSelection: () => void;
+  /** 元数据编辑（T8 收集池散件编辑入口）：传件 id 集（空集=用当前勾选），打开池编辑弹窗 */
+  onEditMetadata: (ids: string[]) => void;
+  /** 纯元数据建档（T10）：无文件直接登记台账 */
+  onCreateMetadataOnly: () => void;
   /** 凭证单元展开行 id（页面持有；凭证号列内的展开钮控制，2026-08-20） */
   expandedId: string | null;
 }
@@ -236,7 +241,8 @@ const UnassignedPool: React.FC<UnassignedPoolProps> = ({
   searchQuery, onSearchChange, searchPlaceholder, onAddToVolume, onBatchDelete, volumes,
   onCreateAndAdd,
   attachmentCountMap, onViewDetail, tableColumns,
-  linkableCount, unlinkableCount, onLinkSelection, onUnlinkSelection, expandedId,
+  linkableCount, unlinkableCount, onLinkSelection, onUnlinkSelection,
+  onEditMetadata, onCreateMetadataOnly, expandedId,
 }) => {
   const allIds = records.map((r) => r.id);
   // ★ 单元化选择下 selectedIds 可能含页外附件 id，用 every 判定（2026-08-20）
@@ -370,6 +376,27 @@ const UnassignedPool: React.FC<UnassignedPoolProps> = ({
               </button>
             )}
             <span className="w-px h-4 bg-slate-200 mx-0.5" aria-hidden="true" />
+            {/* 元数据编辑（2026-08-29 T8：收集池散件编辑入口；不勾选时编辑当前页全部可改件） */}
+            <button
+              type="button"
+              onClick={() => onEditMetadata(Array.from(selectedIds))}
+              title={selectedIds.size === 0 ? '编辑本页全部散件元数据（也可先勾选）' : '编辑勾选件的元数据'}
+              className="flex h-8 items-center gap-1.5 px-3 text-[13px] font-medium rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              <ClipboardList className="w-3.5 h-3.5" />
+              元数据
+            </button>
+            {/* 纯元数据建档（2026-08-29 T10）：无文件先登记台账，文件后补 */}
+            <button
+              type="button"
+              onClick={onCreateMetadataOnly}
+              title="无文件建档：先登记元数据台账，电子文件到档后再补充"
+              className="flex h-8 items-center gap-1.5 px-3 text-[13px] font-medium rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              <FilePlus2 className="w-3.5 h-3.5" />
+              建档
+            </button>
+            <span className="w-px h-4 bg-slate-200 mx-0.5" aria-hidden="true" />
             <button
               type="button"
               onClick={() => onBatchDelete(Array.from(selectedIds))}
@@ -420,7 +447,7 @@ const UnassignedPool: React.FC<UnassignedPoolProps> = ({
             );
           }}
           renderActions={(r) => (
-            // 行内仅保留「详情」；删除走顶部工具栏批量删除（避免每行都带危险操作，2026-08-22）
+            // 行内「详情」+「编辑元数据」（T8 散件编辑入口）；删除走顶部工具栏批量删除（2026-08-22）
             <span className="flex items-center gap-0.5">
               <button
                 type="button"
@@ -430,9 +457,17 @@ const UnassignedPool: React.FC<UnassignedPoolProps> = ({
               >
                 <Eye className="w-3.5 h-3.5" />
               </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onEditMetadata([r.id]); }}
+                className="p-1 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors"
+                title="编辑元数据"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
             </span>
           )}
-          actionsWidth={40}
+          actionsWidth={64}
           emptyLabel="暂无未组卷条目"
           selectedClassName="bg-sky-100 hover:bg-sky-200/70"
         />
@@ -2653,6 +2688,27 @@ const VolumeWorkspacePage: React.FC = () => {
   // ── 元数据录入（2026-08-25）：卷/件元数据录入弹窗；保存后刷新卷内件与件域镜像 ──
   const [metadataVolumeId, setMetadataVolumeId] = useState<string | null>(null);
 
+  // ── 收集池散件元数据编辑（2026-08-29 T8）+ 纯元数据建档（T10） ──
+  const [metadataPoolIds, setMetadataPoolIds] = useState<string[] | null>(null);
+  const [showMetaCreate, setShowMetaCreate] = useState(false);
+
+  /** 池编辑入口：ids 为空 = 编辑当前页全部散件；打开前校验件状态（仅件数据可改） */
+  const openPoolMetadata = useCallback((ids: string[]) => {
+    const pool = unassignedRecords;
+    const target = ids.length > 0
+      ? ids.map((id) => pool.find((r) => r.id === id)).filter(Boolean as unknown as (v: ArchiveRecord | undefined) => v is ArchiveRecord)
+      : pool;
+    const editable = target.filter((r) => r.status === '仅件数据' || r.status === '待审核');
+    if (editable.length === 0) {
+      showToast(target.length === 0 ? '无可编辑件' : '勾选件均已入卷/已固化，无可编辑件（草稿卷内件请从案卷卡片进入元数据录入）', 'info');
+      return;
+    }
+    if (editable.length < target.length) {
+      showToast(`${target.length - editable.length} 件已入卷不可直接修改，仅打开可编辑的 ${editable.length} 件`, 'info');
+    }
+    setMetadataPoolIds(editable.map((r) => r.id));
+  }, [unassignedRecords, showToast]);
+
   const handleMetadataSaved = useCallback(async () => {
     const vid = metadataVolumeId;
     if (vid) {
@@ -2815,6 +2871,8 @@ const VolumeWorkspacePage: React.FC = () => {
             onCreateAndAdd={handleCreateAndAdd}
             attachmentCountMap={attachmentCountMap}
             onViewDetail={handleViewDetail}
+            onEditMetadata={openPoolMetadata}
+            onCreateMetadataOnly={() => setShowMetaCreate(true)}
             tableColumns={poolColumns}
             linkableCount={linkableSelection?.sourceIds.length ?? 0}
             unlinkableCount={unlinkableSelection?.length ?? 0}
@@ -3087,6 +3145,31 @@ const VolumeWorkspacePage: React.FC = () => {
         items={metadataVolumeId ? (volumeItems[metadataVolumeId] || []) : []}
         onClose={() => setMetadataVolumeId(null)}
         onSaved={() => void handleMetadataSaved()}
+      />
+
+      {/* ★ 收集池散件元数据编辑弹窗（2026-08-29 T8：池模式，无卷上下文） */}
+      <MetadataEntryModal
+        open={!!metadataPoolIds}
+        volume={null}
+        items={[]}
+        poolRecords={(metadataPoolIds || [])
+          .map((id) => unassignedRecords.find((r) => r.id === id))
+          .filter((r): r is ArchiveRecord => !!r)}
+        title="收集池散件元数据编辑"
+        onClose={() => setMetadataPoolIds(null)}
+        onSaved={() => void handleMetadataSaved()}
+      />
+
+      {/* ★ 纯元数据建档弹窗（2026-08-29 T10：无文件建档，文件后补） */}
+      <MetadataCreateModal
+        open={showMetaCreate}
+        fondsCode={filters.fondsCode}
+        onClose={() => setShowMetaCreate(false)}
+        onCreated={() => {
+          setShowMetaCreate(false);
+          void useArchiveStore.getState().loadRecords();
+          void useArchiveStore.getState().loadAllRecords();
+        }}
       />
 
       {/* ★ 纯原始凭证组卷确认（2026-08-19：组件＝1张记账凭证+N个原始凭证附件，

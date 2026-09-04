@@ -76,7 +76,7 @@ const ReportRow: React.FC<{
           {expanded ? <ChevronDown className="w-4 h-4 text-slate-400 inline" /> : <ChevronRight className="w-4 h-4 text-slate-400 inline" />}
         </td>
         <td className="px-4 py-3 font-mono text-[13px] text-slate-600 whitespace-nowrap">{fmtTime(report.created_at)}</td>
-        <td className="px-4 py-3 text-[13px] text-slate-800">
+        <td className="px-4 py-3.5 text-sm text-slate-800">
           <div className="font-medium truncate max-w-[260px] flex items-center gap-1.5" title={targetName}>
             {targetName}
             {isReviewRow && (
@@ -85,10 +85,10 @@ const ReportRow: React.FC<{
           </div>
           <div className="text-[10px] text-slate-400 font-mono truncate max-w-[260px]">{report.target_node}</div>
         </td>
-        <td className="px-4 py-3 text-[13px] text-slate-600 whitespace-nowrap">
+        <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap">
           {report.target_kind === 'volume' ? '案卷' : '件'}
         </td>
-        <td className="px-4 py-3 text-[13px] text-slate-600 whitespace-nowrap">{phaseLabel(report.phase)}</td>
+        <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap">{phaseLabel(report.phase)}</td>
         <td className="px-4 py-3">
           <div className="flex items-center gap-1 flex-wrap">
             <DimBadge label="真实" pass={!!report.real} />
@@ -102,7 +102,7 @@ const ReportRow: React.FC<{
             ? <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700">通过</span>
             : <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-600">未通过（{failed.length} 项）</span>}
         </td>
-        <td className="px-4 py-3 text-[13px] text-slate-500 whitespace-nowrap">{report.operator || '系统'}</td>
+        <td className="px-4 py-3.5 text-sm text-slate-500 whitespace-nowrap">{report.operator || '系统'}</td>
       </tr>
 
       {expanded && (
@@ -138,11 +138,11 @@ const ReportRow: React.FC<{
                   <table className="w-full">
                     <thead>
                       <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-600 divide-x divide-slate-200/80">
-                        <th className="px-4 py-2 text-left text-[12px] font-semibold w-24 whitespace-nowrap">四性</th>
-                        <th className="px-4 py-2 text-left text-[12px] font-semibold w-64">检测项</th>
-                        <th className="px-4 py-2 text-center text-[12px] font-semibold w-20 whitespace-nowrap">结果</th>
-                        <th className="px-4 py-2 text-left text-[12px] font-semibold">问题说明</th>
-                        <th className="px-4 py-2 text-right text-[12px] font-semibold w-28 whitespace-nowrap">定位</th>
+                        <th className="px-4 py-2 text-left text-[13px] font-semibold w-24 whitespace-nowrap">四性</th>
+                        <th className="px-4 py-2 text-left text-[13px] font-semibold w-64">检测项</th>
+                        <th className="px-4 py-2 text-center text-[13px] font-semibold w-20 whitespace-nowrap">结果</th>
+                        <th className="px-4 py-2 text-left text-[13px] font-semibold">问题说明</th>
+                        <th className="px-4 py-2 text-right text-[13px] font-semibold w-28 whitespace-nowrap">定位</th>
                       </tr>
                     </thead>
                     <tbody>

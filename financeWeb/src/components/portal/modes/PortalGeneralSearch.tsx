@@ -199,10 +199,10 @@ const PortalGeneralSearch: React.FC<PortalGeneralSearchProps> = ({ onOpenDetail 
                         </span>
                       </td>
                       <td className="px-4 py-3 text-center font-mono text-[13px] text-slate-600">{fmtPeriod(r)}</td>
-                      <td className="px-4 py-3 text-[13px] text-slate-600 truncate" title={r.accountSubject || ''}>
+                      <td className="px-4 py-3.5 text-sm text-slate-600 truncate" title={r.accountSubject || ''}>
                         {r.accountSubject || '—'}
                       </td>
-                      <td className="px-4 py-3 text-[13px] text-slate-600 truncate" title={r.department || ''}>
+                      <td className="px-4 py-3.5 text-sm text-slate-600 truncate" title={r.department || ''}>
                         {r.department || '—'}
                       </td>
                       <td className="px-4 py-3 text-right font-mono text-[13px] text-slate-800">

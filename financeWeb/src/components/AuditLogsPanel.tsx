@@ -225,7 +225,7 @@ export const AuditLogsPanel: React.FC<AuditLogsPanelProps> = ({ records, trigger
                       {log.action}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-[13px] text-slate-600 leading-relaxed" title={log.details}>
+                  <td className="px-4 py-3.5 text-sm text-slate-600 leading-relaxed" title={log.details}>
                     {log.details}
                   </td>
                   <td className="px-4 py-3 text-center">

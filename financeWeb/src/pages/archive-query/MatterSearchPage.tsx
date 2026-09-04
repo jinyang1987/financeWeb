@@ -139,13 +139,13 @@ const MatterSearchPage: React.FC = () => {
         <table className="w-full text-sm">
           <thead className="sticky top-0 z-10 bg-slate-100 text-left">
             <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-              <th className="px-4 py-3 text-[13px] font-semibold">单据编号</th>
-              <th className="px-4 py-3 text-[13px] font-semibold">类型</th>
-              <th className="px-4 py-3 text-[13px] font-semibold">业务日期</th>
-              <th className="px-4 py-3 text-[13px] font-semibold">往来单位</th>
-              <th className="px-4 py-3 text-[13px] font-semibold text-right">金额</th>
-              <th className="px-4 py-3 text-[13px] font-semibold">摘要</th>
-              <th className="px-4 py-3 text-[13px] font-semibold">所属凭证 / 状态</th>
+              <th className="px-4 py-3 text-sm font-semibold">单据编号</th>
+              <th className="px-4 py-3 text-sm font-semibold">类型</th>
+              <th className="px-4 py-3 text-sm font-semibold">业务日期</th>
+              <th className="px-4 py-3 text-sm font-semibold">往来单位</th>
+              <th className="px-4 py-3 text-sm font-semibold text-right">金额</th>
+              <th className="px-4 py-3 text-sm font-semibold">摘要</th>
+              <th className="px-4 py-3 text-sm font-semibold">所属凭证 / 状态</th>
             </tr>
           </thead>
           <tbody>
@@ -158,7 +158,7 @@ const MatterSearchPage: React.FC = () => {
                     <span className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px]">{doc.docTypeName}</span>
                   </td>
                   <td className="px-4 py-3 font-mono text-[13px] text-slate-600 whitespace-nowrap">{doc.transactionDate}</td>
-                  <td className="px-4 py-3 text-[13px] text-slate-600 max-w-[160px] truncate" title={doc.counterpartyName}>
+                  <td className="px-4 py-3.5 text-sm text-slate-600 max-w-[160px] truncate" title={doc.counterpartyName}>
                     <Building2 className="w-3 h-3 inline mr-1 text-slate-400" />{doc.counterpartyName}
                   </td>
                   <td className="px-4 py-3 font-mono text-[13px] font-medium text-slate-800 text-right whitespace-nowrap">

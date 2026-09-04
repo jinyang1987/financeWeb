@@ -270,7 +270,7 @@ const MonitorTab: React.FC<{ batches: OpenPushBatch[]; loading: boolean; refresh
                                       </td>
                                       <td className="px-4 py-3 font-mono text-[13px] text-slate-800">{it.voucher_no || '—'}</td>
                                       <td className="px-4 py-3 font-mono text-[13px] text-slate-600 truncate max-w-[140px]" title={it.external_id}>{it.external_id || '—'}</td>
-                                      <td className="px-4 py-3 text-[13px] text-slate-600 max-w-[220px] truncate" title={it.summary}>{it.summary || '—'}</td>
+                                      <td className="px-4 py-3.5 text-sm text-slate-600 max-w-[220px] truncate" title={it.summary}>{it.summary || '—'}</td>
                                       <td className="px-4 py-3 text-right font-mono text-[13px] text-slate-800">
                                         {it.amount != null ? it.amount.toLocaleString('zh-CN', { minimumFractionDigits: 2 }) : '—'}
                                       </td>
@@ -281,7 +281,7 @@ const MonitorTab: React.FC<{ batches: OpenPushBatch[]; loading: boolean; refresh
                                             ? <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-medium">已跳过</span>
                                             : <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-medium">失败</span>}
                                       </td>
-                                      <td className="px-4 py-3 text-[13px] text-slate-600 max-w-[176px]">
+                                      <td className="px-4 py-3.5 text-sm text-slate-600 max-w-[176px]">
                                         {it.archive_code && <div className="font-mono truncate" title={it.archive_code}>{it.archive_code}</div>}
                                         {it.error && <div className="text-red-500 truncate" title={it.error}>{it.error}</div>}
                                       </td>
@@ -469,7 +469,7 @@ const StandardTab: React.FC = () => (
               </td>
               <td className="px-4 py-3 font-mono text-[13px] text-slate-800 whitespace-nowrap">{e.path}</td>
               <td className="px-4 py-3 text-sm font-medium text-slate-800 whitespace-nowrap">{e.name}</td>
-              <td className="px-4 py-3 text-[13px] text-slate-600">{e.desc}</td>
+              <td className="px-4 py-3.5 text-sm text-slate-600">{e.desc}</td>
             </tr>
           ))}
         </tbody>
@@ -519,7 +519,7 @@ const StandardTab: React.FC = () => (
                 <td className="px-4 py-3 whitespace-nowrap">
                   <span className={f.required === '必选' ? 'text-red-500 font-medium' : 'text-slate-400'}>{f.required}</span>
                 </td>
-                <td className="px-4 py-3 text-[13px] text-slate-600">{f.desc}</td>
+                <td className="px-4 py-3.5 text-sm text-slate-600">{f.desc}</td>
               </tr>
             ))}
           </tbody>
@@ -597,13 +597,13 @@ const StandardTab: React.FC = () => (
           <tbody>
             {RETENTION_TABLE.map((r) => (
               <tr key={r.type} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
-                <td className="px-4 py-3 text-[13px] text-slate-600">{r.type}</td>
+                <td className="px-4 py-3.5 text-sm text-slate-600">{r.type}</td>
                 <td className="px-4 py-3">
                   <span className={`px-1.5 py-0.5 rounded font-medium ${
                     r.period === '永久' ? 'bg-red-50 text-red-600' : r.period === '30年' ? 'bg-sky-50 text-sky-700' : 'bg-slate-100 text-slate-600'
                   }`}>{r.period}</span>
                 </td>
-                <td className="px-4 py-3 text-[13px] text-slate-600">{r.basis}</td>
+                <td className="px-4 py-3.5 text-sm text-slate-600">{r.basis}</td>
               </tr>
             ))}
           </tbody>
@@ -689,8 +689,8 @@ const LogsTab: React.FC = () => {
                 <td className="px-4 py-3 font-mono text-[13px] text-slate-600 whitespace-nowrap">{fmtTime(l.createdAt)}</td>
                 <td className="px-4 py-3">{levelBadge(l.level)}</td>
                 <td className="px-4 py-3 font-mono text-[13px] text-slate-600 whitespace-nowrap">{l.batchNo || '—'}</td>
-                <td className="px-4 py-3 text-[13px] text-slate-600 whitespace-nowrap">{STEP_LABELS[l.step] || l.step}</td>
-                <td className="px-4 py-3 text-[13px] text-slate-600">
+                <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap">{STEP_LABELS[l.step] || l.step}</td>
+                <td className="px-4 py-3.5 text-sm text-slate-600">
                   {l.message}
                   {l.detail && <span className="text-slate-400 ml-2" title={l.detail}>{l.detail}</span>}
                 </td>

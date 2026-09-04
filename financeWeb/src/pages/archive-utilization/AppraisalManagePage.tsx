@@ -166,9 +166,9 @@ const AppraisalManagePage: React.FC = () => {
                       <td className="px-4 py-3 text-sm text-slate-800">{v.title}</td>
                       <td className="px-4 py-3 font-mono text-[13px] text-slate-600">{v.volumeCode || '—'}</td>
                       <td className="px-4 py-3 font-mono text-[13px] text-slate-600">{v.year}</td>
-                      <td className="px-4 py-3 text-[13px] text-slate-600">{v.retention}</td>
+                      <td className="px-4 py-3.5 text-sm text-slate-600">{v.retention}</td>
                       <td className="px-4 py-3 font-mono text-[13px] font-medium text-red-600">{v.dueDate}</td>
-                      <td className="px-4 py-3 text-[13px] text-slate-600">{v.boxNo || '—'}</td>
+                      <td className="px-4 py-3.5 text-sm text-slate-600">{v.boxNo || '—'}</td>
                       <td className="px-4 py-3">
                         {v.appraisalStatus
                           ? <span className={`px-1.5 py-0.5 rounded-full font-medium ${STATUS_META[v.appraisalStatus]?.cls || 'bg-slate-100 text-slate-500'}`}>{STATUS_META[v.appraisalStatus]?.label || v.appraisalStatus}</span>

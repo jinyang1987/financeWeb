@@ -101,6 +101,56 @@ public class BoxService {
 
   // ═══════════════════ 盒写操作（2026-08-16 贯通修复，原仅前端乐观更新） ═══════════════════
 
+  /**
+   * 盒级元数据录入/修改（2026-08-29 T9：补盒域人工字段写路径，Q1 矩阵「盒域无任何写端点」）。
+   * 白名单：盒名称/密级/备注（既有属性）+ 装盒人/装盒日期/整理人/审核人/审核日期/双套制关联
+   * （B20-B23/B26-B29 人工字段；模型 v2.9 新增属性）。
+   * 结构性字段（盒号/类别/年度/期限/状态/计数）不在白名单——由移交/封盒/上架流程维护。
+   * 各状态均可改（装盒/审核信息本就发生在装盒与上架之后），但全部经 Controller 落审计日志。
+   * 返回 {view, changes:[{prop,old,new}]} 供 Controller 落操作日志。
+   */
+  public Map<String, Object> updateMetadata(String ticket, String boxId, Map<String, String> f) {
+    Map<String, Object> box = requireBox(ticket, boxId);
+    Map<String, Object> props = new LinkedHashMap<>();
+    if (f.get("boxName") != null) props.put("finance:boxName", f.get("boxName"));
+    if (f.get("securityLevel") != null) props.put("finance:boxSecurityLevel", f.get("securityLevel"));
+    if (f.get("remarks") != null) props.put("finance:boxRemark", f.get("remarks"));
+    if (f.get("packer") != null) props.put("finance:boxPacker", f.get("packer"));
+    if (f.get("packDate") != null) {
+      if (notBlank(f.get("packDate")) && !f.get("packDate").matches("^\\d{4}-\\d{2}-\\d{2}$"))
+        throw BizException.badRequest("VALIDATION_FAILED", "装盒日期格式不合法（应为 yyyy-MM-dd）");
+      props.put("finance:boxPackDate", f.get("packDate"));
+    }
+    if (f.get("arranger") != null) props.put("finance:boxArranger", f.get("arranger"));
+    if (f.get("auditor") != null) props.put("finance:boxAuditor", f.get("auditor"));
+    if (f.get("auditDate") != null) {
+      if (notBlank(f.get("auditDate")) && !f.get("auditDate").matches("^\\d{4}-\\d{2}-\\d{2}$"))
+        throw BizException.badRequest("VALIDATION_FAILED", "审核日期格式不合法（应为 yyyy-MM-dd）");
+      props.put("finance:boxAuditDate", f.get("auditDate"));
+    }
+    if (f.get("dualSetRef") != null) props.put("finance:dualSetRef", f.get("dualSetRef"));
+    if (props.isEmpty()) {
+      throw BizException.badRequest("VALIDATION_FAILED",
+          "没有可更新的字段（盒号/类别/年度/期限由移交流程维护，不在人工编辑范围）");
+    }
+    // 旧值快照（T10 审计留痕：仅记录本次实际触碰且发生变化的属性）
+    Object oldProps = box.get("properties");
+    List<Map<String, Object>> changes = new ArrayList<>();
+    for (Map.Entry<String, Object> en : props.entrySet()) {
+      String oldVal = oldProps instanceof Map<?, ?> p && p.get(en.getKey()) != null
+          ? String.valueOf(p.get(en.getKey())) : "";
+      String newVal = en.getValue() == null ? "" : String.valueOf(en.getValue());
+      if (!oldVal.equals(newVal)) {
+        changes.add(Map.of("prop", en.getKey(), "old", oldVal, "new", newVal));
+      }
+    }
+    Map<String, Object> view = updateBoxProps(ticket, box, props);
+    Map<String, Object> out = new LinkedHashMap<>();
+    out.put("view", view);
+    out.put("changes", changes);
+    return out;
+  }
+
   /** 封盒：active → sealed（盒满封存，不再接收新卷；在架盒须先下架） */
   public Map<String, Object> seal(String ticket, String boxId) {
     Map<String, Object> box = requireBox(ticket, boxId);
@@ -398,6 +448,13 @@ public class BoxService {
     view.put("totalItems", intProp(entry, "finance:boxTotalItems"));
     view.put("volumeCodeRange", prop(entry, "finance:volumeCodeRange"));
     view.put("remarks", prop(entry, "finance:boxRemark"));
+    // T9 盒级人工字段（B20-B23/B26-B29；模型 v2.9）：装盒人/装盒日期/整理人/审核人/审核日期/双套制关联
+    view.put("packer", prop(entry, "finance:boxPacker"));
+    view.put("packDate", prop(entry, "finance:boxPackDate"));
+    view.put("arranger", prop(entry, "finance:boxArranger"));
+    view.put("auditor", prop(entry, "finance:boxAuditor"));
+    view.put("auditDate", prop(entry, "finance:boxAuditDate"));
+    view.put("dualSetRef", prop(entry, "finance:dualSetRef"));
     view.put("createdAt", entry.get("createdAt"));
     view.put("modifiedAt", entry.get("modifiedAt"));
     return view;
@@ -463,6 +520,10 @@ public class BoxService {
     if (!(props instanceof Map)) return null;
     Object v = ((Map<String, Object>) props).get(name);
     return v instanceof Number n ? n.intValue() : null;
+  }
+
+  private static boolean notBlank(String s) {
+    return s != null && !s.isBlank();
   }
 
   private static String str(Object o) {

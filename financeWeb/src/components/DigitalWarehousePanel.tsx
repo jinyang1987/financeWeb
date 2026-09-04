@@ -21,13 +21,14 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Warehouse, RefreshCw, Plus, Shield, ArrowRight, Boxes, Package,
   Zap, MousePointerClick, Undo2, Lock, LockOpen, Trash2, X, Loader2,
-  MapPin, Layers, SquareX, AlertTriangle,
+  MapPin, Layers, SquareX, AlertTriangle, Pencil,
 } from 'lucide-react';
 import { useArchiveStore } from '../stores/archiveStore';
 import { useArchiveBoxStore } from '../stores/archiveBoxStore';
 import { useAppStore } from '../stores/appStore';
 import { toCategoryCode } from '../stores/volumeStore';
 import { fetchBoxVolumes, type BoxVolumeDto } from '../services/boxService';
+import BoxInfoEditModal from './BoxInfoEditModal';
 import {
   fetchRacks, fetchPositions, fetchRooms, createRack, deleteRack,
   cellKey, locationText,
@@ -76,6 +77,8 @@ export const DigitalWarehousePanel: React.FC<{ triggerToast: (msg: string, type?
   const [detailBoxId, setDetailBoxId] = useState<string | null>(null);
   const [detailVolumes, setDetailVolumes] = useState<BoxVolumeDto[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
+  // 盒信息编辑（2026-08-29 T9：人工字段写路径）
+  const [editBoxOpen, setEditBoxOpen] = useState(false);
 
   const reloadStorage = useCallback(async () => {
     const [rm, r, p] = await Promise.all([fetchRooms(), fetchRacks(), fetchPositions()]);
@@ -510,6 +513,11 @@ export const DigitalWarehousePanel: React.FC<{ triggerToast: (msg: string, type?
                 <InfoItem label="年度 / 期限" value={`${detailBox.year} 年 · ${detailBox.retention || '—'}`} />
                 <InfoItem label="卷数 / 件数" value={`${detailBox.volumeCount} 卷 / ${detailBox.totalItems ?? 0} 件`} />
                 <InfoItem label="建档日期" value={detailBox.createdDate || '—'} />
+                {/* T9 盒级人工字段（装盒/整理/审核/双套制） */}
+                <InfoItem label="装盒人 / 日期" value={[detailBox.packer, detailBox.packDate].filter(Boolean).join(' · ') || '—'} />
+                <InfoItem label="整理人" value={detailBox.arranger || '—'} />
+                <InfoItem label="审核人 / 日期" value={[detailBox.auditor, detailBox.auditDate].filter(Boolean).join(' · ') || '—'} />
+                <InfoItem label="双套制关联" value={detailBox.dualSetRef || '—'} />
               </div>
 
               {/* 架位 */}
@@ -567,6 +575,9 @@ export const DigitalWarehousePanel: React.FC<{ triggerToast: (msg: string, type?
 
             {/* 状态操作（状态机由服务端强制：在架须先下架，空盒才可删） */}
             <div className="px-5 py-4 border-t border-slate-200 flex items-center gap-2 shrink-0">
+              <ActionButton icon={<Pencil className="w-3.5 h-3.5" />} label="盒信息" busy={false}
+                onClick={() => setEditBoxOpen(true)}
+                cls="text-sky-700 bg-sky-50 border-sky-200 hover:bg-sky-100" />
               {detailBox.status === 'stored' && (
                 <>
                   <ActionButton icon={<MapPin className="w-3.5 h-3.5" />} label="换架位" busy={busyBox === detailBox.id}
@@ -597,6 +608,17 @@ export const DigitalWarehousePanel: React.FC<{ triggerToast: (msg: string, type?
           </div>
         </div>
       )}
+
+      {/* ═══ 盒信息编辑弹窗（2026-08-29 T9：装盒人/整理人/审核人/备考/双套制人工字段） ═══ */}
+      <BoxInfoEditModal
+        open={editBoxOpen}
+        box={detailBox}
+        onClose={() => setEditBoxOpen(false)}
+        onSaved={() => {
+          setEditBoxOpen(false);
+          if (currentFanzongCode) void loadBoxes(currentFanzongCode);
+        }}
+      />
     </div>
   );
 };

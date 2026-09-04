@@ -223,14 +223,14 @@ const BatchDetail: React.FC<{ batchNo: string }> = ({ batchNo }) => {
               <tr key={it.id} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
                 <td className="px-4 py-3 font-mono text-[13px] text-slate-600">{it.external_id || '—'}</td>
                 <td className="px-4 py-3 font-mono text-[13px] text-slate-800">{it.voucher_no || '—'}</td>
-                <td className="px-4 py-3 text-[13px] text-slate-600 max-w-[200px] truncate" title={it.summary}>{it.summary || '—'}</td>
+                <td className="px-4 py-3.5 text-sm text-slate-600 max-w-[200px] truncate" title={it.summary}>{it.summary || '—'}</td>
                 <td className="px-4 py-3 text-right font-mono text-[13px] text-slate-800">{it.amount != null ? it.amount.toLocaleString('zh-CN', { minimumFractionDigits: 2 }) : '—'}</td>
                 <td className="px-4 py-3 text-center">
                   {it.status === 'success'
                     ? <span className="px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-medium">已入池</span>
                     : <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-medium">失败</span>}
                 </td>
-                <td className="px-4 py-3 text-[13px] text-slate-600 max-w-[176px]">
+                <td className="px-4 py-3.5 text-sm text-slate-600 max-w-[176px]">
                   {it.archive_code && <div className="font-mono truncate" title={it.archive_code}>{it.archive_code}</div>}
                   {it.error && <div className="text-red-500 truncate" title={it.error}>{it.error}</div>}
                 </td>
@@ -416,7 +416,7 @@ const OpenAppManagePage: React.FC = () => {
                       <td className="px-4 py-3 text-right font-mono text-[13px] text-slate-600">{b.total_count}</td>
                       <td className="px-4 py-3 text-right font-mono text-[13px] text-green-600">{b.success_count}</td>
                       <td className="px-4 py-3 text-right font-mono text-[13px] text-red-600">{b.fail_count}</td>
-                      <td className="px-4 py-3 text-[13px] text-slate-600 max-w-[240px] truncate" title={b.message || ''}>{b.message || '—'}</td>
+                      <td className="px-4 py-3.5 text-sm text-slate-600 max-w-[240px] truncate" title={b.message || ''}>{b.message || '—'}</td>
                       <td className="px-4 py-3 text-center">
                         {expanded ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
                       </td>

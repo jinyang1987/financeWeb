@@ -238,18 +238,92 @@ public class RecordController {
   }
 
   /**
-   * 件级元数据录入/修改（组卷工作台「元数据录入」，2026-08-25）。
+   * 件级元数据录入/修改（组卷工作台「元数据录入」，2026-08-25；2026-08-29 T8 扩 srcDoc*）。
    * 白名单字段；仅收集池件/草稿卷内件可编辑。
+   * T10 审计留痕：服务端返回旧值/新值 diff，落操作日志（DA/T 94-2022 附录 E.7）。
    */
   @PutMapping("/{nodeId}/metadata")
   public Map<String, Object> updateMetadata(
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
       @PathVariable String nodeId,
-      @RequestBody Map<String, Object> body) {
+      @RequestBody Map<String, Object> body,
+      HttpServletRequest request) {
     AuthUser me = perm.me(userId, ticket);
     perm.requireFunction(me, "volume-workspace", "quick-check");
-    return service.updateMetadata(ticket, nodeId, body);
+    Map<String, Object> result = service.updateMetadata(ticket, nodeId, body);
+    @SuppressWarnings("unchecked")
+    List<Map<String, Object>> changes = (List<Map<String, Object>>) result.get("changes");
+    if (changes != null && !changes.isEmpty()) {
+      String detail = "修改 " + changes.size() + " 项：";
+      for (Map<String, Object> c : changes) {
+        detail += strOf(c.get("prop")) + "「" + strOf(c.get("old")) + "」→「" + strOf(c.get("new")) + "」；";
+      }
+      if (detail.length() > 900) detail = detail.substring(0, 900) + "…";
+      oplog.append(me.account(), me.name(), "元数据修改", nodeId, null,
+          detail, OperationLogService.clientIp(request));
+    }
+    @SuppressWarnings("unchecked")
+    Map<String, Object> view = (Map<String, Object>) result.get("view");
+    return view;
+  }
+
+  // ── 纯元数据建档 / 补充文件（2026-08-29 T10） ──
+
+  /**
+   * POST /records/metadata-only — 纯元数据建档（无文件）：元数据先行，文件后补。
+   * 字段口径与 multipart 上传一致（JSON body）；建立后经 POST /records/{id}/content 补文件。
+   */
+  @PostMapping("/metadata-only")
+  public Map<String, Object> createMetadataOnly(
+      @RequestHeader(value = "X-User-Id", required = false) String userId,
+      @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
+      @RequestBody Map<String, String> f,
+      HttpServletRequest request) {
+    AuthUser me = perm.me(userId, ticket);
+    perm.requireFunction(me, "voucher-manager", "archive-rcv", "volume-workspace");
+    perm.checkFonds(me, f.get("fondsCode"));
+    var sourceDocMeta = new RecordService.SourceDocMeta(
+        f.get("docTypeCode"), f.get("docTypeName"), f.get("documentNo"),
+        f.get("counterpartyName"), f.get("counterpartyTaxId"),
+        f.get("summary"), f.get("amountUpper"), f.get("businessCategory"), f.get("extFields"));
+    var vm = new RecordService.VoucherMeta(
+        f.get("voucherWord"), f.get("voucherDate"), f.get("period"),
+        f.get("auditor"), f.get("tallyMan"), null, null, f.get("sourceSystem"), f.get("externalId"),
+        null);
+    var cmd = new RecordService.CreateCmd(
+        f.get("fondsCode"), f.get("voucherNo"), f.get("archiveType"), f.get("department"),
+        parseDouble(f.get("amount")), parseInt(f.get("year")), parseInt(f.get("month")),
+        f.get("retention"),
+        f.getOrDefault("source", "digital-native"),
+        f.getOrDefault("carrierType", "paper"),
+        f.get("preparer"), f.get("voucherCategory"), f.get("remarks"),
+        vm, sourceDocMeta);
+    Map<String, Object> view = service.createMetadataOnly(me.account(), ticket, cmd);
+    oplog.append(me.account(), me.name(), "纯元数据建档", strOf(view.get("voucherNo")),
+        null, "无文件建档（元数据先行，待补文件）", OperationLogService.clientIp(request));
+    return view;
+  }
+
+  /**
+   * POST /records/{nodeId}/content — 补充文件（纯元数据件的电子文件后补）。
+   * 仅「仅件数据」且无内容的件可补；补齐即固化登记，此后内容不可替换。
+   */
+  @PostMapping(value = "/{nodeId}/content", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  public Map<String, Object> attachContent(
+      @RequestHeader(value = "X-User-Id", required = false) String userId,
+      @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
+      @PathVariable String nodeId,
+      @RequestPart("file") MultipartFile file,
+      HttpServletRequest request) throws Exception {
+    AuthUser me = perm.me(userId, ticket);
+    perm.requireFunction(me, "voucher-manager", "volume-workspace");
+    String filename = file.getOriginalFilename() == null ? "未命名文件" : file.getOriginalFilename();
+    String mime = file.getContentType() == null ? "application/octet-stream" : file.getContentType();
+    Map<String, Object> view = service.attachContent(me.account(), ticket, nodeId, filename, mime, file.getBytes());
+    oplog.append(me.account(), me.name(), "补充文件", nodeId, null,
+        "纯元数据件补齐电子文件：" + filename, OperationLogService.clientIp(request));
+    return view;
   }
 
   // ── 卷内件全量读取（P1-③ 读视图） ──

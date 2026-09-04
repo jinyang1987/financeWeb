@@ -74,6 +74,8 @@ export interface RecordDto {
   srcDocCounterpartyTaxId?: string;
   srcDocAmountUpper?: string;
   srcDocBusinessCategory?: string;
+  /** 摘要/事由（finance:srcDocSummary 原值；description 为 cm:description 回落链） */
+  srcDocSummary?: string;
 }
 
 export interface PoolResult {
@@ -307,11 +309,52 @@ export interface RecordMetadataPatch {
   year?: number;
   month?: number;
   amount?: number;
+  // ── v2.9 原始凭证富元数据（2026-08-29 T8 白名单扩 srcDoc*，后端同构） ──
+  /** 原始凭证类型编码（96 类目录，对应 finance:srcDocTypeCode） */
+  docTypeCode?: string;
+  /** 原始凭证类型名称（finance:srcDocTypeName） */
+  docTypeName?: string;
+  /** 单据编号（finance:srcDocNo） */
+  documentNo?: string;
+  /** 对方单位（finance:srcDocCounterpartyName） */
+  counterpartyName?: string;
+  /** 对方税号（finance:srcDocCounterpartyTaxId） */
+  counterpartyTaxId?: string;
+  /** 摘要/事由（finance:srcDocSummary；与 cm:description 的 summary 键区分） */
+  srcDocSummary?: string;
+  /** 大写金额（finance:srcDocAmountUpper） */
+  amountUpper?: string;
+  /** 业务分类（finance:srcDocBusinessCategory） */
+  businessCategory?: string;
+  /** 类型扩展字段 JSON 串（finance:srcDocExtFields） */
+  extFields?: string;
+  /** 附单据数（finance:attachedBillCount） */
+  attachedBillCount?: number;
 }
 
-/** 件级元数据录入/修改（仅收集池件/草稿卷内件可改；返回更新后的视图） */
+/** 件级元数据录入/修改（仅收集池件/草稿卷内件可改；返回更新后的视图；服务端落审计留痕） */
 export async function updateRecordMetadata(nodeId: string, patch: RecordMetadataPatch): Promise<RecordDto> {
   return http.put<RecordDto>(`/records/${nodeId}/metadata`, patch);
+}
+
+// ── 纯元数据建档 / 补充文件（2026-08-29 T10） ──
+
+/**
+ * 纯元数据建档（无文件）：元数据先行，文件后补（纸质件先登记台账、电子件到档再补）。
+ * 字段口径与 uploadRecord 一致；建立后经 attachRecordContent 补齐电子文件。
+ */
+export async function createRecordMetadataOnly(meta: Omit<UploadMeta, 'source' | 'carrierType'> & {
+  source?: 'digital-native' | 'digitized';
+  carrierType?: 'electronic' | 'paper';
+}): Promise<RecordDto> {
+  return http.post<RecordDto>('/records/metadata-only', meta as unknown as Record<string, string>);
+}
+
+/** 补充文件：为无内容的纯元数据件写入电子文件（仅「仅件数据」状态可补；补齐即固化登记） */
+export async function attachRecordContent(nodeId: string, file: File): Promise<RecordDto> {
+  const fd = new FormData();
+  fd.append('file', file, file.name);
+  return http.upload<RecordDto>(`/records/${nodeId}/content`, fd);
 }
 
 /** 卷内件全量读取（完整 RecordView，含 voucherCategory/subType 等筛选字段）——P1-③ 读视图 */
@@ -411,6 +454,7 @@ export function dtoToRecord(dto: RecordDto): ArchiveRecord {
     srcDocCounterpartyTaxId: dto.srcDocCounterpartyTaxId || undefined,
     srcDocAmountUpper: dto.srcDocAmountUpper || undefined,
     srcDocBusinessCategory: dto.srcDocBusinessCategory || undefined,
+    srcDocSummary: dto.srcDocSummary || undefined,
   };
 }
 
