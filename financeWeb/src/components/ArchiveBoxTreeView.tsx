@@ -211,7 +211,7 @@ export const ArchiveBoxTreeView: React.FC<ArchiveBoxTreeViewProps> = ({
           : (r.volumeCode || vol?.volumeCode || '');
         const full = [name, r.volumeCode && name !== r.volumeCode ? r.volumeCode : ''].filter(Boolean).join(' · ');
         return (
-          <span className="text-xs text-slate-500 truncate block max-w-[210px]" title={full || undefined}>
+          <span className="text-sm text-slate-600 truncate block max-w-[210px]" title={full || undefined}>
             {name || '—'}
           </span>
         );
