@@ -148,7 +148,7 @@ const ProjectViewPage: React.FC<ProjectViewPageProps> = ({
       <div className="flex-1 overflow-auto animate-in fade-in duration-200 p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-bold text-slate-800">{displayTitle}</h2>
+            <h2 className="text-base font-bold text-slate-800">{displayTitle}</h2>
             {projectCode && <span className="text-sm text-slate-400">({projectCode})</span>}
             {archiveYear && <><span className="text-slate-300 mx-1">/</span><span className="text-sm font-medium text-slate-500">{archiveYear}年</span></>}
           </div>
@@ -178,7 +178,7 @@ const ProjectViewPage: React.FC<ProjectViewPageProps> = ({
             <h3 className="text-sm font-bold text-slate-800 truncate">{displayTitle}</h3>
             {archiveYear && <span className="text-xs text-slate-400">{archiveYear}年</span>}
           </div>
-          <div className="text-[10px] text-slate-400 mt-0.5">{displayRecords.length} 条记录</div>
+          <div className="text-xs text-slate-400 mt-0.5">{displayRecords.length} 条记录</div>
         </div>
 
         <div className="flex-1 overflow-y-auto">
@@ -205,7 +205,7 @@ const ProjectViewPage: React.FC<ProjectViewPageProps> = ({
                     <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                   )}
                 </div>
-                <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                <div className="flex items-center gap-2 text-xs text-slate-500">
                   <span className="font-mono text-slate-600">¥{rec.amount.toLocaleString()}</span>
                   <span className="text-slate-300">·</span>
                   <span>{rec.department}</span>

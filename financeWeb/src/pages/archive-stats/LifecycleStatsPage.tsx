@@ -62,7 +62,7 @@ const LifecycleStatsPage: React.FC = () => {
                   <span className="font-mono font-bold text-sky-600">{lc.groupedVolumes} 卷</span>
                 </div>
                 {lc.pendingArchive > 0 && (
-                  <div className="flex items-start gap-1.5 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-2 leading-relaxed">
+                  <div className="flex items-start gap-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-2 leading-relaxed">
                     <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                     当前有 {lc.pendingArchive} 件凭证待组卷，请及时在组卷工作台完成整理归档
                   </div>
@@ -78,7 +78,7 @@ const LifecycleStatsPage: React.FC = () => {
               color="#0ea5e9"
               height={190}
             />
-            <p className="text-[11px] text-slate-400 mt-3">按赋号日期统计每月归档件数，监控归档积压与效率</p>
+            <p className="text-xs text-slate-400 mt-3">按赋号日期统计每月归档件数，监控归档积压与效率</p>
           </SectionCard>
 
           {/* 四性检测 */}
@@ -108,16 +108,16 @@ const LifecycleStatsPage: React.FC = () => {
             <div className="space-y-3">
               <div className="grid grid-cols-3 gap-3">
                 <div className="bg-slate-50 rounded-xl px-3 py-2.5 text-center">
-                  <div className="text-lg font-bold font-mono text-sky-600">{lc.transferBatches}</div>
-                  <div className="text-[10px] text-slate-500">移交批次</div>
+                  <div className="text-base font-bold font-mono text-sky-600">{lc.transferBatches}</div>
+                  <div className="text-xs text-slate-500">移交批次</div>
                 </div>
                 <div className="bg-slate-50 rounded-xl px-3 py-2.5 text-center">
-                  <div className="text-lg font-bold font-mono text-sky-600">{lc.transferredVolumes}</div>
-                  <div className="text-[10px] text-slate-500">已移交卷</div>
+                  <div className="text-base font-bold font-mono text-sky-600">{lc.transferredVolumes}</div>
+                  <div className="text-xs text-slate-500">已移交卷</div>
                 </div>
                 <div className="bg-slate-50 rounded-xl px-3 py-2.5 text-center">
-                  <div className="text-lg font-bold font-mono text-sky-600">{lc.transferredItems}</div>
-                  <div className="text-[10px] text-slate-500">移交件数</div>
+                  <div className="text-base font-bold font-mono text-sky-600">{lc.transferredItems}</div>
+                  <div className="text-xs text-slate-500">移交件数</div>
                 </div>
               </div>
               <div className="border-t border-slate-100 pt-3 space-y-2">
@@ -130,7 +130,7 @@ const LifecycleStatsPage: React.FC = () => {
                   <span className={`font-mono font-bold ${lc.expiredNotDestroyed > 0 ? 'text-red-600' : 'text-emerald-600'}`}>{lc.expiredNotDestroyed} 件</span>
                 </div>
               </div>
-              <p className="text-[11px] text-slate-400 leading-relaxed">
+              <p className="text-xs text-slate-400 leading-relaxed">
                 鉴定处置依据 79号令：保管期满档案应经鉴定后销毁或续存；当前库藏最早形成于 2025 年（10/30 年期限），尚无期满档案
               </p>
             </div>

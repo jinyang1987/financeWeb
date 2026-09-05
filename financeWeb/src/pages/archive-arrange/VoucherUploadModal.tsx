@@ -177,7 +177,7 @@ const FileRow: React.FC<FileRowProps> = ({ item, onEdit, onRemove }) => {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="font-medium text-slate-700 truncate">{item.name}</span>
-          <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded ${item.category === '记账凭证' ? 'bg-sky-100 text-sky-700' : item.category === '原始凭证' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
+          <span className={`px-1.5 py-0.5 text-xs font-medium rounded ${item.category === '记账凭证' ? 'bg-sky-100 text-sky-700' : item.category === '原始凭证' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
             {item.category}
           </span>
         </div>
@@ -411,7 +411,7 @@ const VerifyEditor: React.FC<VerifyEditorProps> = ({ item, onSave, onClose }) =>
               <div className="flex flex-col items-center gap-1.5 text-slate-400">
                 <FileText className="w-8 h-8" />
                 <span className="text-xs">该格式（{(item.type || 'unknown').toUpperCase()}）暂不支持在线预览</span>
-                <span className="text-[10px] text-slate-400">请对照本地原件核对左侧字段</span>
+                <span className="text-xs text-slate-400">请对照本地原件核对左侧字段</span>
               </div>
             )}
           </div>
@@ -952,7 +952,7 @@ const VoucherUploadModal: React.FC<VoucherUploadModalProps> = ({ open, onClose, 
           {step === 4 && (
             <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
               <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-2" />
-              <h3 className="text-lg font-bold text-green-800">已入待组卷池</h3>
+              <h3 className="text-base font-bold text-green-800">已入待组卷池</h3>
               <p className="text-sm text-green-600 mt-1">凭证已进入待组卷池，可前往左侧"待分配条目池"进行组卷操作</p>
             </div>
           )}

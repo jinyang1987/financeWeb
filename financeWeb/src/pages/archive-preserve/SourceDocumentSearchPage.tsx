@@ -110,7 +110,7 @@ const TypeTreePanel: React.FC<{
           )}
           <span className="text-xs truncate flex-1">{node.label}</span>
           {hasChildren && (
-            <span className="text-[10px] text-slate-400 shrink-0">
+            <span className="text-xs text-slate-400 shrink-0">
               {node.children!.length}
             </span>
           )}
@@ -191,7 +191,7 @@ const ResultsTable: React.FC<{
 
   const SortHeader: React.FC<{ field: typeof sortField; label: string }> = ({ field, label }) => (
     <th
-      className="px-4 py-3 text-left text-[13px] font-semibold cursor-pointer hover:bg-slate-200/50 select-none"
+      className="px-4 py-3 text-left text-sm font-semibold cursor-pointer hover:bg-slate-200/50 select-none"
       onClick={() => toggleSort(field)}
     >
       <div className="flex items-center gap-1">
@@ -208,13 +208,13 @@ const ResultsTable: React.FC<{
           <tr className="bg-slate-100/80 text-slate-700 divide-x divide-slate-200/80">
             <th className="px-4 py-3 w-8"></th>
             <SortHeader field="transactionDate" label="业务日期" />
-            <th className="px-4 py-3 text-left text-[13px] font-semibold">单据编号</th>
-            <th className="px-4 py-3 text-left text-[13px] font-semibold">凭证类型</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold">单据编号</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold">凭证类型</th>
             <SortHeader field="amountLower" label="金额" />
-            <th className="px-4 py-3 text-left text-[13px] font-semibold">对方单位</th>
-            <th className="px-4 py-3 text-left text-[13px] font-semibold hidden xl:table-cell">业务分类</th>
-            <th className="px-4 py-3 text-left text-[13px] font-semibold hidden xl:table-cell">载体</th>
-            <th className="px-4 py-3 text-center text-[13px] font-semibold w-16">四性</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold">对方单位</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold hidden xl:table-cell">业务分类</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold hidden xl:table-cell">载体</th>
+            <th className="px-4 py-3 text-center text-sm font-semibold w-16">四性</th>
           </tr>
         </thead>
         <tbody>
@@ -237,27 +237,27 @@ const ResultsTable: React.FC<{
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="font-mono text-[13px] text-slate-600 whitespace-nowrap">{doc.transactionDate}</span>
+                  <span className="font-mono text-sm text-slate-600 whitespace-nowrap">{doc.transactionDate}</span>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="font-mono text-[13px] font-medium text-slate-800">{doc.documentNo}</span>
+                  <span className="font-mono text-sm font-medium text-slate-800">{doc.documentNo}</span>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="text-[13px] text-slate-600">{doc.docTypeName}</span>
+                  <span className="text-sm text-slate-600">{doc.docTypeName}</span>
                 </td>
                 <td className="px-4 py-3">
-                  <span className={`font-mono text-[13px] font-medium ${doc.amountLower < 0 ? 'text-red-600' : 'text-slate-800'}`}>
+                  <span className={`font-mono text-sm font-medium ${doc.amountLower < 0 ? 'text-red-600' : 'text-slate-800'}`}>
                     ¥{fmt(Math.abs(doc.amountLower))}
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="text-[13px] text-slate-600 truncate max-w-[160px] block">{doc.counterpartyName}</span>
+                  <span className="text-sm text-slate-600 truncate max-w-[160px] block">{doc.counterpartyName}</span>
                 </td>
                 <td className="px-4 py-3 hidden xl:table-cell">
-                  <span className="text-[11px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{doc.businessCategory}</span>
+                  <span className="text-xs px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{doc.businessCategory}</span>
                 </td>
                 <td className="px-4 py-3 hidden xl:table-cell">
-                  <span className={`text-[11px] px-1.5 py-0.5 rounded ${
+                  <span className={`text-xs px-1.5 py-0.5 rounded ${
                     doc.carrierType === 'electronic'
                       ? 'bg-sky-50 text-sky-600'
                       : 'bg-amber-50 text-amber-700'
@@ -413,10 +413,10 @@ const SourceDocDrawer: React.FC<{
                 <div className="text-xs font-medium text-sky-700">
                   所属记账凭证：{parentRecord.voucherNo}
                 </div>
-                <div className="text-[11px] text-sky-500 font-mono mt-0.5">
+                <div className="text-xs text-sky-500 font-mono mt-0.5">
                   {parentRecord.archiveCode}
                 </div>
-                <div className="text-[11px] text-sky-500 mt-0.5">
+                <div className="text-xs text-sky-500 mt-0.5">
                   {parentRecord.department} · {parentRecord.archiveType} · ¥{fmt(parentRecord.amount)}
                 </div>
               </div>
@@ -425,7 +425,7 @@ const SourceDocDrawer: React.FC<{
             <span className="text-xs text-slate-400">未关联记账凭证</span>
           )}
           {doc.volumeId && (
-            <div className="text-[11px] text-slate-500 mt-2">
+            <div className="text-xs text-slate-500 mt-2">
               所属案卷：{doc.volumeId}
               {doc.boxId && <span className="ml-3">档案盒：{doc.boxId}</span>}
             </div>
@@ -439,7 +439,7 @@ const SourceDocDrawer: React.FC<{
               <div key={i} className="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-lg">
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-medium text-slate-700 truncate">{f.name}</div>
-                  <div className="text-[10px] text-slate-500">{f.type} · {f.size}</div>
+                  <div className="text-xs text-slate-500">{f.type} · {f.size}</div>
                 </div>
                 {f.signatureVerified && (
                   <span title="签名已验证"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 ml-2" /></span>
@@ -451,7 +451,7 @@ const SourceDocDrawer: React.FC<{
 
         {/* ── 备注 ── */}
         {doc.remarks && (
-          <div className="text-[11px] text-slate-500 bg-slate-50 rounded-lg p-3">
+          <div className="text-xs text-slate-500 bg-slate-50 rounded-lg p-3">
             <StickyNote className="w-3 h-3 inline mr-0.5" />{doc.remarks}
           </div>
         )}
@@ -479,11 +479,11 @@ const Badge: React.FC<{ children: React.ReactNode; color?: 'blue' | 'amber' | 's
     amber: 'bg-amber-50 text-amber-700',
     slate: 'bg-slate-100 text-slate-600',
   };
-  return <span className={`text-[11px] px-1.5 py-0.5 rounded ${colors[color]}`}>{children}</span>;
+  return <span className={`text-xs px-1.5 py-0.5 rounded ${colors[color]}`}>{children}</span>;
 };
 
 const CheckBadge: React.FC<{ label: string; passed: boolean }> = ({ label, passed }) => (
-  <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-[11px] ${
+  <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs ${
     passed ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'
   }`}>
     {passed ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
@@ -545,7 +545,7 @@ const SourceDocumentSearchPage: React.FC = () => {
             <Filter className="w-3.5 h-3.5" />
             筛选
             {activeFilterCount > 0 && (
-              <span className="bg-sky-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
+              <span className="bg-sky-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
                 {activeFilterCount}
               </span>
             )}

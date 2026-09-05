@@ -113,31 +113,31 @@ const MonitorTab: React.FC<{ batches: OpenPushBatch[]; loading: boolean; refresh
       {/* 统计卡 */}
       <div className="grid grid-cols-6 gap-3">
         <div className="bg-white border border-slate-200 rounded-xl p-3.5">
-          <div className="text-2xl font-bold text-slate-800">{stats.todayBatches}</div>
+          <div className="text-xl font-bold text-slate-800">{stats.todayBatches}</div>
           <div className="text-xs text-slate-400 mt-0.5">今日推送批次</div>
         </div>
         <div className="bg-white border border-slate-200 rounded-xl p-3.5">
-          <div className="text-2xl font-bold text-slate-800">{stats.totalIn}</div>
+          <div className="text-xl font-bold text-slate-800">{stats.totalIn}</div>
           <div className="text-xs text-slate-400 mt-0.5">累计接收条目</div>
         </div>
         <div className="bg-white border border-slate-200 rounded-xl p-3.5">
-          <div className="text-2xl font-bold text-green-600">{stats.totalSuccess}</div>
+          <div className="text-xl font-bold text-green-600">{stats.totalSuccess}</div>
           <div className="text-xs text-slate-400 mt-0.5">成功入池</div>
         </div>
         <div className="bg-white border border-slate-200 rounded-xl p-3.5">
-          <div className="text-2xl font-bold text-red-500">{stats.totalFail}</div>
+          <div className="text-xl font-bold text-red-500">{stats.totalFail}</div>
           <div className="text-xs text-slate-400 mt-0.5">失败条目</div>
         </div>
         <div className="col-span-2 bg-white border border-slate-200 rounded-xl p-3.5">
           <div className="text-xs text-slate-400 mb-1.5">四类批次分布（79号令第六条）</div>
           <div className="flex items-center gap-2 flex-wrap">
             {(['voucher', 'ledger', 'report', 'other'] as const).map((c) => (
-              <span key={c} className={`px-2 py-0.5 text-[11px] font-medium rounded-full border ${CATEGORY_BADGE[c]}`}>
+              <span key={c} className={`px-2 py-0.5 text-xs font-medium rounded-full border ${CATEGORY_BADGE[c]}`}>
                 {CATEGORY_LABELS[c]} {stats.byCat[c] || 0}
               </span>
             ))}
             {(stats.byCat.mixed || 0) > 0 && (
-              <span className="px-2 py-0.5 text-[11px] rounded-full border bg-slate-50 text-slate-500 border-slate-200">
+              <span className="px-2 py-0.5 text-xs rounded-full border bg-slate-50 text-slate-500 border-slate-200">
                 混合 {stats.byCat.mixed}
               </span>
             )}
@@ -159,15 +159,15 @@ const MonitorTab: React.FC<{ batches: OpenPushBatch[]; loading: boolean; refresh
         <table className="w-full text-sm min-w-[1150px]">
           <thead>
             <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-              <th className="px-4 py-3 text-left text-[13px] font-semibold w-48 whitespace-nowrap">批次号</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold w-40 whitespace-nowrap">来源应用</th>
-              <th className="px-4 py-3 text-center text-[13px] font-semibold w-24 whitespace-nowrap">期间</th>
-              <th className="px-4 py-3 text-center text-[13px] font-semibold w-28 whitespace-nowrap">类别</th>
-              <th className="px-4 py-3 text-center text-[13px] font-semibold w-32 whitespace-nowrap">去向</th>
-              <th className="px-4 py-3 text-center text-[13px] font-semibold w-24 whitespace-nowrap">状态</th>
-              <th className="px-4 py-3 text-right text-[13px] font-semibold w-28 whitespace-nowrap">收/成/败</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold w-40 whitespace-nowrap">推送时间</th>
-              <th className="px-4 py-3 text-right text-[13px] font-semibold w-40 whitespace-nowrap">操作</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold w-48 whitespace-nowrap">批次号</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold w-40 whitespace-nowrap">来源应用</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold w-24 whitespace-nowrap">期间</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold w-28 whitespace-nowrap">类别</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold w-32 whitespace-nowrap">去向</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold w-24 whitespace-nowrap">状态</th>
+              <th className="px-4 py-3 text-right text-sm font-semibold w-28 whitespace-nowrap">收/成/败</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold w-40 whitespace-nowrap">推送时间</th>
+              <th className="px-4 py-3 text-right text-sm font-semibold w-40 whitespace-nowrap">操作</th>
               <th className="px-4 py-3 w-8"></th>
             </tr>
           </thead>
@@ -190,31 +190,31 @@ const MonitorTab: React.FC<{ batches: OpenPushBatch[]; loading: boolean; refresh
                 <React.Fragment key={b.batch_no}>
                   <tr className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors cursor-pointer"
                     onClick={() => setExpanded(isOpen ? null : b.batch_no)}>
-                    <td className="px-4 py-3 font-mono text-[13px] text-slate-800 whitespace-nowrap">{b.batch_no}</td>
+                    <td className="px-4 py-3 font-mono text-sm text-slate-800 whitespace-nowrap">{b.batch_no}</td>
                     <td className="px-4 py-3 text-sm text-slate-800">
                       {b.app_name || '—'}
-                      {b.source_system && <div className="text-[10px] text-slate-400 font-mono">{b.source_system}</div>}
+                      {b.source_system && <div className="text-xs text-slate-400 font-mono">{b.source_system}</div>}
                     </td>
-                    <td className="px-4 py-3 text-center font-mono text-[13px] text-slate-600 whitespace-nowrap">{b.period || '—'}</td>
+                    <td className="px-4 py-3 text-center font-mono text-sm text-slate-600 whitespace-nowrap">{b.period || '—'}</td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`px-2 py-0.5 text-[11px] font-medium rounded-full border ${CATEGORY_BADGE[b.category || ''] || 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+                      <span className={`px-2 py-0.5 text-xs font-medium rounded-full border ${CATEGORY_BADGE[b.category || ''] || 'bg-slate-50 text-slate-500 border-slate-200'}`}>
                         {catLabel(b.category)}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-center text-[13px] text-slate-600">
+                    <td className="px-4 py-3 text-center text-sm text-slate-600">
                       {b.destination ? (DESTINATION_LABELS[b.destination as PushDestination] || b.destination) : '—'}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${st.cls}`}>{st.label}</span>
                     </td>
-                    <td className="px-4 py-3 text-right font-mono text-[13px]">
+                    <td className="px-4 py-3 text-right font-mono text-sm">
                       <span className="text-slate-600">{b.total_count}</span>
                       <span className="text-slate-300">/</span>
                       <span className="text-green-600">{b.success_count}</span>
                       <span className="text-slate-300">/</span>
                       <span className="text-red-500">{b.fail_count}</span>
                     </td>
-                    <td className="px-4 py-3 font-mono text-[13px] text-slate-600 whitespace-nowrap">{fmtTime(b.created_at)}</td>
+                    <td className="px-4 py-3 font-mono text-sm text-slate-600 whitespace-nowrap">{fmtTime(b.created_at)}</td>
                     {/* 去向操作：四性检测统一在移交（推送至保管库）环节执行，采集环节不再提供（2026-08-25） */}
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1.5">
@@ -222,7 +222,7 @@ const MonitorTab: React.FC<{ batches: OpenPushBatch[]; loading: boolean; refresh
                           type="button" disabled={!hasSuccess || actioning !== null}
                           onClick={() => runAction(b.batch_no, 'autogroup')}
                           title="按类别自动组卷并确认，直接入库"
-                          className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md hover:bg-emerald-100 disabled:opacity-40 whitespace-nowrap"
+                          className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md hover:bg-emerald-100 disabled:opacity-40 whitespace-nowrap"
                         >
                           {actioning === b.batch_no + 'autogroup' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Layers className="w-3 h-3" />}
                           自动组卷
@@ -251,27 +251,27 @@ const MonitorTab: React.FC<{ batches: OpenPushBatch[]; loading: boolean; refresh
                               <table className="w-full min-w-[960px]">
                                 <thead>
                                   <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-                                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-28 whitespace-nowrap">类别</th>
-                                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-36 whitespace-nowrap">凭证/资料号</th>
-                                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-40 whitespace-nowrap">来源单号</th>
-                                    <th className="px-4 py-3 text-left text-[13px] font-semibold min-w-[200px]">摘要</th>
-                                    <th className="px-4 py-3 text-right text-[13px] font-semibold w-32 whitespace-nowrap">金额</th>
-                                    <th className="px-4 py-3 text-center text-[13px] font-semibold w-24 whitespace-nowrap">状态</th>
-                                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-48 whitespace-nowrap">档号 / 错误</th>
+                                    <th className="px-4 py-3 text-left text-sm font-semibold w-28 whitespace-nowrap">类别</th>
+                                    <th className="px-4 py-3 text-left text-sm font-semibold w-36 whitespace-nowrap">凭证/资料号</th>
+                                    <th className="px-4 py-3 text-left text-sm font-semibold w-40 whitespace-nowrap">来源单号</th>
+                                    <th className="px-4 py-3 text-left text-sm font-semibold min-w-[200px]">摘要</th>
+                                    <th className="px-4 py-3 text-right text-sm font-semibold w-32 whitespace-nowrap">金额</th>
+                                    <th className="px-4 py-3 text-center text-sm font-semibold w-24 whitespace-nowrap">状态</th>
+                                    <th className="px-4 py-3 text-left text-sm font-semibold w-48 whitespace-nowrap">档号 / 错误</th>
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {detail.items.map((it: OpenPushItem) => (
                                     <tr key={it.id} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
                                       <td className="px-4 py-3">
-                                        <span className={`px-1.5 py-0.5 text-[10px] rounded-full border ${CATEGORY_BADGE[it.category || ''] || 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+                                        <span className={`px-1.5 py-0.5 text-xs rounded-full border ${CATEGORY_BADGE[it.category || ''] || 'bg-slate-50 text-slate-500 border-slate-200'}`}>
                                           {catLabel(it.category) || it.archive_type}
                                         </span>
                                       </td>
-                                      <td className="px-4 py-3 font-mono text-[13px] text-slate-800">{it.voucher_no || '—'}</td>
-                                      <td className="px-4 py-3 font-mono text-[13px] text-slate-600 truncate max-w-[140px]" title={it.external_id}>{it.external_id || '—'}</td>
+                                      <td className="px-4 py-3 font-mono text-sm text-slate-800">{it.voucher_no || '—'}</td>
+                                      <td className="px-4 py-3 font-mono text-sm text-slate-600 truncate max-w-[140px]" title={it.external_id}>{it.external_id || '—'}</td>
                                       <td className="px-4 py-3.5 text-sm text-slate-600 max-w-[220px] truncate" title={it.summary}>{it.summary || '—'}</td>
-                                      <td className="px-4 py-3 text-right font-mono text-[13px] text-slate-800">
+                                      <td className="px-4 py-3 text-right font-mono text-sm text-slate-800">
                                         {it.amount != null ? it.amount.toLocaleString('zh-CN', { minimumFractionDigits: 2 }) : '—'}
                                       </td>
                                       <td className="px-4 py-3 text-center">
@@ -434,7 +434,7 @@ const StandardTab: React.FC = () => (
           <div key={s.title} className="border border-slate-100 rounded-lg p-3 bg-slate-50/60">
             <s.Icon className="w-5 h-5 text-sky-600 mb-2" />
             <div className="text-xs font-semibold text-slate-700 mb-1">{s.title}</div>
-            <div className="text-[11px] text-slate-500 leading-relaxed">{s.desc}</div>
+            <div className="text-xs text-slate-500 leading-relaxed">{s.desc}</div>
           </div>
         ))}
       </div>
@@ -453,10 +453,10 @@ const StandardTab: React.FC = () => (
       <table className="w-full text-sm min-w-[760px]">
         <thead>
           <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-            <th className="px-4 py-3 text-left text-[13px] font-semibold w-20 whitespace-nowrap">方法</th>
-            <th className="px-4 py-3 text-left text-[13px] font-semibold w-80 whitespace-nowrap">路径</th>
-            <th className="px-4 py-3 text-left text-[13px] font-semibold w-28 whitespace-nowrap">名称</th>
-            <th className="px-4 py-3 text-left text-[13px] font-semibold min-w-[200px]">说明</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold w-20 whitespace-nowrap">方法</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold w-80 whitespace-nowrap">路径</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold w-28 whitespace-nowrap">名称</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold min-w-[200px]">说明</th>
           </tr>
         </thead>
         <tbody>
@@ -467,7 +467,7 @@ const StandardTab: React.FC = () => (
                   e.method === 'POST' ? 'bg-emerald-50 text-emerald-700' : 'bg-sky-50 text-sky-700'
                 }`}>{e.method}</span>
               </td>
-              <td className="px-4 py-3 font-mono text-[13px] text-slate-800 whitespace-nowrap">{e.path}</td>
+              <td className="px-4 py-3 font-mono text-sm text-slate-800 whitespace-nowrap">{e.path}</td>
               <td className="px-4 py-3 text-sm font-medium text-slate-800 whitespace-nowrap">{e.name}</td>
               <td className="px-4 py-3.5 text-sm text-slate-600">{e.desc}</td>
             </tr>
@@ -505,17 +505,17 @@ const StandardTab: React.FC = () => (
         <table className="w-full min-w-[520px]">
           <thead>
             <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-              <th className="px-4 py-3 text-left text-[13px] font-semibold whitespace-nowrap">字段</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold w-16 whitespace-nowrap">类型</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold w-14 whitespace-nowrap">必选</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold min-w-[160px]">说明</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">字段</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold w-16 whitespace-nowrap">类型</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold w-14 whitespace-nowrap">必选</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold min-w-[160px]">说明</th>
             </tr>
           </thead>
           <tbody>
             {CONTRACT_COMMON.map((f) => (
               <tr key={f.field} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
-                <td className="px-4 py-3 font-mono text-[13px] text-slate-800 whitespace-nowrap">{f.field}</td>
-                <td className="px-4 py-3 font-mono text-[13px] text-slate-600 whitespace-nowrap">{f.type}</td>
+                <td className="px-4 py-3 font-mono text-sm text-slate-800 whitespace-nowrap">{f.field}</td>
+                <td className="px-4 py-3 font-mono text-sm text-slate-600 whitespace-nowrap">{f.type}</td>
                 <td className="px-4 py-3 whitespace-nowrap">
                   <span className={f.required === '必选' ? 'text-red-500 font-medium' : 'text-slate-400'}>{f.required}</span>
                 </td>
@@ -534,7 +534,7 @@ const StandardTab: React.FC = () => (
         <div className="p-4 space-y-3">
           {CONTRACT_TYPES.map((t) => (
             <div key={t.category}>
-              <span className={`inline-block px-2 py-0.5 text-[11px] font-semibold rounded-full border mb-1.5 ${t.cls}`}>
+              <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full border mb-1.5 ${t.cls}`}>
                 {t.category}
               </span>
               <table className="w-full text-xs">
@@ -589,9 +589,9 @@ const StandardTab: React.FC = () => (
         <table className="w-full">
           <thead>
             <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-              <th className="px-4 py-3 text-left text-[13px] font-semibold">资料类型</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold w-16">期限</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold w-24">依据</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold">资料类型</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold w-16">期限</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold w-24">依据</th>
             </tr>
           </thead>
           <tbody>
@@ -676,19 +676,19 @@ const LogsTab: React.FC = () => {
         <table className="w-full min-w-[880px]">
           <thead>
             <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-              <th className="px-4 py-3 text-left text-[13px] font-semibold w-44 whitespace-nowrap">时间</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold w-20 whitespace-nowrap">级别</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold w-48 whitespace-nowrap">批次</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold w-28 whitespace-nowrap">环节</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold min-w-[280px]">内容</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold w-44 whitespace-nowrap">时间</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold w-20 whitespace-nowrap">级别</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold w-48 whitespace-nowrap">批次</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold w-28 whitespace-nowrap">环节</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold min-w-[280px]">内容</th>
             </tr>
           </thead>
           <tbody>
             {logs.map((l) => (
               <tr key={l.id} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
-                <td className="px-4 py-3 font-mono text-[13px] text-slate-600 whitespace-nowrap">{fmtTime(l.createdAt)}</td>
+                <td className="px-4 py-3 font-mono text-sm text-slate-600 whitespace-nowrap">{fmtTime(l.createdAt)}</td>
                 <td className="px-4 py-3">{levelBadge(l.level)}</td>
-                <td className="px-4 py-3 font-mono text-[13px] text-slate-600 whitespace-nowrap">{l.batchNo || '—'}</td>
+                <td className="px-4 py-3 font-mono text-sm text-slate-600 whitespace-nowrap">{l.batchNo || '—'}</td>
                 <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap">{STEP_LABELS[l.step] || l.step}</td>
                 <td className="px-4 py-3.5 text-sm text-slate-600">
                   {l.message}

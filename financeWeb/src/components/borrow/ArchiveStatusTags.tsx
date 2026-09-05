@@ -28,7 +28,7 @@ export const ArchiveStatusTags: React.FC<ArchiveStatusTagsProps> = ({ record, si
   const hasPhysical = !!volume && (volume.carrierType === 'paper' || volume.carrierType === 'mixed');
   const stock = volume ? volumeStockStatus(orders, volume.id) : null;
 
-  const cls = size === 'xs' ? 'text-[10px] px-1.5 py-0.5 gap-0.5' : 'text-xs px-2 py-1 gap-1';
+  const cls = size === 'xs' ? 'text-xs px-1.5 py-0.5 gap-0.5' : 'text-xs px-2 py-1 gap-1';
   const iconCls = size === 'xs' ? 'w-3 h-3' : 'w-3.5 h-3.5';
 
   return (

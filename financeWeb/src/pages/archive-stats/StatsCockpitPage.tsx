@@ -144,7 +144,7 @@ const Donut: React.FC<{ segments: { value: number; color: string }[]; size?: num
       <div className="absolute inset-0 rounded-full" style={{ background: `conic-gradient(${gradient})` }} />
       <div className="absolute rounded-full flex flex-col items-center justify-center" style={{ inset: size * 0.22, background: 'var(--ck-card-solid)' }}>
         {centerValue && <span className="text-xl font-bold font-mono" style={{ color: 'var(--ck-accent-text)' }}>{centerValue}</span>}
-        {centerLabel && <span className="text-[10px] mt-0.5" style={{ color: 'var(--ck-dim)' }}>{centerLabel}</span>}
+        {centerLabel && <span className="text-xs mt-0.5" style={{ color: 'var(--ck-dim)' }}>{centerLabel}</span>}
       </div>
     </div>
   );
@@ -177,7 +177,7 @@ const GaugeRing: React.FC<{ pct: number; label: string; color?: string; size?: n
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-2xl font-bold font-mono" style={{ color }}>{pct}%</span>
-        <span className="text-[10px] mt-0.5" style={{ color: 'var(--ck-dim)' }}>{label}</span>
+        <span className="text-xs mt-0.5" style={{ color: 'var(--ck-dim)' }}>{label}</span>
       </div>
     </div>
   );
@@ -193,7 +193,7 @@ const StatTile: React.FC<{ label: string; value: string | number; Icon: typeof D
     </div>
     <div className="min-w-0">
       <div className="text-xl font-bold font-mono leading-tight truncate" style={{ color: 'var(--ck-text)' }}>{value}</div>
-      <div className="text-[10px]" style={{ color: 'var(--ck-dim)' }}>{label}</div>
+      <div className="text-xs" style={{ color: 'var(--ck-dim)' }}>{label}</div>
     </div>
   </div>
 );
@@ -288,7 +288,7 @@ const StatsCockpitPage: React.FC = () => {
                     style={{ height: `${(y.records / max) * 100}%` }} />
                 </div>
                 <div className="text-xs" style={{ color: 'var(--ck-dim)' }}>{y.year}年</div>
-                <div className="text-[10px]" style={{ color: 'var(--ck-faint)' }}>{y.volumes} 卷</div>
+                <div className="text-xs" style={{ color: 'var(--ck-faint)' }}>{y.volumes} 卷</div>
               </div>
             ))}
           </div>
@@ -340,7 +340,7 @@ const StatsCockpitPage: React.FC = () => {
             {util.byTypeHeat.map((h, i) => (
               <BarRow key={h.code} label={h.label} value={h.count} max={max} color={ACCENTS[i]} suffix=" 件次" />
             ))}
-            <p className="text-[10px] pt-1" style={{ color: 'var(--ck-faint)' }}>高频借阅类型可能提示财务争议或审计重点</p>
+            <p className="text-xs pt-1" style={{ color: 'var(--ck-faint)' }}>高频借阅类型可能提示财务争议或审计重点</p>
           </div>
         );
       }
@@ -351,16 +351,16 @@ const StatsCockpitPage: React.FC = () => {
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-lg px-3 py-2.5" style={{ background: 'var(--ck-danger-bg)', border: '1px solid var(--ck-danger-border)' }}>
                 <div className="text-xl font-bold font-mono" style={{ color: 'var(--ck-danger-strong)' }}>{cc.overdueVolumes}</div>
-                <div className="text-[10px]" style={{ color: 'var(--ck-danger-text)' }}>逾期未还（卷）</div>
+                <div className="text-xs" style={{ color: 'var(--ck-danger-text)' }}>逾期未还（卷）</div>
               </div>
               <div className="rounded-lg px-3 py-2.5" style={{ background: 'var(--ck-warn-bg)', border: '1px solid var(--ck-warn-border)' }}>
                 <div className="text-xl font-bold font-mono" style={{ color: 'var(--ck-warn-strong)' }}>{cc.blacklistedUsers}</div>
-                <div className="text-[10px]" style={{ color: 'var(--ck-warn-text)' }}>黑名单熔断（人）</div>
+                <div className="text-xs" style={{ color: 'var(--ck-warn-text)' }}>黑名单熔断（人）</div>
               </div>
             </div>
             {cc.overdueVolumes > 0 || cc.blacklistedUsers > 0 ? (
               <div
-                className="flex items-start gap-2 text-[11px] rounded-lg px-3 py-2 leading-relaxed"
+                className="flex items-start gap-2 text-xs rounded-lg px-3 py-2 leading-relaxed"
                 style={{ color: 'var(--ck-danger-text)', background: 'var(--ck-danger-bg)', border: '1px solid var(--ck-danger-border)' }}
               >
                 <AlertOctagon className="w-3.5 h-3.5 shrink-0 mt-0.5" />
@@ -368,7 +368,7 @@ const StatsCockpitPage: React.FC = () => {
               </div>
             ) : (
               <div
-                className="flex items-center gap-2 text-[11px] rounded-lg px-3 py-2"
+                className="flex items-center gap-2 text-xs rounded-lg px-3 py-2"
                 style={{ color: 'var(--ck-ok-text)', background: 'var(--ck-ok-bg)', border: '1px solid var(--ck-ok-border)' }}
               >
                 <ShieldCheck className="w-3.5 h-3.5" />当前无逾期与熔断，借阅风险可控
@@ -434,7 +434,7 @@ const StatsCockpitPage: React.FC = () => {
             <div className="w-1 h-8 bg-gradient-to-b from-cyan-400 to-sky-600 rounded-full" />
             <div>
               <h1 className="text-xl font-bold tracking-widest" style={{ color: 'var(--ck-text)' }}>会计档案统计驾驶舱</h1>
-              <p className="text-[11px] tracking-wider mt-0.5" style={{ color: 'var(--ck-sub)' }}>ACCOUNTING ARCHIVES STATISTICS COCKPIT · 全宗 Z001</p>
+              <p className="text-xs tracking-wider mt-0.5" style={{ color: 'var(--ck-sub)' }}>ACCOUNTING ARCHIVES STATISTICS COCKPIT · 全宗 Z001</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -520,7 +520,7 @@ const RealtimeFeedCard: React.FC = () => {
     <ModuleCard title="实时动态" icon={<Radio className="w-4 h-4" />} className="min-h-[200px]">
       <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
         {latest.map((log) => (
-          <div key={log.id} className="flex items-center gap-2 text-[11px] py-1" style={{ borderBottom: '1px solid var(--ck-divider)' }}>
+          <div key={log.id} className="flex items-center gap-2 text-xs py-1" style={{ borderBottom: '1px solid var(--ck-divider)' }}>
             <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0 animate-pulse" />
             <span className="font-mono shrink-0" style={{ color: 'var(--ck-faint)' }}>{log.timestamp.slice(5, 16)}</span>
             <span className="font-medium shrink-0" style={{ color: 'var(--ck-body)' }}>{log.actorName}</span>

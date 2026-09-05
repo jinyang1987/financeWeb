@@ -163,7 +163,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
           <div className="flex items-center gap-2">
             <UploadCloud className="w-5 h-5 text-sky-400" />
             <span className="font-bold text-base">会计档案文件上传</span>
-            <span className="text-[11px] text-slate-400">全宗 {currentFanzongCode} · 入收集池</span>
+            <span className="text-xs text-slate-400">全宗 {currentFanzongCode} · 入收集池</span>
           </div>
           <button
             type="button"
@@ -177,11 +177,11 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
         {/* Steps */}
         <div className="grid grid-cols-2 bg-slate-50 border-b border-slate-100 p-3 shrink-0 text-xs">
           <div className={`flex items-center gap-2 justify-center py-1 border-r border-slate-200 ${activeStep === 0 ? 'text-sky-600 font-bold' : 'text-slate-400'}`}>
-            <span className="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center font-bold text-[10px] select-none">1</span>
+            <span className="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center font-bold text-xs select-none">1</span>
             <span>选择文件与来源</span>
           </div>
           <div className={`flex items-center gap-2 justify-center py-1 ${activeStep === 1 ? 'text-sky-600 font-bold' : 'text-slate-400'}`}>
-            <span className="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center font-bold text-[10px] select-none">2</span>
+            <span className="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center font-bold text-xs select-none">2</span>
             <span>填写元数据入库</span>
           </div>
         </div>
@@ -210,7 +210,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
                     </div>
                     <div>
                       <div className="text-sm font-bold text-slate-800">纯电子文件</div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">原生电子会计档案（数电发票/电子凭证等）</div>
+                      <div className="text-xs text-slate-400 mt-0.5">原生电子会计档案（数电发票/电子凭证等）</div>
                     </div>
                   </button>
                   <button
@@ -227,7 +227,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
                     </div>
                     <div>
                       <div className="text-sm font-bold text-slate-800">纸质数字化副本</div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">纸质原件扫描件，入库后统一走组卷流程</div>
+                      <div className="text-xs text-slate-400 mt-0.5">纸质原件扫描件，入库后统一走组卷流程</div>
                     </div>
                   </button>
                 </div>
@@ -284,12 +284,12 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
                 <FileText className="w-5 h-5 text-sky-600 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-bold text-slate-800 truncate">{file.name}</div>
-                  <div className="text-[11px] text-slate-500">{formatSize(file.size)} · {sourceType === 'digitized' ? '纸质数字化副本' : '纯电子文件'}</div>
+                  <div className="text-xs text-slate-500">{formatSize(file.size)} · {sourceType === 'digitized' ? '纸质数字化副本' : '纯电子文件'}</div>
                 </div>
                 <button
                   type="button"
                   onClick={() => { setFile(null); setActiveStep(0); }}
-                  className="text-[11px] text-sky-600 hover:underline shrink-0 cursor-pointer"
+                  className="text-xs text-sky-600 hover:underline shrink-0 cursor-pointer"
                 >
                   重新选择
                 </button>
@@ -352,7 +352,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
                 </div>
               </div>
 
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-[11px] text-slate-500 leading-relaxed">
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-500 leading-relaxed">
                 入库后件级档号为临时值（{currentFanzongCode}-PEND-××××××××），确认组卷时按档号规则正式赋号；四性检测状态为「未检测」，待检测引擎接入后统一执行。
               </div>
 

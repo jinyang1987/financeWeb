@@ -162,7 +162,7 @@ const ConnectionView: React.FC<{
 
 const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
   <div>
-    <label className="block text-[11px] font-semibold text-slate-500 mb-1.5">{label}</label>
+    <label className="block text-xs font-semibold text-slate-500 mb-1.5">{label}</label>
     {children}
   </div>
 );
@@ -205,21 +205,21 @@ const BorrowChainRulesPanel: React.FC<{ wf: BusinessWorkflow }> = ({ wf }) => {
       <div className="flex items-center gap-1.5">
         <Zap className="w-3.5 h-3.5 text-emerald-600" />
         <span className="text-xs font-bold text-emerald-800">审批组链规则（运行中）</span>
-        <span className="ml-auto text-[10px] text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded-full">
+        <span className="ml-auto text-xs text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded-full">
           服务端实时消费 · v{wf.version}
         </span>
       </div>
 
       {/* 基础链 */}
       <div>
-        <div className="text-[11px] font-semibold text-slate-500 mb-1.5">基础审批链（必经，按顺序）</div>
+        <div className="text-xs font-semibold text-slate-500 mb-1.5">基础审批链（必经，按顺序）</div>
         <div className="space-y-1">
           {rules.base.length === 0 && (
-            <div className="text-[11px] text-slate-400 px-1">（空 — 审批链仅由升级规则与终审组成）</div>
+            <div className="text-xs text-slate-400 px-1">（空 — 审批链仅由升级规则与终审组成）</div>
           )}
           {rules.base.map((role, i) => (
             <div key={role} className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg px-2 py-1">
-              <span className="w-4 text-[10px] font-mono text-slate-400">{i + 1}</span>
+              <span className="w-4 text-xs font-mono text-slate-400">{i + 1}</span>
               <span className="flex-1 text-xs font-medium text-slate-700">{roleLabel(role)}</span>
               <button type="button" disabled={i === 0} onClick={() => moveBase(i, -1)}
                 className="p-0.5 text-slate-300 hover:text-sky-600 disabled:opacity-30"><ArrowUp className="w-3 h-3" /></button>
@@ -244,12 +244,12 @@ const BorrowChainRulesPanel: React.FC<{ wf: BusinessWorkflow }> = ({ wf }) => {
 
       {/* 升级规则 */}
       <div>
-        <div className="text-[11px] font-semibold text-slate-500 mb-1.5">升级规则（满足条件时在终审前追加）</div>
+        <div className="text-xs font-semibold text-slate-500 mb-1.5">升级规则（满足条件时在终审前追加）</div>
         <div className="space-y-1.5">
           {rules.escalation.map((esc, i) => (
             <div key={esc.when} className="bg-white border border-slate-200 rounded-lg px-2.5 py-2">
               <div className="text-xs font-medium text-slate-700">{ESCALATION_META[esc.when]?.label}</div>
-              <div className="text-[10px] text-slate-400 mb-1.5">{ESCALATION_META[esc.when]?.hint}</div>
+              <div className="text-xs text-slate-400 mb-1.5">{ESCALATION_META[esc.when]?.hint}</div>
               <div className="flex items-center gap-1.5 text-xs text-slate-500">
                 追加
                 <select
@@ -271,7 +271,7 @@ const BorrowChainRulesPanel: React.FC<{ wf: BusinessWorkflow }> = ({ wf }) => {
 
       {/* 终审 */}
       <div className="flex items-center gap-1.5">
-        <span className="text-[11px] font-semibold text-slate-500">终审角色（必经）</span>
+        <span className="text-xs font-semibold text-slate-500">终审角色（必经）</span>
         <select
           value={rules.final}
           onChange={(e) => save({ final: e.target.value })}
@@ -283,13 +283,13 @@ const BorrowChainRulesPanel: React.FC<{ wf: BusinessWorkflow }> = ({ wf }) => {
 
       {/* 动态审批人变量约定（对照 Activiti OperateVariablesListener 思想） */}
       <div className="border-t border-emerald-100 pt-2.5 space-y-1">
-        <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+        <div className="flex items-center gap-1 text-xs font-bold text-slate-400 uppercase tracking-wider">
           <Info className="w-3 h-3" />动态审批人约定
         </div>
       </div>
 
       {/* 生效语义 */}
-      <div className="text-[10px] text-emerald-700 bg-emerald-100/70 border border-emerald-200 rounded-lg px-2.5 py-1.5 leading-relaxed">
+      <div className="text-xs text-emerald-700 bg-emerald-100/70 border border-emerald-200 rounded-lg px-2.5 py-1.5 leading-relaxed">
         修改即时生效于<strong>今后发起</strong>的借阅申请（在途单据按原链执行，对应「部署」语义）；
         停用本流程后，借阅审批回退系统默认链。
       </div>
@@ -306,7 +306,7 @@ const WorkflowSettingsPanel: React.FC<{ wf: BusinessWorkflow }> = ({ wf }) => {
     <div className="p-4 space-y-4">
       <div className="flex items-center justify-between">
         <span className="text-xs font-bold uppercase tracking-wider text-slate-400">流程设置</span>
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-[11px] font-semibold ${meta.badge}`}>
+        <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-xs font-semibold ${meta.badge}`}>
           {meta.label}
         </span>
       </div>
@@ -355,15 +355,15 @@ const WorkflowSettingsPanel: React.FC<{ wf: BusinessWorkflow }> = ({ wf }) => {
 
       <div className="border-t border-slate-100 pt-3 grid grid-cols-2 gap-2 text-center">
         <div className="bg-slate-50 rounded-lg py-2">
-          <div className="text-lg font-bold text-slate-800 font-mono">{wf.nodes.length}</div>
-          <div className="text-[10px] text-slate-400">节点</div>
+          <div className="text-base font-bold text-slate-800 font-mono">{wf.nodes.length}</div>
+          <div className="text-xs text-slate-400">节点</div>
         </div>
         <div className="bg-slate-50 rounded-lg py-2">
-          <div className="text-lg font-bold text-slate-800 font-mono">{wf.connections.length}</div>
-          <div className="text-[10px] text-slate-400">连线</div>
+          <div className="text-base font-bold text-slate-800 font-mono">{wf.connections.length}</div>
+          <div className="text-xs text-slate-400">连线</div>
         </div>
       </div>
-      <p className="text-[10px] text-slate-400">
+      <p className="text-xs text-slate-400">
         版本 v{wf.version} · 更新于 {wf.updatedDate}
       </p>
     </div>
@@ -379,7 +379,7 @@ const NodeSettingsPanel: React.FC<{ wf: BusinessWorkflow; node: WfNode }> = ({ w
     <div className="p-4 space-y-4">
       <div className="flex items-center justify-between">
         <span className="text-xs font-bold uppercase tracking-wider text-slate-400">节点属性</span>
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold"
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold"
           style={{ backgroundColor: th.fill, color: th.text }}>
           {WF_NODE_TYPE_LABELS[node.type]}
         </span>
@@ -591,7 +591,7 @@ const WorkflowConfigPage: React.FC = () => {
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* 执行口径明示（2026-08-18：借阅审批链已接线消费本页配置） */}
-      <div className="px-4 py-2 bg-emerald-50/70 border-b border-emerald-100 text-[11px] text-emerald-800 leading-relaxed shrink-0">
+      <div className="px-4 py-2 bg-emerald-50/70 border-b border-emerald-100 text-xs text-emerald-800 leading-relaxed shrink-0">
         <strong>配置即运行</strong>：借阅审批链由服务端按本页「借阅利用」流程的组链规则实时组链
         （基础链 → 含下载/打印/实体升级 → 涉密升级 → 终审），修改对今后发起的申请生效，在途单据按原链执行；
         借阅车「审批链预览」与服务端组链同源一致。
@@ -603,7 +603,7 @@ const WorkflowConfigPage: React.FC = () => {
           <GitBranch className="w-4 h-4 text-sky-600" />
           <span className="text-sm font-bold text-slate-800">{wf?.name || '流程配置'}</span>
           {wf?.builtIn && (
-            <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-slate-100 text-slate-500 rounded">内置</span>
+            <span className="px-1.5 py-0.5 text-xs font-semibold bg-slate-100 text-slate-500 rounded">内置</span>
           )}
           {dirty && <span className="w-1.5 h-1.5 rounded-full bg-amber-400" title="有未保存修改" />}
         </div>
@@ -635,7 +635,7 @@ const WorkflowConfigPage: React.FC = () => {
 
         <div className="flex-1" />
 
-        <span className="text-[11px] text-slate-400 font-mono">
+        <span className="text-xs text-slate-400 font-mono">
           {wf?.nodes.length ?? 0} 节点 · {wf?.connections.length ?? 0} 连线
         </span>
 
@@ -693,7 +693,7 @@ const WorkflowConfigPage: React.FC = () => {
                 <div key={cat}>
                   <div className="flex items-center gap-1.5 px-2 pt-1 pb-1.5">
                     <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{meta.label}</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{meta.label}</span>
                   </div>
                   <div className="space-y-1">
                     {list.map((w) => (
@@ -703,10 +703,10 @@ const WorkflowConfigPage: React.FC = () => {
                             activeId === w.id ? 'bg-sky-50 border border-sky-200' : 'border border-transparent hover:bg-slate-50'
                           }`}>
                           <div className="flex items-center gap-1.5">
-                            <span className={`text-[13px] font-semibold ${activeId === w.id ? 'text-sky-700' : 'text-slate-700'}`}>{w.name}</span>
+                            <span className={`text-sm font-semibold ${activeId === w.id ? 'text-sky-700' : 'text-slate-700'}`}>{w.name}</span>
                             {!w.active && <Power className="w-3 h-3 text-slate-300" />}
                           </div>
-                          <div className="text-[10px] text-slate-400 mt-0.5 font-mono">{w.nodes.length} 节点 · v{w.version}</div>
+                          <div className="text-xs text-slate-400 mt-0.5 font-mono">{w.nodes.length} 节点 · v{w.version}</div>
                         </button>
                         {!w.builtIn && (
                           <button type="button" onClick={() => deleteWorkflow(w.id)}

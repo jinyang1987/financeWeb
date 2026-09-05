@@ -220,7 +220,7 @@ const AuditTrailPage: React.FC = () => {
                               <pre className="text-xs text-slate-600 whitespace-pre-wrap font-sans">{node.detail}</pre>
                             )}
                             {node.hash && (
-                              <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-mono bg-white/60 rounded px-2 py-1">
+                              <div className="flex items-center gap-1.5 text-xs text-slate-400 font-mono bg-white/60 rounded px-2 py-1">
                                 <Link2 className="w-3 h-3 shrink-0" />
                                 <span className="truncate">哈希链：{node.hash}</span>
                               </div>

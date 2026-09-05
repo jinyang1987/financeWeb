@@ -142,7 +142,7 @@ const BorrowStatsPage: React.FC = () => {
                 <c.Icon className={`w-5 h-5 ${c.icon}`} />
               </div>
               <div>
-                <div className={`text-2xl font-bold ${c.text}`}>{c.value}</div>
+                <div className={`text-xl font-bold ${c.text}`}>{c.value}</div>
                 <div className="text-xs text-slate-500">{c.label}</div>
               </div>
             </div>
@@ -161,8 +161,8 @@ const BorrowStatsPage: React.FC = () => {
             <div key={c.label} className="bg-white border border-slate-200 rounded-2xl shadow-sm px-4 py-3 flex items-center gap-3">
               <c.Icon className="w-4 h-4 text-slate-400 shrink-0" />
               <div>
-                <div className="text-lg font-bold font-mono text-slate-800">{c.value}</div>
-                <div className="text-[10px] text-slate-400">{c.label}</div>
+                <div className="text-base font-bold font-mono text-slate-800">{c.value}</div>
+                <div className="text-xs text-slate-400">{c.label}</div>
               </div>
             </div>
           ))}
@@ -175,7 +175,7 @@ const BorrowStatsPage: React.FC = () => {
               <Flame className="w-4 h-4 text-orange-500" />
               <span className="text-sm font-bold text-slate-700">借阅热力图</span>
             </div>
-            <p className="text-[11px] text-slate-400 mb-4">高频借阅类型可能提示财务争议或审计重点</p>
+            <p className="text-xs text-slate-400 mb-4">高频借阅类型可能提示财务争议或审计重点</p>
             <div className="space-y-3">
               {heatByType.map((t) => (
                 <div key={t.code}>
@@ -202,14 +202,14 @@ const BorrowStatsPage: React.FC = () => {
               <div className="flex items-end gap-2 h-24">
                 {monthlyTrend.map((m) => (
                   <div key={m.month} className="flex-1 flex flex-col items-center gap-1">
-                    <span className="text-[10px] font-mono text-slate-500">{m.count}</span>
+                    <span className="text-xs font-mono text-slate-500">{m.count}</span>
                     <div className="w-full bg-slate-100 rounded-t-md relative" style={{ height: '100%' }}>
                       <div
                         className="absolute bottom-0 w-full bg-sky-500/80 rounded-t-md transition-all duration-500"
                         style={{ height: `${Math.max(m.pct, m.count > 0 ? 8 : 0)}%` }}
                       />
                     </div>
-                    <span className="text-[10px] text-slate-400">{m.month.slice(5)}月</span>
+                    <span className="text-xs text-slate-400">{m.month.slice(5)}月</span>
                   </div>
                 ))}
               </div>
@@ -222,28 +222,28 @@ const BorrowStatsPage: React.FC = () => {
               <AlertOctagon className="w-4 h-4 text-red-500" />
               <span className="text-sm font-bold text-slate-700">逾期红黑榜</span>
             </div>
-            <p className="text-[11px] text-slate-400 mb-4">按部门统计实体档案逾期率，纳入部门考核</p>
+            <p className="text-xs text-slate-400 mb-4">按部门统计实体档案逾期率，纳入部门考核</p>
             <table className="w-full">
               <thead>
                 <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-                  <th className="px-4 py-3 text-left text-[13px] font-semibold">部门</th>
-                  <th className="px-4 py-3 text-center text-[13px] font-semibold">实体借阅</th>
-                  <th className="px-4 py-3 text-center text-[13px] font-semibold">按期归还</th>
-                  <th className="px-4 py-3 text-center text-[13px] font-semibold">逾期未还</th>
-                  <th className="px-4 py-3 text-right text-[13px] font-semibold">逾期率</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">部门</th>
+                  <th className="px-4 py-3 text-center text-sm font-semibold">实体借阅</th>
+                  <th className="px-4 py-3 text-center text-sm font-semibold">按期归还</th>
+                  <th className="px-4 py-3 text-center text-sm font-semibold">逾期未还</th>
+                  <th className="px-4 py-3 text-right text-sm font-semibold">逾期率</th>
                 </tr>
               </thead>
               <tbody>
                 {deptBoard.map((d) => (
                   <tr key={d.dept} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
                     <td className="px-4 py-3 text-sm font-medium text-slate-800">{d.dept}</td>
-                    <td className="px-4 py-3 text-center font-mono text-[13px] text-slate-600">{d.total}</td>
-                    <td className="px-4 py-3 text-center font-mono text-[13px] text-emerald-600">{d.onTime}</td>
-                    <td className="px-4 py-3 text-center font-mono text-[13px]">
+                    <td className="px-4 py-3 text-center font-mono text-sm text-slate-600">{d.total}</td>
+                    <td className="px-4 py-3 text-center font-mono text-sm text-emerald-600">{d.onTime}</td>
+                    <td className="px-4 py-3 text-center font-mono text-sm">
                       <span className={d.overdue > 0 ? 'text-red-600 font-bold' : 'text-slate-400'}>{d.overdue}</span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
                         d.rate === 0 ? 'bg-emerald-100 text-emerald-700' : d.rate < 30 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
                       }`}>
                         {d.rate}%
@@ -272,22 +272,22 @@ const BorrowStatsPage: React.FC = () => {
             <table className="w-full">
               <thead>
                 <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-                  <th className="px-4 py-3 text-left text-[13px] font-semibold">时间</th>
-                  <th className="px-4 py-3 text-left text-[13px] font-semibold">操作人</th>
-                  <th className="px-4 py-3 text-left text-[13px] font-semibold">角色</th>
-                  <th className="px-4 py-3 text-left text-[13px] font-semibold">动作</th>
-                  <th className="px-4 py-3 text-left text-[13px] font-semibold">对象</th>
-                  <th className="px-4 py-3 text-left text-[13px] font-semibold">详情</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">时间</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">操作人</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">角色</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">动作</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">对象</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">详情</th>
                 </tr>
               </thead>
               <tbody>
                 {shownLogs.map((log: BorrowLog) => (
                   <tr key={log.id} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
-                    <td className="px-4 py-3 font-mono text-[13px] text-slate-600 whitespace-nowrap">{log.timestamp}</td>
+                    <td className="px-4 py-3 font-mono text-sm text-slate-600 whitespace-nowrap">{log.timestamp}</td>
                     <td className="px-4 py-3 text-sm font-medium text-slate-800 whitespace-nowrap">{log.actorName}</td>
                     <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap">{log.actorRoleLabel}</td>
                     <td className="px-4 py-3">
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap ${LOG_ACTION_COLORS[log.action] || 'bg-slate-100 text-slate-600'}`}>
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap ${LOG_ACTION_COLORS[log.action] || 'bg-slate-100 text-slate-600'}`}>
                         {log.action}
                       </span>
                     </td>

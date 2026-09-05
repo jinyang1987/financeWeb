@@ -275,7 +275,7 @@ export const DigitalWarehousePanel: React.FC<{ triggerToast: (msg: string, type?
           </div>
           <div>
             <div className="text-sm font-bold text-slate-800">密集架库房</div>
-            <div className="text-[11px] text-slate-400">组卷 → 归盒 → 封盒 → 上架 → 在架保管</div>
+            <div className="text-xs text-slate-400">组卷 → 归盒 → 封盒 → 上架 → 在架保管</div>
           </div>
         </div>
         <div className="h-8 w-px bg-slate-200" />
@@ -284,7 +284,7 @@ export const DigitalWarehousePanel: React.FC<{ triggerToast: (msg: string, type?
         <Stat label="在架盒" value={stats.occupied} unit="盒" accent="text-emerald-600" />
         <Stat label="待上架" value={stats.pending} unit="盒" accent={stats.pending > 0 ? 'text-amber-600' : undefined} />
         <div className="min-w-[140px]">
-          <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+          <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
             <span>在架率</span><span className="font-bold text-sky-700">{stats.rate}%</span>
           </div>
           <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -325,29 +325,29 @@ export const DigitalWarehousePanel: React.FC<{ triggerToast: (msg: string, type?
                   <div className="flex items-center gap-2">
                     <span className={`w-2.5 h-2.5 rounded-sm ${cs.spine}`} />
                     <span className="font-mono text-xs font-bold text-slate-800 truncate">{b.boxNo}</span>
-                    <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded-full border ${
+                    <span className={`ml-auto text-xs px-1.5 py-0.5 rounded-full border ${
                       b.status === 'sealed' ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-amber-50 text-amber-700 border-amber-200'
                     }`}>{BOX_STATUS_LABEL[b.status] || b.status}</span>
                   </div>
-                  <div className="mt-1 text-[11px] text-slate-500 truncate" title={b.boxName}>{b.boxName || '—'}</div>
-                  <div className="mt-0.5 text-[10px] text-slate-400">
+                  <div className="mt-1 text-xs text-slate-500 truncate" title={b.boxName}>{b.boxName || '—'}</div>
+                  <div className="mt-0.5 text-xs text-slate-400">
                     {cs.label} · {b.year} 年 · {b.volumeCount} 卷 / {b.totalItems ?? 0} 件
                     {b.location ? ` · 旧位 ${b.location}` : ''}
                   </div>
                   <div className="mt-2.5 flex items-center gap-1.5">
                     <button type="button" onClick={() => void handleAutoShelve(b)} disabled={busyBox === b.id}
-                      className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] font-semibold text-white bg-sky-600 rounded-lg hover:bg-sky-700 disabled:opacity-50 transition-colors">
+                      className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-semibold text-white bg-sky-600 rounded-lg hover:bg-sky-700 disabled:opacity-50 transition-colors">
                       {busyBox === b.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
                       自动上架
                     </button>
                     {placing === b.id ? (
                       <button type="button" onClick={() => setPlacing(null)}
-                        className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] font-semibold text-emerald-700 bg-emerald-100 border border-emerald-300 rounded-lg hover:bg-emerald-200 transition-colors">
+                        className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-100 border border-emerald-300 rounded-lg hover:bg-emerald-200 transition-colors">
                         <SquareX className="w-3 h-3" />退出选位
                       </button>
                     ) : (
                       <button type="button" onClick={() => setPlacing(b.id)} disabled={busyBox === b.id}
-                        className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 disabled:opacity-50 transition-colors">
+                        className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 disabled:opacity-50 transition-colors">
                         <MousePointerClick className="w-3 h-3" />点选架位
                       </button>
                     )}
@@ -405,7 +405,7 @@ export const DigitalWarehousePanel: React.FC<{ triggerToast: (msg: string, type?
             <AlertTriangle className="w-8 h-8 mx-auto mb-2 text-amber-400" />
             <p className="text-sm font-medium text-slate-600">库房数据加载失败</p>
             <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">{loadError}</p>
-            <p className="text-[11px] text-slate-400 mt-1">若刚升级过后端，请确认 ams-server 已重启并加载最新端点</p>
+            <p className="text-xs text-slate-400 mt-1">若刚升级过后端，请确认 ams-server 已重启并加载最新端点</p>
             <button type="button" onClick={() => void loadAll()}
               className="mt-3 px-4 py-1.5 text-xs font-medium text-white bg-sky-600 rounded-lg hover:bg-sky-700 transition-colors">
               重试
@@ -437,7 +437,7 @@ export const DigitalWarehousePanel: React.FC<{ triggerToast: (msg: string, type?
         )}
 
         {/* 图例 */}
-        <div className="flex items-center gap-4 mt-4 pt-3 border-t border-slate-100 text-[10px] text-slate-400 flex-wrap">
+        <div className="flex items-center gap-4 mt-4 pt-3 border-t border-slate-100 text-xs text-slate-400 flex-wrap">
           {Object.entries(CATEGORY_STYLE).map(([code, cs]) => (
             <span key={code} className="flex items-center gap-1">
               <span className={`w-2.5 h-2.5 rounded-sm ${cs.spine}`} />{cs.label}
@@ -494,9 +494,9 @@ export const DigitalWarehousePanel: React.FC<{ triggerToast: (msg: string, type?
               </div>
               <div className="min-w-0 flex-1">
                 <div className="font-mono text-sm font-bold text-slate-800 truncate">{detailBox.boxNo}</div>
-                <div className="text-[11px] text-slate-400 truncate">{detailBox.boxName}</div>
+                <div className="text-xs text-slate-400 truncate">{detailBox.boxName}</div>
               </div>
-              <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
+              <span className={`text-xs px-2 py-0.5 rounded-full border ${
                 detailBox.status === 'stored' ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                 : detailBox.status === 'sealed' ? 'bg-slate-100 text-slate-600 border-slate-200'
                 : 'bg-amber-50 text-amber-700 border-amber-200'
@@ -531,13 +531,13 @@ export const DigitalWarehousePanel: React.FC<{ triggerToast: (msg: string, type?
                     <div className="font-semibold text-emerald-700">
                       {locationText(detailPos.room, detailPos.rack, detailPos.column_no, detailPos.layer_no, detailPos.cell_no)}
                     </div>
-                    <div className="text-[11px] text-slate-400">
+                    <div className="text-xs text-slate-400">
                       上架时间 {detailPos.shelved_at ? detailPos.shelved_at.replace('T', ' ').slice(0, 19) : '—'}
                       {detailPos.shelved_by ? ` · 操作人 ${detailPos.shelved_by}` : ''}
                     </div>
                   </div>
                 ) : (
-                  <div className="text-[11px] text-slate-400">尚未上架（在「待上架区」排队）</div>
+                  <div className="text-xs text-slate-400">尚未上架（在「待上架区」排队）</div>
                 )}
               </div>
 
@@ -553,17 +553,17 @@ export const DigitalWarehousePanel: React.FC<{ triggerToast: (msg: string, type?
                     <table className="w-full">
                       <thead>
                         <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-                          <th className="px-4 py-3 text-left text-[13px] font-semibold">档号</th>
-                          <th className="px-4 py-3 text-left text-[13px] font-semibold">题名</th>
-                          <th className="px-4 py-3 text-right text-[13px] font-semibold w-14">件数</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold">档号</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold">题名</th>
+                          <th className="px-4 py-3 text-right text-sm font-semibold w-14">件数</th>
                         </tr>
                       </thead>
                       <tbody>
                         {detailVolumes.map((v) => (
                           <tr key={v.nodeId} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
-                            <td className="px-4 py-3 font-mono text-[13px] text-slate-600">{v.volumeCode || '（未赋号）'}</td>
+                            <td className="px-4 py-3 font-mono text-sm text-slate-600">{v.volumeCode || '（未赋号）'}</td>
                             <td className="px-4 py-3 text-sm text-slate-800 max-w-[140px] truncate" title={v.title}>{v.title || '—'}</td>
-                            <td className="px-4 py-3 text-right font-mono text-[13px] text-slate-600">{v.totalItems ?? 0}</td>
+                            <td className="px-4 py-3 text-right font-mono text-sm text-slate-600">{v.totalItems ?? 0}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -626,16 +626,16 @@ export const DigitalWarehousePanel: React.FC<{ triggerToast: (msg: string, type?
 // ── 统计小卡 ──
 const Stat: React.FC<{ label: string; value: number; unit: string; accent?: string }> = ({ label, value, unit, accent }) => (
   <div>
-    <div className="text-[11px] text-slate-400">{label}</div>
-    <div className={`text-lg font-bold leading-tight ${accent || 'text-slate-800'}`}>
-      {value}<span className="text-[11px] font-normal text-slate-400 ml-0.5">{unit}</span>
+    <div className="text-xs text-slate-400">{label}</div>
+    <div className={`text-base font-bold leading-tight ${accent || 'text-slate-800'}`}>
+      {value}<span className="text-xs font-normal text-slate-400 ml-0.5">{unit}</span>
     </div>
   </div>
 );
 
 const InfoItem: React.FC<{ label: string; value: string }> = ({ label, value }) => (
   <div className="bg-slate-50 rounded-lg px-3 py-2">
-    <div className="text-[10px] text-slate-400">{label}</div>
+    <div className="text-xs text-slate-400">{label}</div>
     <div className="font-medium text-slate-700 mt-0.5">{value}</div>
   </div>
 );
@@ -691,7 +691,7 @@ const RackCard: React.FC<{
       {/* 架头（金属牌） */}
       <div className="px-3 py-2.5 bg-gradient-to-r from-slate-700 to-slate-600 text-white flex items-center gap-2">
         <span className="text-sm font-black tracking-wider">{rack.rack}</span>
-        <div className="text-[10px] text-slate-300 leading-tight">
+        <div className="text-xs text-slate-300 leading-tight">
           <div>{rack.rack_name} · {rack.column_count}列×{rack.layer_count}层×{rack.cell_count}位</div>
           <div className="flex items-center gap-1.5 mt-0.5">
             <span className={occupied > 0 ? 'text-emerald-300 font-semibold' : ''}>{occupied}/{capacity}</span>
@@ -737,7 +737,7 @@ const RackCard: React.FC<{
                   style={{ height: `${Math.round((colOcc / colCap) * 100)}%` }}
                 />
                 <span className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-[9px] font-bold text-slate-500 group-hover:text-sky-700 [writing-mode:vertical-lr]">{col}列</span>
+                  <span className="text-xs font-bold text-slate-500 group-hover:text-sky-700 [writing-mode:vertical-lr]">{col}列</span>
                 </span>
               </button>
             );
@@ -752,7 +752,7 @@ const RackCard: React.FC<{
               <button
                 type="button"
                 onClick={() => onToggleColumn(col)}
-                className="w-full flex items-center justify-between px-2 py-1 bg-sky-50 border-b border-sky-100 text-[10px] font-bold text-sky-700 hover:bg-sky-100 transition-colors"
+                className="w-full flex items-center justify-between px-2 py-1 bg-sky-50 border-b border-sky-100 text-xs font-bold text-sky-700 hover:bg-sky-100 transition-colors"
                 title="点击闭合通道"
               >
                 <span>{col} 列 · 通道已打开</span>
@@ -761,7 +761,7 @@ const RackCard: React.FC<{
               <div className="p-1.5 space-y-[3px] animate-in fade-in duration-300">
                 {layers.map((layer) => (
                   <div key={layer} className="flex items-center gap-1">
-                    <span className="w-5 text-[9px] text-slate-400 text-right shrink-0">{layer}层</span>
+                    <span className="w-5 text-xs text-slate-400 text-right shrink-0">{layer}层</span>
                     <div className="flex gap-[3px] border-b border-slate-200 pb-[3px]">
                       {Array.from({ length: rack.cell_count }, (_, i) => i + 1).map((cell) => {
                         const key = cellKey(rack.room, rack.rack, col, layer, cell);

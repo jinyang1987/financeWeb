@@ -258,7 +258,7 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose, contextI
                         </button>
 
                         {/* 编号 */}
-                        <span className={`text-[10px] font-mono font-bold shrink-0 ${
+                        <span className={`text-xs font-mono font-bold shrink-0 ${
                           isBoxField ? 'text-teal-600' : isVolumeField ? 'text-amber-600' : 'text-sky-600'
                         }`}>{field.id}</span>
 
@@ -274,14 +274,14 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose, contextI
                         </span>
 
                         {/* 必选标记 */}
-                        {isMandatory && <span className="text-[9px] text-red-400 shrink-0">*</span>}
+                        {isMandatory && <span className="text-xs text-red-400 shrink-0">*</span>}
 
                         {/* 实体类型标记（卷级/盒级特殊标记） */}
                         {isBoxField && (
-                          <span className="text-[8px] text-teal-500 bg-teal-50 px-1 rounded shrink-0">盒</span>
+                          <span className="text-xs text-teal-500 bg-teal-50 px-1 rounded shrink-0">盒</span>
                         )}
                         {isVolumeField && (
-                          <span className="text-[8px] text-amber-500 bg-amber-50 px-1 rounded shrink-0">卷</span>
+                          <span className="text-xs text-amber-500 bg-amber-50 px-1 rounded shrink-0">卷</span>
                         )}
 
                         {/* ✓ 采用开关 */}
@@ -331,14 +331,14 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose, contextI
                         isBoxField ? 'text-teal-400' : isVolumeField ? 'text-amber-400' : 'text-slate-300'
                       }`}>{field.id}</span>
                       <span className="text-xs text-slate-500">{fieldName(field.id)}</span>
-                      <span className="text-[10px] text-slate-300 font-mono truncate">
+                      <span className="text-xs text-slate-300 font-mono truncate">
                         {allMetadata.find((m) => m.id === field.id)?.englishName || ''}
                       </span>
                       {isBoxField && (
-                        <span className="text-[9px] text-teal-400 bg-teal-50 px-1 rounded">盒级</span>
+                        <span className="text-xs text-teal-400 bg-teal-50 px-1 rounded">盒级</span>
                       )}
                       {isVolumeField && (
-                        <span className="text-[9px] text-amber-400 bg-amber-50 px-1 rounded">卷级</span>
+                        <span className="text-xs text-amber-400 bg-amber-50 px-1 rounded">卷级</span>
                       )}
                     </div>
                   );
@@ -435,27 +435,27 @@ const MetadataSection: React.FC<SectionProps> = ({ title, description, icon, met
           <table className="w-full">
             <thead>
               <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-                <th className="px-4 py-3 text-left text-[13px] font-semibold w-12">编号</th>
-                <th className="px-4 py-3 text-left text-[13px] font-semibold w-24">中文名称</th>
-                <th className="px-4 py-3 text-left text-[13px] font-semibold w-28">英文名称</th>
-                <th className="px-4 py-3 text-left text-[13px] font-semibold min-w-48">定义</th>
-                <th className="px-4 py-3 text-left text-[13px] font-semibold w-16">必选性</th>
-                <th className="px-4 py-3 text-left text-[13px] font-semibold w-16">可重复性</th>
-                <th className="px-4 py-3 text-left text-[13px] font-semibold w-12">数据类型</th>
-                <th className="px-4 py-3 text-left text-[13px] font-semibold w-36">值域</th>
-                <th className="px-4 py-3 text-left text-[13px] font-semibold w-40">捕获节点</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold w-12">编号</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold w-24">中文名称</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold w-28">英文名称</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold min-w-48">定义</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold w-16">必选性</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold w-16">可重复性</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold w-12">数据类型</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold w-36">值域</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold w-40">捕获节点</th>
               </tr>
             </thead>
             <tbody>
               {metadata.map((item, idx) => (
                 <React.Fragment key={item.id}>
                   <tr className={`border-b border-slate-200/60 divide-x divide-slate-100 ${rowHoverBg} transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}`}>
-                    <td className={`px-4 py-3 font-mono text-[13px] font-bold ${idColor}`}>{item.id}</td>
+                    <td className={`px-4 py-3 font-mono text-sm font-bold ${idColor}`}>{item.id}</td>
                     <td className="px-4 py-3 text-sm font-bold text-slate-800">{item.name}</td>
-                    <td className="px-4 py-3 font-mono text-[13px] text-slate-600">{item.englishName}</td>
+                    <td className="px-4 py-3 font-mono text-sm text-slate-600">{item.englishName}</td>
                     <td className="px-4 py-3.5 text-sm text-slate-600 leading-relaxed">{item.definition}</td>
                     <td className="px-4 py-3">
-                      <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                      <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-bold ${
                         item.mandatory === '必选' ? 'bg-red-50 text-red-600 border border-red-200' :
                         item.mandatory === '条件可选' ? 'bg-amber-50 text-amber-600 border border-amber-200' :
                         'bg-slate-100 text-slate-500 border border-slate-200'
@@ -468,12 +468,12 @@ const MetadataSection: React.FC<SectionProps> = ({ title, description, icon, met
                   </tr>
                   {item.subItems?.map((sub) => (
                     <tr key={sub.id} className={`border-b border-slate-200/60 divide-x divide-slate-100 bg-slate-50/20 ${rowHoverBg} transition-colors`}>
-                      <td className={`px-4 py-3 pl-8 font-mono text-[13px] font-bold ${subIdColor}`}>{sub.id}</td>
+                      <td className={`px-4 py-3 pl-8 font-mono text-sm font-bold ${subIdColor}`}>{sub.id}</td>
                       <td className="px-4 py-3 text-sm font-bold text-slate-600">├ {sub.name}</td>
-                      <td className="px-4 py-3 font-mono text-[13px] text-slate-400">{sub.englishName}</td>
+                      <td className="px-4 py-3 font-mono text-sm text-slate-400">{sub.englishName}</td>
                       <td className="px-4 py-3.5 text-sm text-slate-500 leading-relaxed">{sub.definition}</td>
                       <td className="px-4 py-3">
-                        <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                        <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-bold ${
                           sub.mandatory === '必选' ? 'bg-red-50 text-red-600 border border-red-200' :
                           'bg-slate-100 text-slate-500 border border-slate-200'
                         }`}>{sub.mandatory}</span>
@@ -588,7 +588,7 @@ const MetadataConfigTab: React.FC = () => {
       }`}
     >
       <span className={`flex-1 text-xs font-medium truncate ${active ? 'text-sky-700' : 'text-slate-600'}`}>{label}</span>
-      <span className={`text-[10px] shrink-0 px-1.5 py-0.5 rounded-full ${
+      <span className={`text-xs shrink-0 px-1.5 py-0.5 rounded-full ${
         tone === 'box' ? 'bg-teal-50 text-teal-600' : tone === 'volume' ? 'bg-amber-50 text-amber-600' : tone === 'item' ? 'bg-sky-50 text-sky-600' : 'bg-slate-100 text-slate-500'
       }`}>
         {total} 项{mandatory > 0 ? ` · 必选 ${mandatory}` : ''}
@@ -681,7 +681,7 @@ const MetadataConfigTab: React.FC = () => {
                   onClick={() => { setActiveKey('overview'); setSearchQuery(''); setMandFilter('all'); }}
                   label="概览总览" total={stats.totalCount} mandatory={stats.mandatoryCount} tone="overview"
                 />
-                <div className="px-2 pt-3 pb-1 text-[10px] font-bold text-amber-500 uppercase tracking-wider">卷级 · DA/T 39</div>
+                <div className="px-2 pt-3 pb-1 text-xs font-bold text-amber-500 uppercase tracking-wider">卷级 · DA/T 39</div>
                 {GROUPS.filter((g) => g.tone === 'volume').map((g) => {
                   const s = groupStats(g.items);
                   return (
@@ -690,7 +690,7 @@ const MetadataConfigTab: React.FC = () => {
                       label={g.title} total={s.total} mandatory={s.mandatory} tone="volume" />
                   );
                 })}
-                <div className="px-2 pt-3 pb-1 text-[10px] font-bold text-sky-500 uppercase tracking-wider">件级 · DA/T 94 附录A</div>
+                <div className="px-2 pt-3 pb-1 text-xs font-bold text-sky-500 uppercase tracking-wider">件级 · DA/T 94 附录A</div>
                 {GROUPS.filter((g) => g.tone === 'item').map((g) => {
                   const s = groupStats(g.items);
                   return (
@@ -699,7 +699,7 @@ const MetadataConfigTab: React.FC = () => {
                       label={g.title} total={s.total} mandatory={s.mandatory} tone="item" />
                   );
                 })}
-                <div className="px-2 pt-3 pb-1 text-[10px] font-bold text-teal-500 uppercase tracking-wider">盒级 · DA/T 39/42/94</div>
+                <div className="px-2 pt-3 pb-1 text-xs font-bold text-teal-500 uppercase tracking-wider">盒级 · DA/T 39/42/94</div>
                 {GROUPS.filter((g) => g.tone === 'box').map((g) => {
                   const s = groupStats(g.items);
                   return (
@@ -744,31 +744,31 @@ const MetadataConfigTab: React.FC = () => {
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-4">
                       <div className="bg-slate-50 rounded-lg p-3 text-center">
-                        <div className="text-2xl font-bold text-slate-700">{stats.totalCount}</div>
+                        <div className="text-xl font-bold text-slate-700">{stats.totalCount}</div>
                         <div className="text-xs text-slate-500 mt-0.5">元数据项总数</div>
                       </div>
                       <div className="bg-red-50 rounded-lg p-3 text-center">
-                        <div className="text-2xl font-bold text-red-600">{stats.mandatoryCount}</div>
+                        <div className="text-xl font-bold text-red-600">{stats.mandatoryCount}</div>
                         <div className="text-xs text-slate-500 mt-0.5">必选项</div>
                       </div>
                       <div className="bg-slate-50 rounded-lg p-3 text-center">
-                        <div className="text-2xl font-bold text-slate-500">{stats.optionalCount}</div>
+                        <div className="text-xl font-bold text-slate-500">{stats.optionalCount}</div>
                         <div className="text-xs text-slate-500 mt-0.5">可选项</div>
                       </div>
                       <div className="bg-amber-50 rounded-lg p-3 text-center">
-                        <div className="text-2xl font-bold text-amber-600">{stats.conditionalCount}</div>
+                        <div className="text-xl font-bold text-amber-600">{stats.conditionalCount}</div>
                         <div className="text-xs text-slate-500 mt-0.5">条件可选</div>
                       </div>
                       <div className="bg-sky-50 rounded-lg p-3 text-center">
-                        <div className="text-2xl font-bold text-sky-600">{stats.volumeEntityCount + stats.volumeAssociationCount}</div>
+                        <div className="text-xl font-bold text-sky-600">{stats.volumeEntityCount + stats.volumeAssociationCount}</div>
                         <div className="text-xs text-slate-500 mt-0.5">卷级项</div>
                       </div>
                       <div className="bg-emerald-50 rounded-lg p-3 text-center">
-                        <div className="text-2xl font-bold text-emerald-600">{stats.fileEntityCount + stats.agentEntityCount + stats.businessEntityCount + stats.relationCount}</div>
+                        <div className="text-xl font-bold text-emerald-600">{stats.fileEntityCount + stats.agentEntityCount + stats.businessEntityCount + stats.relationCount}</div>
                         <div className="text-xs text-slate-500 mt-0.5">件级项</div>
                       </div>
                       <div className="bg-teal-50 rounded-lg p-3 text-center">
-                        <div className="text-2xl font-bold text-teal-600">{stats.boxTotalCount}</div>
+                        <div className="text-xl font-bold text-teal-600">{stats.boxTotalCount}</div>
                         <div className="text-xs text-slate-500 mt-0.5">盒级项</div>
                       </div>
                     </div>

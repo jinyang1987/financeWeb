@@ -95,7 +95,7 @@ const SectionCard: React.FC<{ title: string; icon: React.ReactNode; badge?: stri
     <div className="flex items-center gap-2.5 px-5 py-4 border-b border-slate-100">
       {icon}
       <span className="text-sm font-bold text-slate-800">{title}</span>
-      {badge && <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{badge}</span>}
+      {badge && <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{badge}</span>}
     </div>
     <div className="px-5 py-4">{children}</div>
   </div>
@@ -153,7 +153,7 @@ const GroupingConfigTab: React.FC = () => {
     <div className="flex flex-col flex-1 min-h-0 bg-slate-100">
       {/* ═══ 操作栏（说教内容已移「原理说明」Tab） ═══ */}
       <div className="flex items-center gap-3 px-6 py-2.5 bg-white border-b border-slate-200 shrink-0">
-        <span className="text-[11px] px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200 font-medium"
+        <span className="text-xs px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200 font-medium"
           title="本页配置实时写入组卷引擎，驱动组卷工作台「智能组卷」推荐与「组卷」操作">
           配置实时驱动智能组卷
         </span>
@@ -177,7 +177,7 @@ const GroupingConfigTab: React.FC = () => {
               {NAV_SECTIONS.map((sec) => (
                 <React.Fragment key={sec.key}>
                   {sec.group && (
-                    <div className="px-2 pt-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">{sec.group}</div>
+                    <div className="px-2 pt-3 pb-1 text-xs font-bold text-slate-400 uppercase tracking-wider">{sec.group}</div>
                   )}
                   <button
                     type="button"
@@ -190,7 +190,7 @@ const GroupingConfigTab: React.FC = () => {
                       {sec.label}
                     </span>
                     {sec.badge && (
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 ${sec.badgeCls || 'bg-slate-100 text-slate-500'}`}>
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium shrink-0 ${sec.badgeCls || 'bg-slate-100 text-slate-500'}`}>
                         {sec.badge}
                       </span>
                     )}
@@ -258,7 +258,7 @@ const GroupingConfigTab: React.FC = () => {
                             }`}
                           >
                             <div className="text-xs font-bold text-slate-700">{opt.label}</div>
-                            <div className="text-[11px] text-slate-500 mt-0.5">{opt.desc}</div>
+                            <div className="text-xs text-slate-500 mt-0.5">{opt.desc}</div>
                           </button>
                         ))}
                       </div>
@@ -277,7 +277,7 @@ const GroupingConfigTab: React.FC = () => {
                                     boxThicknessMm: p.mm,
                                     itemsPerBox: calcItemsPerBox(p.mm, config.perItemThicknessMm),
                                   })}
-                                  className={`px-2.5 py-1 text-[11px] rounded-full border transition-colors cursor-pointer ${
+                                  className={`px-2.5 py-1 text-xs rounded-full border transition-colors cursor-pointer ${
                                     config.boxThicknessMm === p.mm
                                       ? 'bg-amber-600 text-white border-amber-600 font-medium'
                                       : 'bg-white text-slate-600 border-slate-300 hover:border-amber-400'
@@ -444,7 +444,7 @@ const GroupingConfigTab: React.FC = () => {
                         )}
 
                         {/* 规则预览 */}
-                        <p className="text-[11px] text-slate-500 mt-2.5">
+                        <p className="text-xs text-slate-500 mt-2.5">
                           <Ruler className="w-3.5 h-3.5 inline mr-0.5" />{at.label} →
                           {rule.period === 'month' ? ' 按月度分组，每月一卷' :
                            rule.period === 'quarter' ? ' 按季度分组，每季一卷' :
@@ -560,7 +560,7 @@ const GroupingConfigTab: React.FC = () => {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-sm font-bold text-slate-700">{opt.label}</span>
-                              <span className="font-mono text-[11px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{opt.structure}</span>
+                              <span className="font-mono text-xs text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{opt.structure}</span>
                             </div>
                             <p className="text-xs text-slate-500 mt-0.5">{opt.desc}</p>
                             <p className="text-xs text-sky-600 font-mono mt-1">示例：{opt.example}</p>

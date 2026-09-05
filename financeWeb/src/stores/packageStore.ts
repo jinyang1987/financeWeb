@@ -8,6 +8,7 @@ import { create } from 'zustand';
 import type { PackageUnit, PackageRecord, PackageStatus } from '../types/package';
 import { groupIntoPackageUnits, runPreCheck, generatePackageName, computeChecksum } from '../utils/packageEngine';
 import { generateManifestXML } from '../utils/packageManifest';
+import { createArchivePackage } from '../services/packageService';
 import type { ArchiveRecord } from '../types';
 import type { Volume } from '../types/volume';
 
@@ -117,15 +118,19 @@ export const usePackageStore = create<PackageStore>((set, get) => ({
     }));
   },
 
+  /**
+   * 生成封装包（2026-09-05 T15 真实现）：
+   * 调用服务端 POST /packages —— 真 ZIP（DA/T 48 封装说明 + 卷元数据 + 件内容字节），
+   * 包级 SHA-256 由服务端计算，ZIP 随档留存 /{全宗}/_归档信息包/{年}/ 并入固化登记。
+   * 本地仅记录包号/摘要/状态（serverNo），下载/移交走服务端。
+   */
   generatePackages: () => {
     set({ isGenerating: true });
-    setTimeout(async () => {
+    void (async () => {
       const state = get();
       // 自动对未校验的单元执行校验
-      let units = state.packageUnits.map(u =>
-        u.preCheck.errors.length === 0 && u.preCheck.warnings.length === 0 && u.preCheck.passed
-          ? u
-          : { ...u, preCheck: runPreCheck(u) }
+      const units = state.packageUnits.map(u =>
+        u.preCheck.passed ? u : { ...u, preCheck: runPreCheck(u) }
       );
 
       const targetIds = state.selectedUnitIds.size > 0
@@ -140,37 +145,57 @@ export const usePackageStore = create<PackageStore>((set, get) => ({
 
       const now = new Date().toISOString();
       const newPkgs: PackageRecord[] = [];
+      const failed: string[] = [];
       let seq = state.generatedPackages.length;
 
-      // 按类型分组生成封装包（保持规范的一一对应关系）
+      // 按封装单元逐个生成服务端信息包（一单元一包，保持规范一一对应）
       for (const unit of targetUnits) {
         seq++;
         const pkgName = generatePackageName(unit);
         const pkgId = `pkg-${now.slice(0, 10)}-${String(seq).padStart(3, '0')}`;
-        const manifestXML = await generateManifestXML({
-          packageName: pkgName,
-          unit,
-          createdBy: '档案管理员',
-          createdAt: now,
-          seq,
-        });
-
-        // 将校验结果写入 unit
-        unit.preCheck = runPreCheck(unit);
-
-        newPkgs.push({
-          id: pkgId,
-          packageName: pkgName,
-          containerFormat: 'zip',
-          unitIds: [unit.id],
-          totalRecords: unit.recordCount,
-          totalSize: unit.totalSize,
-          createdAt: now,
-          createdBy: '档案管理员',
-          checksum: await computeChecksum(manifestXML),
-          status: 'generated' as PackageStatus,
-          manifestXML,
-        });
+        // 卷节点清单：凭证类用 volumeId；其他类从记录的卷归属去重收集
+        const volNodes = new Set<string>();
+        if (unit.volumeId) volNodes.add(unit.volumeId);
+        for (const r of unit.records) {
+          if (r.volumeId) volNodes.add(r.volumeId);
+        }
+        if (volNodes.size === 0) {
+          failed.push(`${unit.label}（未关联案卷）`);
+          continue;
+        }
+        try {
+          const result = await createArchivePackage({
+            fondsCode: unit.fondsCode,
+            name: pkgName,
+            unitKind: unit.type,
+            volumeNodes: [...volNodes],
+          });
+          // 预览用说明 XML（本地生成；服务端 ZIP 内另有带文件清单的封装说明）
+          const manifestXML = await generateManifestXML({
+            packageName: pkgName,
+            unit,
+            createdBy: '档案管理员',
+            createdAt: now,
+            seq,
+          });
+          newPkgs.push({
+            id: pkgId,
+            packageName: pkgName,
+            containerFormat: 'zip',
+            unitIds: [unit.id],
+            totalRecords: unit.recordCount,
+            totalSize: unit.totalSize,
+            createdAt: now,
+            createdBy: '档案管理员',
+            checksum: result.checksum,
+            status: 'generated' as PackageStatus,
+            manifestXML,
+            serverNo: result.packageNo,
+            serverTotalVolumes: result.totalVolumes,
+          });
+        } catch {
+          failed.push(unit.label);
+        }
       }
 
       set(s => ({
@@ -179,7 +204,11 @@ export const usePackageStore = create<PackageStore>((set, get) => ({
         selectedUnitIds: new Set(),
         isGenerating: false,
       }));
-    }, 600);
+      if (failed.length > 0) {
+        // 失败原因经 Toast 由页面提示（store 无 UI 依赖，这里以 console + 状态留痕）
+        console.warn('[packageStore] 部分封装单元生成失败:', failed.join('、'));
+      }
+    })();
   },
 
   removePackage: (id) => {

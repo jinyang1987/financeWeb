@@ -118,13 +118,13 @@ const BorrowLedgerPage: React.FC = () => {
           <thead className="sticky top-0 z-10 bg-slate-100">
             <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
               <th className="px-4 py-3 w-8"></th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold">借阅单号</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold">借阅人</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold">事由</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold">档案数</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold">审批链</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold">借阅周期</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold">状态</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold">借阅单号</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold">借阅人</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold">事由</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold">档案数</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold">审批链</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold">借阅周期</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold">状态</th>
             </tr>
           </thead>
           <tbody>
@@ -139,14 +139,14 @@ const BorrowLedgerPage: React.FC = () => {
                     <td className="px-4 py-3 text-slate-400">
                       {expanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                     </td>
-                    <td className="px-4 py-3 font-mono text-[13px] font-bold text-slate-800">{o.orderNo}</td>
+                    <td className="px-4 py-3 font-mono text-sm font-bold text-slate-800">{o.orderNo}</td>
                     <td className="px-4 py-3 text-sm text-slate-800">{o.applicantName}<span className="text-slate-400 ml-1">{o.applicantDept}</span></td>
                     <td className="px-4 py-3.5 text-sm text-slate-600">{o.reasonType}</td>
                     <td className="px-4 py-3.5 text-sm text-slate-600">{o.items.length} 件</td>
                     <td className="px-4 py-3.5 text-sm text-slate-600 max-w-[180px] truncate" title={approverChain(o)}>{approverChain(o) || '—'}</td>
-                    <td className="px-4 py-3 font-mono text-[13px] text-slate-600 whitespace-nowrap">{o.startDate} ~ {o.endDate}</td>
+                    <td className="px-4 py-3 font-mono text-sm text-slate-600 whitespace-nowrap">{o.startDate} ~ {o.endDate}</td>
                     <td className="px-4 py-3">
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[o.status]}`}>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[o.status]}`}>
                         {ORDER_STATUS_LABELS[o.status]}
                       </span>
                     </td>
@@ -157,10 +157,10 @@ const BorrowLedgerPage: React.FC = () => {
                       <td colSpan={7} className="px-4 py-3">
                         <div className="space-y-1.5">
                           {o.fulfillments.length === 0 && (
-                            <div className="text-[11px] text-slate-400">审批中，待终审通过后生成履约子单</div>
+                            <div className="text-xs text-slate-400">审批中，待终审通过后生成履约子单</div>
                           )}
                           {o.fulfillments.map((f) => (
-                            <div key={f.id} className="flex items-center gap-3 text-[11px] bg-white border border-slate-100 rounded-lg px-3 py-2">
+                            <div key={f.id} className="flex items-center gap-3 text-xs bg-white border border-slate-100 rounded-lg px-3 py-2">
                               {f.type === 'electronic'
                                 ? <Cloud className="w-3.5 h-3.5 text-sky-500 shrink-0" />
                                 : <HardDrive className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
@@ -176,7 +176,7 @@ const BorrowLedgerPage: React.FC = () => {
                               </span>
                             </div>
                           ))}
-                          <div className="text-[10px] text-slate-400 pt-1">
+                          <div className="text-xs text-slate-400 pt-1">
                             申请权限：{o.items.map((i) => `${i.voucherNo}(${i.electronicPerms.map((p) => PERM_LABELS[p]).join('/') || '无电子'}${i.physicalMode !== 'none' ? '+' + PHYSICAL_MODE_LABELS[i.physicalMode] : ''})`).join('、')}
                           </div>
                         </div>

@@ -391,7 +391,7 @@ export const FanzongManager: React.FC = () => {
           <Building2 className="w-4 h-4 text-slate-400 shrink-0" />
           <span className="truncate">{node.name}</span>
           {count > 0 && (
-            <span className={`ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded-full shrink-0 ${
+            <span className={`ml-auto text-xs font-mono px-1.5 py-0.5 rounded-full shrink-0 ${
               isSelected ? 'bg-sky-100 text-sky-700' : 'bg-slate-100 text-slate-500'
             }`}>
               {activeCount}现
@@ -417,7 +417,7 @@ export const FanzongManager: React.FC = () => {
           </button>
         </div>
       </td>
-      <td className="px-4 py-3 font-mono text-[13px] font-bold text-slate-800">{f.code}</td>
+      <td className="px-4 py-3 font-mono text-sm font-bold text-slate-800">{f.code}</td>
       <td className="px-4 py-3 text-sm font-medium text-slate-800">{f.name}</td>
       <td className="px-4 py-3">
         {f.type === 'active' ? (
@@ -550,11 +550,11 @@ export const FanzongManager: React.FC = () => {
               <table className="w-full border-collapse">
                 <thead className="sticky top-0 bg-slate-100">
                   <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-                    <th className="px-4 py-3 text-center text-[13px] font-semibold w-20">操作</th>
-                    <th className="px-4 py-3 text-left text-[13px] font-semibold">全宗号</th>
-                    <th className="px-4 py-3 text-left text-[13px] font-semibold">全宗名称</th>
-                    <th className="px-4 py-3 text-left text-[13px] font-semibold">类型</th>
-                    <th className="px-4 py-3 text-left text-[13px] font-semibold">代管关系</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold w-20">操作</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">全宗号</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">全宗名称</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">类型</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">代管关系</th>
                   </tr>
                 </thead>
                 <tbody>

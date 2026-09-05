@@ -132,7 +132,7 @@ export const AuditLogsPanel: React.FC<AuditLogsPanelProps> = ({ records, trigger
     <div id="audit-logs-panel-area" className="space-y-4 animate-in fade-in duration-200">
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
             <Fingerprint className="w-5 h-5 text-sky-600" />
             <span>系统安全审计日志</span>
           </h2>
@@ -202,21 +202,21 @@ export const AuditLogsPanel: React.FC<AuditLogsPanelProps> = ({ records, trigger
           <table className="w-full border-collapse font-sans" id="audit-trail-logs-table">
             <thead>
               <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-                <th className="px-4 py-3 text-left text-[13px] font-semibold w-40">操作时间 (Time)</th>
-                <th className="px-4 py-3 text-left text-[13px] font-semibold w-28">操作柜员 (User)</th>
-                <th className="px-4 py-3 text-left text-[13px] font-semibold w-32">IP 地址 (IP)</th>
-                <th className="px-4 py-3 text-left text-[13px] font-semibold w-44">事件行为 (Action)</th>
-                <th className="px-4 py-3 text-left text-[13px] font-semibold">详情</th>
-                <th className="px-4 py-3 text-center text-[13px] font-semibold w-28">不可篡改验证</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold w-40">操作时间 (Time)</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold w-28">操作柜员 (User)</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold w-32">IP 地址 (IP)</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold w-44">事件行为 (Action)</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">详情</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold w-28">不可篡改验证</th>
               </tr>
             </thead>
             <tbody>
               {filteredLogs.map(log => (
                 <tr key={log.id} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
-                  <td className="px-4 py-3 font-mono text-[13px] text-slate-600">{log.time}</td>
+                  <td className="px-4 py-3 font-mono text-sm text-slate-600">{log.time}</td>
                   <td className="px-4 py-3 text-sm text-slate-800">{log.user}</td>
                   <td className="px-4 py-3">
-                    <code className="font-mono text-[13px] text-slate-600">
+                    <code className="font-mono text-sm text-slate-600">
                       {log.ip}
                     </code>
                   </td>
@@ -229,7 +229,7 @@ export const AuditLogsPanel: React.FC<AuditLogsPanelProps> = ({ records, trigger
                     {log.details}
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <div className="inline-flex items-center gap-1 bg-slate-50 text-slate-600 border border-slate-200 px-2 py-0.5 rounded-full font-bold text-[10px]">
+                    <div className="inline-flex items-center gap-1 bg-slate-50 text-slate-600 border border-slate-200 px-2 py-0.5 rounded-full font-bold text-xs">
                       <ShieldCheck className="w-3 h-3 text-slate-500 shrink-0" />
                       <span>链上存证</span>
                     </div>

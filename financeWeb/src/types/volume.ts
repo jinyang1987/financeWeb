@@ -181,7 +181,7 @@ export interface ArchiveCodeRule {
   /** 档号前缀段（卷和件共享） */
   segments: ArchiveCodeSegment[];
 
-  /** 盒级流水号段配置（仅 volume-mode 使用） */
+  /** 盒级流水号段配置（2026-08-29 T11 起弃用：盒号由后端流水表生成，不再嵌入档号；字段保留兼容旧数据） */
   boxSerial?: ArchiveCodeSerialConfig;
 
   /** 卷级流水号段配置 */
@@ -233,12 +233,13 @@ export interface VolumeRecommendation {
 /**
  * 默认纸质档案档号规则（volume-mode，依据 DA/T 13-2022、DA/T 94-2022）
  *
- * 标准结构（含盒号段）：
- *   全宗号(4位) - KU·二级类别号(2位)·年度(4位) - 保管期限代码 - 盒号(3位) - 案卷号(4位) - 件号(4位)
+ * 标准结构（2026-08-29 T11 起：去 B 伪盒号段——真实盒号由移交归盒流水生成，
+ * 与档号解耦，档号不再伪造 B 段）：
+ *   全宗号(4位) - KJ·二级类别号(2位)·年度(4位) - 保管期限代码 - 案卷号(4位) - 件号(4位)
  *
- * 示例：Z001-KU·01·2026-D30-B01-0005-0020
- *       ──── ── ── ──── ─── ─── ──── ────
- *       全宗  KU 01  2026  D30  B01  0005  0020
+ * 示例：Z001-KJ·01·2026-D30-0005-0020
+ *       ──── ── ── ──── ─── ──── ────
+ *       全宗  KJ 01  2026  D30  0005  0020
  */
 export const defaultPaperCodeRule: ArchiveCodeRule = {
   id: 'rule-default-paper',
@@ -247,25 +248,25 @@ export const defaultPaperCodeRule: ArchiveCodeRule = {
   managementMode: 'volume-mode',
   segments: [
     { type: 'fondsCode', label: '全宗号', length: 4, separator: '-', order: 1, source: 'fixed' },
-    { type: 'categoryCode', label: '门类代码', length: 2, separator: '·', order: 2, fixedValue: 'KU', source: 'fixed' },
+    { type: 'categoryCode', label: '门类代码', length: 2, separator: '·', order: 2, fixedValue: 'KJ', source: 'fixed' },
     { type: 'archiveTypeCode', label: '档案类别', length: 2, separator: '·', order: 3, source: 'auto' },
     { type: 'year', label: '年度', length: 4, separator: '-', order: 4, source: 'auto' },
     { type: 'retentionCode', label: '保管期限', length: 3, separator: '', order: 5, source: 'auto' },
   ],
-  boxSerial: { label: '盒号', length: 3, paddingChar: '0', prefix: 'B', separator: '-', resetOn: 'year' },
+  // T11：盒号段移除——盒号由后端流水表生成（BOX-年-类-序号），不再嵌入档号
   volumeSerial: { label: '案卷号', length: 4, paddingChar: '0', prefix: '', separator: '-', resetOn: 'year' },
   itemSerial: { label: '件号', length: 4, paddingChar: '0', prefix: '', separator: '-', resetOn: 'never' },
-  exampleVolumeCode: 'Z001-KU·01·2026-D30-B01-0005',
-  exampleItemCode: 'Z001-KU·01·2026-D30-B01-0005-0020',
+  exampleVolumeCode: 'Z001-KJ·01·2026-D30-0005',
+  exampleItemCode: 'Z001-KJ·01·2026-D30-0005-0020',
 };
 
 /**
  * 默认纯电子档案档号规则（item-mode，依据 DA/T 94-2022）
  *
  * 标准结构（无盒号/卷号段，仅件号）：
- *   全宗号(4位) - KU·二级类别号(2位)·年度(4位) - 保管期限代码 - 件号(4位)
+ *   全宗号(4位) - KJ·二级类别号(2位)·年度(4位) - 保管期限代码 - 件号(4位)
  *
- * 示例：Z001-KU·01·2026-D30-0020
+ * 示例：Z001-KJ·01·2026-D30-0020
  */
 export const defaultElectronicCodeRule: ArchiveCodeRule = {
   id: 'rule-default-electronic',
@@ -274,7 +275,7 @@ export const defaultElectronicCodeRule: ArchiveCodeRule = {
   managementMode: 'item-mode',
   segments: [
     { type: 'fondsCode', label: '全宗号', length: 4, separator: '-', order: 1, source: 'fixed' },
-    { type: 'categoryCode', label: '门类代码', length: 2, separator: '·', order: 2, fixedValue: 'KU', source: 'fixed' },
+    { type: 'categoryCode', label: '门类代码', length: 2, separator: '·', order: 2, fixedValue: 'KJ', source: 'fixed' },
     { type: 'archiveTypeCode', label: '档案类别', length: 2, separator: '·', order: 3, source: 'auto' },
     { type: 'year', label: '年度', length: 4, separator: '-', order: 4, source: 'auto' },
     { type: 'retentionCode', label: '保管期限', length: 3, separator: '', order: 5, source: 'auto' },
@@ -282,8 +283,8 @@ export const defaultElectronicCodeRule: ArchiveCodeRule = {
   // item-mode 无盒号段、无卷号段
   volumeSerial: { label: '案卷号', length: 4, paddingChar: '0', prefix: '', separator: '-', resetOn: 'year' },
   itemSerial: { label: '件号', length: 4, paddingChar: '0', prefix: '', separator: '-', resetOn: 'never' },
-  exampleVolumeCode: 'Z001-KU·01·2026-D30-0005',
-  exampleItemCode: 'Z001-KU·01·2026-D30-0020',
+  exampleVolumeCode: 'Z001-KJ·01·2026-D30-0005',
+  exampleItemCode: 'Z001-KJ·01·2026-D30-0020',
 };
 
 /** @deprecated 使用 defaultPaperCodeRule 代替 */

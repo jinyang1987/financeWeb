@@ -84,7 +84,7 @@ const CreateAppModal: React.FC<{ open: boolean; onClose: () => void; onCreated: 
             <KeyRound className="w-4 h-4 text-sky-600" />
             {issued ? '签发成功' : '签发推送接入应用'}
           </h3>
-          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg">×</button>
+          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600 text-base">×</button>
         </div>
 
         {issued ? (
@@ -95,11 +95,11 @@ const CreateAppModal: React.FC<{ open: boolean; onClose: () => void; onCreated: 
             </div>
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2 font-mono text-xs">
               <div>
-                <div className="text-slate-400 text-[11px]">AppKey</div>
+                <div className="text-slate-400 text-xs">AppKey</div>
                 <div className="text-slate-800 break-all">{issued.appKey}</div>
               </div>
               <div>
-                <div className="text-slate-400 text-[11px]">AppSecret（仅此一次，请妥善保存）</div>
+                <div className="text-slate-400 text-xs">AppSecret（仅此一次，请妥善保存）</div>
                 <div className="text-amber-700 break-all">{issued.appSecret}</div>
               </div>
             </div>
@@ -210,21 +210,21 @@ const BatchDetail: React.FC<{ batchNo: string }> = ({ batchNo }) => {
         <table className="w-full">
           <thead>
             <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-              <th className="px-4 py-3 text-left text-[13px] font-semibold w-36">来源单号</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold w-28">凭证号</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold">摘要</th>
-              <th className="px-4 py-3 text-right text-[13px] font-semibold w-28">金额</th>
-              <th className="px-4 py-3 text-center text-[13px] font-semibold w-20">状态</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold w-44">档号 / 说明</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold w-36">来源单号</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold w-28">凭证号</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold">摘要</th>
+              <th className="px-4 py-3 text-right text-sm font-semibold w-28">金额</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold w-20">状态</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold w-44">档号 / 说明</th>
             </tr>
           </thead>
           <tbody>
             {detail.items.map((it) => (
               <tr key={it.id} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
-                <td className="px-4 py-3 font-mono text-[13px] text-slate-600">{it.external_id || '—'}</td>
-                <td className="px-4 py-3 font-mono text-[13px] text-slate-800">{it.voucher_no || '—'}</td>
+                <td className="px-4 py-3 font-mono text-sm text-slate-600">{it.external_id || '—'}</td>
+                <td className="px-4 py-3 font-mono text-sm text-slate-800">{it.voucher_no || '—'}</td>
                 <td className="px-4 py-3.5 text-sm text-slate-600 max-w-[200px] truncate" title={it.summary}>{it.summary || '—'}</td>
-                <td className="px-4 py-3 text-right font-mono text-[13px] text-slate-800">{it.amount != null ? it.amount.toLocaleString('zh-CN', { minimumFractionDigits: 2 }) : '—'}</td>
+                <td className="px-4 py-3 text-right font-mono text-sm text-slate-800">{it.amount != null ? it.amount.toLocaleString('zh-CN', { minimumFractionDigits: 2 }) : '—'}</td>
                 <td className="px-4 py-3 text-center">
                   {it.status === 'success'
                     ? <span className="px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-medium">已入池</span>
@@ -333,7 +333,7 @@ const OpenAppManagePage: React.FC = () => {
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-slate-800 flex items-center gap-2">
                       {a.appName}
-                      <span className={`px-1.5 py-0.5 text-[10px] rounded-full ${a.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                      <span className={`px-1.5 py-0.5 text-xs rounded-full ${a.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
                         {a.status === 'active' ? '启用' : '停用'}
                       </span>
                     </div>
@@ -348,7 +348,7 @@ const OpenAppManagePage: React.FC = () => {
                   </div>
                   {canManage && (
                     <label className="flex items-center gap-1.5 shrink-0" title="该应用推送的数据默认流向（推送方可在报文中覆盖）">
-                      <span className="text-[11px] text-slate-400">默认去向</span>
+                      <span className="text-xs text-slate-400">默认去向</span>
                       <select
                         value={a.defaultDestination || 'to-volume'}
                         onChange={async (e) => {
@@ -383,15 +383,15 @@ const OpenAppManagePage: React.FC = () => {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-                <th className="px-4 py-3 text-left text-[13px] font-semibold w-44">批次号</th>
-                <th className="px-4 py-3 text-left text-[13px] font-semibold">应用</th>
-                <th className="px-4 py-3 text-center text-[13px] font-semibold w-24">全宗</th>
-                <th className="px-4 py-3 text-center text-[13px] font-semibold w-20">状态</th>
-                <th className="px-4 py-3 text-right text-[13px] font-semibold w-16">总数</th>
-                <th className="px-4 py-3 text-right text-[13px] font-semibold w-16">成功</th>
-                <th className="px-4 py-3 text-right text-[13px] font-semibold w-16">失败</th>
-                <th className="px-4 py-3 text-left text-[13px] font-semibold">说明</th>
-                <th className="px-4 py-3 text-center text-[13px] font-semibold w-10"></th>
+                <th className="px-4 py-3 text-left text-sm font-semibold w-44">批次号</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">应用</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold w-24">全宗</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold w-20">状态</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold w-16">总数</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold w-16">成功</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold w-16">失败</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">说明</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold w-10"></th>
               </tr>
             </thead>
             <tbody>
@@ -407,15 +407,15 @@ const OpenAppManagePage: React.FC = () => {
                       className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors cursor-pointer"
                       onClick={() => setExpandedBatch(expanded ? null : b.batch_no)}
                     >
-                      <td className="px-4 py-3 font-mono text-[13px] text-slate-800">{b.batch_no}</td>
-                      <td className="px-4 py-3 text-sm text-slate-800">{b.app_name || '—'}<div className="text-[10px] text-slate-400">{b.source_system || ''}</div></td>
-                      <td className="px-4 py-3 text-center font-mono text-[13px] text-slate-600">{b.fonds_code}</td>
+                      <td className="px-4 py-3 font-mono text-sm text-slate-800">{b.batch_no}</td>
+                      <td className="px-4 py-3 text-sm text-slate-800">{b.app_name || '—'}<div className="text-xs text-slate-400">{b.source_system || ''}</div></td>
+                      <td className="px-4 py-3 text-center font-mono text-sm text-slate-600">{b.fonds_code}</td>
                       <td className="px-4 py-3 text-center">
                         <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${st.cls}`}>{st.label}</span>
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-[13px] text-slate-600">{b.total_count}</td>
-                      <td className="px-4 py-3 text-right font-mono text-[13px] text-green-600">{b.success_count}</td>
-                      <td className="px-4 py-3 text-right font-mono text-[13px] text-red-600">{b.fail_count}</td>
+                      <td className="px-4 py-3 text-right font-mono text-sm text-slate-600">{b.total_count}</td>
+                      <td className="px-4 py-3 text-right font-mono text-sm text-green-600">{b.success_count}</td>
+                      <td className="px-4 py-3 text-right font-mono text-sm text-red-600">{b.fail_count}</td>
                       <td className="px-4 py-3.5 text-sm text-slate-600 max-w-[240px] truncate" title={b.message || ''}>{b.message || '—'}</td>
                       <td className="px-4 py-3 text-center">
                         {expanded ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}

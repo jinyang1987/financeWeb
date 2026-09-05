@@ -145,7 +145,7 @@ const TypeSelector: React.FC<{
                   }`}
               >
                 <span className="font-medium">{l.label}</span>
-                <span className="text-slate-400 ml-2 text-[10px]">{l.path}</span>
+                <span className="text-slate-400 ml-2 text-xs">{l.path}</span>
               </button>
             ))
           )}
@@ -219,8 +219,8 @@ const FieldConfigTable: React.FC<{ typeCode: string }> = ({ typeCode }) => {
       {/* 规范依据 */}
       {basis && (
         <div className="mb-3 px-3 py-2 bg-teal-50/60 border border-teal-200/70 rounded-lg">
-          <span className="text-[10px] font-semibold text-teal-700 mr-1.5">字段依据</span>
-          <span className="text-[11px] text-teal-600 leading-relaxed">{basis}</span>
+          <span className="text-xs font-semibold text-teal-700 mr-1.5">字段依据</span>
+          <span className="text-xs text-teal-600 leading-relaxed">{basis}</span>
         </div>
       )}
 
@@ -236,12 +236,12 @@ const FieldConfigTable: React.FC<{ typeCode: string }> = ({ typeCode }) => {
         </span>
         <div className="flex items-center gap-1.5">
           <button onClick={handleSelectAll}
-            className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-sky-600 bg-sky-50 rounded-md hover:bg-sky-100 transition-colors">
+            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-sky-600 bg-sky-50 rounded-md hover:bg-sky-100 transition-colors">
             <Eye className="w-3 h-3" />
             全部显示
           </button>
           <button onClick={handleDeselectAll}
-            className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-slate-500 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors">
+            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-500 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors">
             <EyeOff className="w-3 h-3" />
             仅必填
           </button>
@@ -259,7 +259,7 @@ const FieldConfigTable: React.FC<{ typeCode: string }> = ({ typeCode }) => {
               <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border-b border-slate-100">
                 <span className="text-slate-400">{info.icon}</span>
                 <span className="text-xs font-semibold text-slate-600">{info.label}</span>
-                <span className="text-[10px] text-slate-400">
+                <span className="text-xs text-slate-400">
                   {groupVisible}/{groupFields.length}
                 </span>
               </div>
@@ -289,14 +289,14 @@ const FieldConfigTable: React.FC<{ typeCode: string }> = ({ typeCode }) => {
                       <span className={`text-xs ${field.visible ? 'text-slate-700 font-medium' : 'text-slate-400'}`}>
                         {field.label}
                       </span>
-                      <span className="text-[10px] text-slate-400 font-mono">{field.key}</span>
+                      <span className="text-xs text-slate-400 font-mono">{field.key}</span>
                       {field.required && (
-                        <span className="text-[9px] text-red-400 font-medium">必填</span>
+                        <span className="text-xs text-red-400 font-medium">必填</span>
                       )}
                     </div>
                     {/* 公共字段标记 */}
                     {SOURCE_DOC_COMMON_FIELDS.some(cf => cf.key === field.key) && (
-                      <span className="text-[9px] text-slate-300 bg-slate-100 px-1 rounded shrink-0">公共</span>
+                      <span className="text-xs text-slate-300 bg-slate-100 px-1 rounded shrink-0">公共</span>
                     )}
                   </div>
                 ))}

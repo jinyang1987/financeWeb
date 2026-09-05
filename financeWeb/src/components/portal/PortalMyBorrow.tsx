@@ -19,7 +19,7 @@ const PortalMyBorrow: React.FC = () => {
       <div className="px-6 py-2.5 bg-white border-b border-slate-200 flex items-center gap-2 shrink-0">
         <BookOpen className="w-4 h-4 text-sky-600" />
         <span className="text-xs font-semibold text-slate-700">我的借阅（检索门户）</span>
-        <span className="text-[10px] text-slate-400">借阅车统一结算 · 审批进度 · 限时在线调阅</span>
+        <span className="text-xs text-slate-400">借阅车统一结算 · 审批进度 · 限时在线调阅</span>
       </div>
       <div className="h-[calc(100%-37px)]">
         <MyBorrowPage />

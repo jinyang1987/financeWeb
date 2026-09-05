@@ -69,8 +69,8 @@ const PortalApp: React.FC<{ loggedUser: string; onLogout: () => void }> = ({ log
           className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
         >
           <img src="/logo.png" alt="会计档案" className="h-7 w-auto object-contain rounded" />
-          <span className="font-bold text-slate-800 text-[15px] tracking-wide">会计档案 · 检索门户</span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-sky-50 text-sky-600 border border-sky-100">前台</span>
+          <span className="font-bold text-slate-800 text-tab tracking-wide">会计档案 · 检索门户</span>
+          <span className="text-xs px-1.5 py-0.5 rounded-full bg-sky-50 text-sky-600 border border-sky-100">前台</span>
         </button>
 
         <div className="flex items-center gap-2">
@@ -115,7 +115,7 @@ const PortalApp: React.FC<{ loggedUser: string; onLogout: () => void }> = ({ log
             </div>
             <div className="hidden lg:block">
               <div className="text-xs font-semibold text-slate-700 leading-tight">{currentUser?.name || loggedUser}</div>
-              <div className="text-[10px] text-slate-400 leading-tight">
+              <div className="text-xs text-slate-400 leading-tight">
                 {currentUser?.roles.map((r) => ROLE_LABELS[r]).join(' / ') || ''}
               </div>
             </div>

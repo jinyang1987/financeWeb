@@ -41,7 +41,7 @@ const EMPTY: Draft = {
   arranger: '', auditor: '', auditDate: '', dualSetRef: '',
 };
 
-const inputCls = 'mt-0.5 w-full px-2 py-1.5 text-[13px] border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-sky-200';
+const inputCls = 'mt-0.5 w-full px-2 py-1.5 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-sky-200';
 const labelCls = 'text-xs font-medium text-slate-600';
 
 const BoxInfoEditModal: React.FC<BoxInfoEditModalProps> = ({ open, box, onClose, onSaved }) => {
@@ -145,7 +145,7 @@ const BoxInfoEditModal: React.FC<BoxInfoEditModalProps> = ({ open, box, onClose,
               <textarea value={draft.remarks} onChange={(e) => set('remarks', e.target.value)} rows={2} className={`${inputCls} resize-none`} placeholder="断号/特殊情况的备考说明" />
             </label>
           </div>
-          <p className="text-[11px] text-slate-400 mt-3">
+          <p className="text-xs text-slate-400 mt-3">
             装盒/审核信息建议在封盒或上架前录入完整；所有修改将记入操作日志（旧值/新值留痕，DA/T 94-2022 附录 E.7）。
           </p>
         </div>

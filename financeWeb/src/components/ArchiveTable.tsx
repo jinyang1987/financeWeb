@@ -91,7 +91,7 @@ export const ArchiveTable: React.FC<ArchiveTableProps> = ({
                     <span className="text-sm font-bold text-slate-500 bg-white border border-slate-200 px-2 py-1 rounded-lg shadow-xs">{((item.done / item.total) * 100).toFixed(0)}% Done</span>
                   </div>
                   <div>
-                    <h4 className="font-bold text-slate-800 text-lg mb-1">{item.title}</h4>
+                    <h4 className="font-bold text-slate-800 text-base mb-1">{item.title}</h4>
                     <p className="text-xs text-slate-500 font-medium tracking-wide">Total {item.done} / Of {item.total}</p>
                   </div>
                   <div className="w-full bg-slate-200 rounded-full h-2.5 mt-2 overflow-hidden shadow-inner">
@@ -218,38 +218,38 @@ export const ArchiveTable: React.FC<ArchiveTableProps> = ({
                         <button
                           title="Real (CA)"
                           onClick={() => { handleOpenDrawer(row); setActiveFileIndex(1); }}
-                          className={`px-1.5 py-0.5 rounded font-bold text-[10px] flex items-center gap-0.5 pointer-events-auto border transition-colors cursor-pointer ${
+                          className={`px-1.5 py-0.5 rounded font-bold text-xs flex items-center gap-0.5 pointer-events-auto border transition-colors cursor-pointer ${
                             row.checks.real ? 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100' : 'bg-red-50 border-red-200 text-red-800 hover:bg-red-100'
                           }`}
                         >
-                          <span></span><span className="text-[8px] opacity-75">(CA)</span>
+                          <span></span><span className="text-xs opacity-75">(CA)</span>
                         </button>
                         <button
                           title="Complete (SHA256)"
-                          className={`px-1.5 py-0.5 rounded font-bold text-[10px] flex items-center gap-0.5 border cursor-pointer ${
+                          className={`px-1.5 py-0.5 rounded font-bold text-xs flex items-center gap-0.5 border cursor-pointer ${
                             row.checks.complete ? 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100' : 'bg-red-50 border-red-200 text-red-800'
                           }`}
                           onClick={() => handleOpenDrawer(row)}
                         >
-                          <span></span><span className="text-[8px] opacity-75">(Hash)</span>
+                          <span></span><span className="text-xs opacity-75">(Hash)</span>
                         </button>
                         <button
                           title="Usable (Format)"
-                          className={`px-1.5 py-0.5 rounded font-bold text-[10px] flex items-center gap-0.5 border transition-all cursor-pointer ${
+                          className={`px-1.5 py-0.5 rounded font-bold text-xs flex items-center gap-0.5 border transition-all cursor-pointer ${
                             row.checks.usable ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-amber-100 border-amber-300 text-amber-800 animate-pulse'
                           }`}
                           onClick={() => { handleOpenDrawer(row); const ofdIdx = row.components.findIndex(c => c.contentType === 'ofd'); if (ofdIdx >= 0) setActiveFileIndex(ofdIdx); }}
                         >
-                          <span>Usable</span><span className="text-[8px] opacity-75">({row.checks.usable ? 'OK' : 'Missing?'})</span>
+                          <span>Usable</span><span className="text-xs opacity-75">({row.checks.usable ? 'OK' : 'Missing?'})</span>
                         </button>
                         <button
                           title="Safe (Security)"
-                          className={`px-1.5 py-0.5 rounded font-bold text-[10px] flex items-center gap-0.5 border cursor-pointer ${
+                          className={`px-1.5 py-0.5 rounded font-bold text-xs flex items-center gap-0.5 border cursor-pointer ${
                             row.checks.safe ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-800'
                           }`}
                           onClick={() => handleOpenDrawer(row)}
                         >
-                          <span></span><span className="text-[8px] opacity-75"></span>
+                          <span></span><span className="text-xs opacity-75"></span>
                         </button>
                       </div>
                     </TableCell>
@@ -260,7 +260,7 @@ export const ArchiveTable: React.FC<ArchiveTableProps> = ({
                         row.status === '已组卷' ? 'bg-muted text-muted-foreground border border-slate-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
                       }`}>{row.status}</span>
                       {row.volumeCode && (
-                        <span className="block font-mono text-[9px] text-muted-foreground mt-0.5 tracking-tight">{row.volumeCode}</span>
+                        <span className="block font-mono text-xs text-muted-foreground mt-0.5 tracking-tight">{row.volumeCode}</span>
                       )}
                     </TableCell>
 

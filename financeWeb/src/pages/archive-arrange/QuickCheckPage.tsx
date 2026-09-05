@@ -39,7 +39,7 @@ const phaseLabel = (p: string) =>
 
 /** 四性徽标（单维度） */
 const DimBadge: React.FC<{ label: string; pass: boolean }> = ({ label, pass }) => (
-  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-medium ${
+  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-xs font-medium ${
     pass ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-600 border-red-200'
   }`}>
     {pass ? <CheckCircle2 className="w-2.5 h-2.5" /> : <XCircle className="w-2.5 h-2.5" />}
@@ -75,15 +75,15 @@ const ReportRow: React.FC<{
         <td className="px-4 py-3 text-center">
           {expanded ? <ChevronDown className="w-4 h-4 text-slate-400 inline" /> : <ChevronRight className="w-4 h-4 text-slate-400 inline" />}
         </td>
-        <td className="px-4 py-3 font-mono text-[13px] text-slate-600 whitespace-nowrap">{fmtTime(report.created_at)}</td>
+        <td className="px-4 py-3 font-mono text-sm text-slate-600 whitespace-nowrap">{fmtTime(report.created_at)}</td>
         <td className="px-4 py-3.5 text-sm text-slate-800">
           <div className="font-medium truncate max-w-[260px] flex items-center gap-1.5" title={targetName}>
             {targetName}
             {isReviewRow && (
-              <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-violet-50 text-violet-600 border border-violet-200 shrink-0">人工复检</span>
+              <span className="px-1.5 py-0.5 text-xs rounded-full bg-violet-50 text-violet-600 border border-violet-200 shrink-0">人工复检</span>
             )}
           </div>
-          <div className="text-[10px] text-slate-400 font-mono truncate max-w-[260px]">{report.target_node}</div>
+          <div className="text-xs text-slate-400 font-mono truncate max-w-[260px]">{report.target_node}</div>
         </td>
         <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap">
           {report.target_kind === 'volume' ? '案卷' : '件'}
@@ -138,32 +138,32 @@ const ReportRow: React.FC<{
                   <table className="w-full">
                     <thead>
                       <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-600 divide-x divide-slate-200/80">
-                        <th className="px-4 py-2 text-left text-[13px] font-semibold w-24 whitespace-nowrap">四性</th>
-                        <th className="px-4 py-2 text-left text-[13px] font-semibold w-64">检测项</th>
-                        <th className="px-4 py-2 text-center text-[13px] font-semibold w-20 whitespace-nowrap">结果</th>
-                        <th className="px-4 py-2 text-left text-[13px] font-semibold">问题说明</th>
-                        <th className="px-4 py-2 text-right text-[13px] font-semibold w-28 whitespace-nowrap">定位</th>
+                        <th className="px-4 py-2 text-left text-sm font-semibold w-24 whitespace-nowrap">四性</th>
+                        <th className="px-4 py-2 text-left text-sm font-semibold w-64">检测项</th>
+                        <th className="px-4 py-2 text-center text-sm font-semibold w-20 whitespace-nowrap">结果</th>
+                        <th className="px-4 py-2 text-left text-sm font-semibold">问题说明</th>
+                        <th className="px-4 py-2 text-right text-sm font-semibold w-28 whitespace-nowrap">定位</th>
                       </tr>
                     </thead>
                     <tbody>
                       {items.map((it, i) => (
                         <tr key={i} className={`border-b border-slate-100 last:border-0 divide-x divide-slate-100 ${it.pass ? '' : 'bg-red-50/40'}`}>
-                          <td className="px-4 py-2 text-[12px] text-slate-600 whitespace-nowrap">
+                          <td className="px-4 py-2 text-xs text-slate-600 whitespace-nowrap">
                             {DIMENSION_LABELS[it.dimension] || it.dimension}
                           </td>
-                          <td className="px-4 py-2 text-[12px] text-slate-700">{it.name}<span className="text-slate-300 font-mono ml-1.5">{it.code}</span></td>
+                          <td className="px-4 py-2 text-xs text-slate-700">{it.name}<span className="text-slate-300 font-mono ml-1.5">{it.code}</span></td>
                           <td className="px-4 py-2 text-center">
                             {it.pass
                               ? <CheckCircle2 className="w-4 h-4 text-emerald-500 inline" />
                               : <XCircle className="w-4 h-4 text-red-500 inline" />}
                           </td>
-                          <td className="px-4 py-2 text-[12px] text-slate-500">{it.pass ? '—' : (it.note || '未通过')}</td>
+                          <td className="px-4 py-2 text-xs text-slate-500">{it.pass ? '—' : (it.note || '未通过')}</td>
                           <td className="px-4 py-2 text-right whitespace-nowrap">
                             {!it.pass && it.target === 'volume' && (
                               <button
                                 type="button"
                                 onClick={(e) => { e.stopPropagation(); onJumpVolume(report.target_node); }}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-sky-700 bg-sky-50 border border-sky-200 rounded-md hover:bg-sky-100"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-sky-700 bg-sky-50 border border-sky-200 rounded-md hover:bg-sky-100"
                               >
                                 <Layers className="w-3 h-3" />查看案卷
                               </button>
@@ -172,7 +172,7 @@ const ReportRow: React.FC<{
                               <button
                                 type="button"
                                 onClick={(e) => { e.stopPropagation(); onViewRecord(it.target!); }}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-sky-700 bg-sky-50 border border-sky-200 rounded-md hover:bg-sky-100"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-sky-700 bg-sky-50 border border-sky-200 rounded-md hover:bg-sky-100"
                               >
                                 <Eye className="w-3 h-3" />查看该件
                               </button>
@@ -186,7 +186,7 @@ const ReportRow: React.FC<{
               )}
 
               {(detail.reviews || []).length > 0 && (
-                <div className="text-[11px] text-slate-500 space-y-1">
+                <div className="text-xs text-slate-500 space-y-1">
                   {(detail.reviews || []).map((rv, i) => (
                     <div key={i}>
                       人工复检：{DIMENSION_LABELS[rv.dimension] || rv.dimension} → {rv.status === 'pass' ? '通过' : '不通过'}
@@ -206,7 +206,7 @@ const ReportRow: React.FC<{
                       void downloadRecord(detail.reportFileNode!, `四性检测报告-${report.phase}-${report.id.slice(0, 8)}.json`)
                         .catch(() => {});
                     }}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-slate-600 bg-white border border-slate-200 rounded-md hover:bg-slate-50"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-md hover:bg-slate-50"
                   >
                     <Download className="w-3 h-3" />下载报告文件
                   </button>
@@ -216,7 +216,7 @@ const ReportRow: React.FC<{
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); onReview(report); }}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-violet-700 bg-white border border-violet-200 rounded-md hover:bg-violet-50"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-violet-700 bg-white border border-violet-200 rounded-md hover:bg-violet-50"
                   >
                     <ClipboardCheck className="w-3 h-3" />人工复检
                   </button>
@@ -225,7 +225,7 @@ const ReportRow: React.FC<{
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); onJumpVolume(report.target_node); }}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-sky-700 bg-white border border-sky-200 rounded-md hover:bg-sky-50"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-sky-700 bg-white border border-sky-200 rounded-md hover:bg-sky-50"
                   >
                     <ExternalLink className="w-3 h-3" />到组卷工作台查看该案卷
                   </button>
@@ -400,7 +400,7 @@ const QuickCheckPage: React.FC = () => {
               返回检测列表
             </button>
             <div className="text-sm font-bold text-slate-800 truncate">{viewRecord.voucherNo || '档案详情'}</div>
-            <div className="text-[10px] text-slate-400 mt-0.5">检测问题定位 · 件级元数据与内容</div>
+            <div className="text-xs text-slate-400 mt-0.5">检测问题定位 · 件级元数据与内容</div>
           </div>
         </div>
         <RecordDetailPanel context="archive" record={viewRecord} onClose={() => setViewRecord(null)} />
@@ -448,7 +448,7 @@ const QuickCheckPage: React.FC = () => {
               <ShieldCheck className="w-5 h-5 text-slate-500" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-slate-800">{stats.total}</div>
+              <div className="text-xl font-bold text-slate-800">{stats.total}</div>
               <div className="text-xs text-slate-400">检测报告总数（全库）</div>
             </div>
           </div>
@@ -457,7 +457,7 @@ const QuickCheckPage: React.FC = () => {
               <CheckCircle2 className="w-5 h-5 text-emerald-500" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-emerald-600">{stats.passed}</div>
+              <div className="text-xl font-bold text-emerald-600">{stats.passed}</div>
               <div className="text-xs text-slate-400">四性全部通过（本页）</div>
             </div>
           </div>
@@ -466,13 +466,13 @@ const QuickCheckPage: React.FC = () => {
               <ShieldAlert className="w-5 h-5 text-red-500" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-red-500">{stats.failed}</div>
+              <div className="text-xl font-bold text-red-500">{stats.failed}</div>
               <div className="text-xs text-slate-400">存在不合格项（本页）</div>
             </div>
           </div>
           <div className="bg-white border border-slate-200 rounded-xl p-4">
             <div className="text-xs text-slate-400 mb-1.5">检测口径（DA/T 70 / DA/T 94）</div>
-            <div className="text-[11px] text-slate-500 leading-relaxed">
+            <div className="text-xs text-slate-500 leading-relaxed">
               归档（确认组卷）与移交（推送保管库）双环节自动检测，未过即阻断；人工复检写新行不改历史；报告文件随档留存
             </div>
           </div>
@@ -514,13 +514,13 @@ const QuickCheckPage: React.FC = () => {
                 <thead>
                   <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
                     <th className="px-4 py-3 w-10"></th>
-                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-44 whitespace-nowrap">检测时间</th>
-                    <th className="px-4 py-3 text-left text-[13px] font-semibold min-w-[220px]">检测对象</th>
-                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-16 whitespace-nowrap">类型</th>
-                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-28 whitespace-nowrap">环节</th>
-                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-64 whitespace-nowrap">四性结果</th>
-                    <th className="px-4 py-3 text-center text-[13px] font-semibold w-36 whitespace-nowrap">结论</th>
-                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-28 whitespace-nowrap">操作人</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold w-44 whitespace-nowrap">检测时间</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold min-w-[220px]">检测对象</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold w-16 whitespace-nowrap">类型</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold w-28 whitespace-nowrap">环节</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold w-64 whitespace-nowrap">四性结果</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold w-36 whitespace-nowrap">结论</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold w-28 whitespace-nowrap">操作人</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -596,7 +596,7 @@ const QuickCheckPage: React.FC = () => {
                       <div className="text-sm font-medium text-slate-800 truncate" title={v.title}>
                         {v.title && v.title !== '未命名案卷' && v.title !== '新案卷' ? v.title : (v.volumeCode || '未命名案卷')}
                       </div>
-                      <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2">
+                      <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-2">
                         <span>{v.archiveType || '—'}</span>
                         <span>{v.year}年</span>
                         <span>{v.totalItems ?? 0} 件</span>

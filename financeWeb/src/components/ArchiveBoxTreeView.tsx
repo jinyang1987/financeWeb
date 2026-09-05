@@ -145,7 +145,7 @@ export const ArchiveBoxTreeView: React.FC<ArchiveBoxTreeViewProps> = ({
       cell: (e) => {
         const level = e.box.securityLevel || '普通';
         return (
-          <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium ${SECURITY_COLORS[level] || SECURITY_COLORS['普通']}`}>
+          <span className={`text-xs px-1.5 py-0.5 rounded-full border font-medium ${SECURITY_COLORS[level] || SECURITY_COLORS['普通']}`}>
             {level}
           </span>
         );
@@ -155,7 +155,7 @@ export const ArchiveBoxTreeView: React.FC<ArchiveBoxTreeViewProps> = ({
     {
       id: 'status', header: '状态',
       cell: (e) => (
-        <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium ${STATUS_COLORS[e.box.status]}`}>
+        <span className={`text-xs px-1.5 py-0.5 rounded-full border font-medium ${STATUS_COLORS[e.box.status]}`}>
           {BOX_STATUS_LABELS[e.box.status]}
         </span>
       ),
@@ -211,7 +211,7 @@ export const ArchiveBoxTreeView: React.FC<ArchiveBoxTreeViewProps> = ({
           : (r.volumeCode || vol?.volumeCode || '');
         const full = [name, r.volumeCode && name !== r.volumeCode ? r.volumeCode : ''].filter(Boolean).join(' · ');
         return (
-          <span className="text-[11px] text-slate-500 truncate block max-w-[210px]" title={full || undefined}>
+          <span className="text-xs text-slate-500 truncate block max-w-[210px]" title={full || undefined}>
             {name || '—'}
           </span>
         );
@@ -288,7 +288,7 @@ export const ArchiveBoxTreeView: React.FC<ArchiveBoxTreeViewProps> = ({
                   ? `${ARCHIVE_TYPE_CONFIG[archiveTypeCode]?.label || ''} · 案卷盒`
                   : '全部案卷盒'}
               </span>
-              <span className="text-[10px] text-slate-400">
+              <span className="text-xs text-slate-400">
                 ({entries.length} 盒)
               </span>
             </div>
@@ -342,11 +342,11 @@ export const ArchiveBoxTreeView: React.FC<ArchiveBoxTreeViewProps> = ({
               <span className="text-xs text-slate-500 truncate">
                 {focusedBox?.boxName || ''}
               </span>
-              <span className="text-[10px] text-slate-400 shrink-0">
+              <span className="text-xs text-slate-400 shrink-0">
                 ({focusedEntry?.volumes.length || 0} 卷 · {focusedEntry?.matchedItems.length || 0} 件 · {formatAmount(focusedTotalAmount)})
               </span>
               {selectedItemIds.size > 0 && (
-                <span className="text-[10px] font-medium text-sky-600 bg-sky-50 border border-sky-200 rounded-full px-2 py-0.5 shrink-0">
+                <span className="text-xs font-medium text-sky-600 bg-sky-50 border border-sky-200 rounded-full px-2 py-0.5 shrink-0">
                   已选 {selectedItemIds.size} 件
                 </span>
               )}
@@ -354,7 +354,7 @@ export const ArchiveBoxTreeView: React.FC<ArchiveBoxTreeViewProps> = ({
 
             {/* 盒关键元数据标签 */}
             {focusedBox && (
-              <div className="flex items-center gap-3 text-[10px] text-slate-500 shrink-0">
+              <div className="flex items-center gap-3 text-xs text-slate-500 shrink-0">
                 <span className="flex items-center gap-1">
                   <MapPin className="w-3 h-3" />{focusedBox.location || '未设置'}
                 </span>

@@ -42,7 +42,7 @@ export const AuditTimeline: React.FC<AuditTimelineProps> = ({ logs }) => {
           <Clock className="w-3.5 h-3.5 text-sky-600" />
           <span>Alfresco 原生全生命周期固化审计日志 (Audit Trail)</span>
         </h4>
-        <span className="text-[10px] bg-sky-50 text-sky-700 px-2 py-0.5 rounded-full font-bold select-none">
+        <span className="text-xs bg-sky-50 text-sky-700 px-2 py-0.5 rounded-full font-bold select-none">
           国标/区块链双链防篡改防泄漏存证
         </span>
       </div>
@@ -58,14 +58,14 @@ export const AuditTimeline: React.FC<AuditTimelineProps> = ({ logs }) => {
             <div className="space-y-1">
               {/* Top metadata row */}
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] font-mono text-slate-400 font-bold">{log.timestamp}</span>
-                <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded border ${getLogColorClass(log.action)}`}>
+                <span className="text-xs font-mono text-slate-400 font-bold">{log.timestamp}</span>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded border ${getLogColorClass(log.action)}`}>
                   {log.action}
                 </span>
-                <span className="text-[10px] text-slate-500">
+                <span className="text-xs text-slate-500">
                   操作人：<strong className="text-slate-700">{log.operator}</strong>
                 </span>
-                <span className="text-[9px] font-mono text-slate-400 select-all" title="操作客户端源IP">
+                <span className="text-xs font-mono text-slate-400 select-all" title="操作客户端源IP">
                   (IP: {log.ipAddress})
                 </span>
               </div>

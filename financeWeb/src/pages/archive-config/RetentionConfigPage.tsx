@@ -261,7 +261,7 @@ const DetailRow: React.FC<{ detail: CategoryDetail; isLast: boolean; depth: numb
               {expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
             </button>
           )}
-          <span className={`font-mono text-[11px] font-bold ${
+          <span className={`font-mono text-xs font-bold ${
             depth > 0 ? 'text-slate-400' : 'text-slate-600'
           }`} style={{ marginLeft: `${depth * 16}px` }}>
             {detail.code}
@@ -275,12 +275,12 @@ const DetailRow: React.FC<{ detail: CategoryDetail; isLast: boolean; depth: numb
               {detail.name}
             </span>
             {isPermanent && (
-              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-50 text-red-600 border border-red-200">
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-bold bg-red-50 text-red-600 border border-red-200">
                 <Lock className="w-2.5 h-2.5" />永久
               </span>
             )}
             {detail.mandatory && (
-              <span className="text-[9px] text-slate-300">[法定]</span>
+              <span className="text-xs text-slate-300">[法定]</span>
             )}
           </div>
         </div>
@@ -292,7 +292,7 @@ const DetailRow: React.FC<{ detail: CategoryDetail; isLast: boolean; depth: numb
 
         {/* 保管期限 */}
         <div className="col-span-2 flex justify-center">
-          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${RETENTION_COLOR[detail.retention] || 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${RETENTION_COLOR[detail.retention] || 'bg-slate-50 text-slate-500 border-slate-200'}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${RETENTION_DOT[detail.retention] || 'bg-slate-400'}`} />
             {detail.retention}
           </span>
@@ -300,7 +300,7 @@ const DetailRow: React.FC<{ detail: CategoryDetail; isLast: boolean; depth: numb
 
         {/* 起算规则 */}
         <div className="col-span-2">
-          <span className="text-[11px] text-slate-400">{detail.retentionBasis}</span>
+          <span className="text-xs text-slate-400">{detail.retentionBasis}</span>
         </div>
       </div>
 
@@ -355,7 +355,7 @@ const CategoryDetailTable: React.FC<{ category: ArchiveCategory }> = ({ category
           {Object.entries(retentionCounts).map(([ret, count]) => (
             <span
               key={ret}
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${RETENTION_COLOR[ret] || 'bg-slate-50 text-slate-500 border-slate-200'}`}
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold border ${RETENTION_COLOR[ret] || 'bg-slate-50 text-slate-500 border-slate-200'}`}
             >
               <span className={`w-1.5 h-1.5 rounded-full ${RETENTION_DOT[ret] || 'bg-slate-400'}`} />
               {ret} ×{count}
@@ -466,9 +466,9 @@ const RetentionConfigPage: React.FC<{ embedded?: boolean }> = ({ embedded = fals
                 onClick={() => { setActiveKey('overview'); setSearchQuery(''); }}
                 icon={<LayoutGrid className="w-3.5 h-3.5 text-slate-400" />}
                 label="概览"
-                badge={<span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500">{totalDetailCount} 项</span>}
+                badge={<span className="text-xs px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500">{totalDetailCount} 项</span>}
               />
-              <div className="px-2 pt-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">归档范围 · 保管期限</div>
+              <div className="px-2 pt-3 pb-1 text-xs font-bold text-slate-400 uppercase tracking-wider">归档范围 · 保管期限</div>
               {ARCHIVE_CATEGORIES.map((cat) => {
                 const codeCls = cat.code === 'KP' ? 'bg-sky-50 text-sky-600' :
                   cat.code === 'KB' ? 'bg-emerald-50 text-emerald-600' :
@@ -479,24 +479,24 @@ const RetentionConfigPage: React.FC<{ embedded?: boolean }> = ({ embedded = fals
                     active={!searchQuery.trim() && activeKey === cat.code}
                     onClick={() => { setActiveKey(cat.code); setSearchQuery(''); }}
                     label={cat.name}
-                    badge={<span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${codeCls}`}>{cat.code} · {cat.details.length} 项</span>}
+                    badge={<span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${codeCls}`}>{cat.code} · {cat.details.length} 项</span>}
                   />
                 );
               })}
-              <div className="px-2 pt-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">规则</div>
+              <div className="px-2 pt-3 pb-1 text-xs font-bold text-slate-400 uppercase tracking-wider">规则</div>
               <NavItem
                 active={!searchQuery.trim() && activeKey === 'exclusion'}
                 onClick={() => { setActiveKey('exclusion'); setSearchQuery(''); }}
                 icon={<Ban className="w-3.5 h-3.5 text-red-400" />}
                 label="排除范围（非会计档案）"
-                badge={<span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-50 text-red-500">{EXCLUSION_ITEMS.length} 类</span>}
+                badge={<span className="text-xs px-1.5 py-0.5 rounded-full bg-red-50 text-red-500">{EXCLUSION_ITEMS.length} 类</span>}
               />
               <NavItem
                 active={!searchQuery.trim() && activeKey === 'calc'}
                 onClick={() => { setActiveKey('calc'); setSearchQuery(''); }}
                 icon={<Clock className="w-3.5 h-3.5 text-amber-400" />}
                 label="保管期限计算规则"
-                badge={<span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600">4 档</span>}
+                badge={<span className="text-xs px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600">4 档</span>}
               />
             </nav>
           </aside>
@@ -528,7 +528,7 @@ const RetentionConfigPage: React.FC<{ embedded?: boolean }> = ({ embedded = fals
                         <DetailRow detail={detail} isLast={idx === searchResults.length - 1} depth={0} />
                         {/* 所属类别标注 */}
                         <div className="px-5 pb-2 -mt-1">
-                          <span className="text-[10px] text-slate-400">所属：{category.code} {category.name}</span>
+                          <span className="text-xs text-slate-400">所属：{category.code} {category.name}</span>
                         </div>
                       </React.Fragment>
                     ))}
@@ -551,9 +551,9 @@ const RetentionConfigPage: React.FC<{ embedded?: boolean }> = ({ embedded = fals
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-                        <th className="px-4 py-3 text-left text-[13px] font-semibold">材料类型</th>
-                        <th className="px-4 py-3 text-center text-[13px] font-semibold w-32">归入档案类型</th>
-                        <th className="px-4 py-3 text-left text-[13px] font-semibold">备注说明</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">材料类型</th>
+                        <th className="px-4 py-3 text-center text-sm font-semibold w-32">归入档案类型</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">备注说明</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -561,7 +561,7 @@ const RetentionConfigPage: React.FC<{ embedded?: boolean }> = ({ embedded = fals
                         <tr key={idx} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
                           <td className="px-4 py-3 text-sm text-slate-800">{item.name}</td>
                           <td className="px-4 py-3 text-center">
-                            <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-600 border border-red-200">
+                            <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-50 text-red-600 border border-red-200">
                               {item.attribution}
                             </span>
                           </td>
@@ -631,7 +631,7 @@ const RetentionConfigPage: React.FC<{ embedded?: boolean }> = ({ embedded = fals
                 {/* 法规依据 */}
                 <div className="bg-sky-50 border border-sky-200 rounded-xl px-5 py-3 flex items-center gap-3">
                   <BookOpen className="w-4 h-4 text-sky-600 shrink-0" />
-                  <span className="text-[13px] font-medium text-sky-900">
+                  <span className="text-sm font-medium text-sky-900">
                     法定依据：《会计档案管理办法》（财政部、国家档案局令第 79 号）·《会计档案整理规范》（DA/T 42-2022）
                   </span>
                 </div>
@@ -680,7 +680,7 @@ const RetentionConfigPage: React.FC<{ embedded?: boolean }> = ({ embedded = fals
                   <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
                     <FileText className="w-4 h-4 text-slate-600" />
                     <h2 className="text-sm font-bold text-slate-800">法定归档范围 · 保管期限映射</h2>
-                    <span className="text-[11px] text-slate-400">共 4 大类 {totalDetailCount} 项明细</span>
+                    <span className="text-xs text-slate-400">共 4 大类 {totalDetailCount} 项明细</span>
                   </div>
                   <div className="grid grid-cols-2 gap-3 p-4">
                     {ARCHIVE_CATEGORIES.map((cat) => (
@@ -700,7 +700,7 @@ const RetentionConfigPage: React.FC<{ embedded?: boolean }> = ({ embedded = fals
                         </div>
                         <div className="min-w-0">
                           <div className="text-sm font-bold text-slate-700">{cat.name}</div>
-                          <div className="text-[11px] text-slate-400 truncate">{cat.details.length} 项明细 · {cat.description}</div>
+                          <div className="text-xs text-slate-400 truncate">{cat.details.length} 项明细 · {cat.description}</div>
                         </div>
                       </button>
                     ))}

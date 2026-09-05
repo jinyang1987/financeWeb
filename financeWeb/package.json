@@ -10,7 +10,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit && eslint src/ --ext .ts,.tsx"
+    "lint": "tsc --noEmit && eslint src/ --ext .ts,.tsx",
+    "check:typography": "node scripts/check-typography.mjs src",
+    "smoke:fe": "npm run check:typography && tsc --noEmit && vitest run && npm run build"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

@@ -62,3 +62,6 @@ ams-server/target_bak*/
 ams-server/_build2/
 financeWeb/dist_old_*/
 financeWeb/dist_v28/
+
+ams-server/_build3/
+financeWeb/dist_v29/

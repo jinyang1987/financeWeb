@@ -236,13 +236,13 @@ const BorrowCartCheckout: React.FC<BorrowCartCheckoutProps> = ({ blacklisted, on
                     {/* 档案信息 */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] font-mono text-slate-400">#{idx + 1}</span>
+                        <span className="text-xs font-mono text-slate-400">#{idx + 1}</span>
                         <span className="text-sm font-semibold text-slate-800 truncate">{r.remarks || r.voucherNo}</span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${SECURITY_COLORS[sec]}`}>
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${SECURITY_COLORS[sec]}`}>
                           {sec !== '普通' && <Lock className="w-2.5 h-2.5 inline mr-0.5" />}{sec}
                         </span>
                       </div>
-                      <div className="flex items-center gap-3 mt-1 text-[11px] text-slate-400 flex-wrap">
+                      <div className="flex items-center gap-3 mt-1 text-xs text-slate-400 flex-wrap">
                         <span className="font-mono">{r.archiveCode}</span>
                         <span>{r.archiveType}</span>
                         <span>介质：{MEDIA_TYPE_LABELS[media]}</span>
@@ -257,14 +257,14 @@ const BorrowCartCheckout: React.FC<BorrowCartCheckoutProps> = ({ blacklisted, on
                     {/* 权限勾选 */}
                     <div className="shrink-0 w-[300px] space-y-2">
                       <div>
-                        <div className="text-[10px] font-medium text-slate-400 mb-1">电子权限（件级）</div>
+                        <div className="text-xs font-medium text-slate-400 mb-1">电子权限（件级）</div>
                         <div className="flex gap-1.5">
                           {(['view', 'download', 'print'] as ElectronicPerm[]).map((p) => (
                             <button
                               key={p}
                               type="button"
                               onClick={() => togglePerm(r.id, p)}
-                              className={`px-2 py-1 text-[11px] rounded-lg border font-medium transition-all cursor-pointer ${
+                              className={`px-2 py-1 text-xs rounded-lg border font-medium transition-all cursor-pointer ${
                                 d.perms.has(p)
                                   ? 'bg-sky-100 text-sky-700 border-sky-300'
                                   : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
@@ -275,14 +275,14 @@ const BorrowCartCheckout: React.FC<BorrowCartCheckoutProps> = ({ blacklisted, on
                       </div>
                       {canPhysical && (
                         <div>
-                          <div className="text-[10px] font-medium text-slate-400 mb-1">实体外借（整卷）</div>
+                          <div className="text-xs font-medium text-slate-400 mb-1">实体外借（整卷）</div>
                           <div className="flex gap-1.5">
                             {(['none', 'original', 'copy'] as PhysicalMode[]).map((m) => (
                               <button
                                 key={m}
                                 type="button"
                                 onClick={() => updateDraft(r.id, { physical: m })}
-                                className={`px-2 py-1 text-[11px] rounded-lg border font-medium transition-all cursor-pointer ${
+                                className={`px-2 py-1 text-xs rounded-lg border font-medium transition-all cursor-pointer ${
                                   d.physical === m
                                     ? m === 'none' ? 'bg-slate-200 text-slate-700 border-slate-300' : 'bg-amber-100 text-amber-700 border-amber-300'
                                     : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
@@ -291,7 +291,7 @@ const BorrowCartCheckout: React.FC<BorrowCartCheckoutProps> = ({ blacklisted, on
                             ))}
                           </div>
                           {d.physical !== 'none' && stock === 'lent_out' && (
-                            <div className="flex items-center gap-1 mt-1 text-[10px] text-amber-600">
+                            <div className="flex items-center gap-1 mt-1 text-xs text-amber-600">
                               <AlertTriangle className="w-3 h-3" />该卷当前被借出，审批通过后将进入优先预约队列
                             </div>
                           )}
@@ -366,7 +366,7 @@ const BorrowCartCheckout: React.FC<BorrowCartCheckoutProps> = ({ blacklisted, on
           {routePreview.length > 0 && (
             <div className="mt-4 flex items-center gap-2 px-3 py-2.5 bg-sky-50/60 border border-sky-100 rounded-xl">
               <Info className="w-3.5 h-3.5 text-sky-500 shrink-0" />
-              <span className="text-[11px] text-sky-700">
+              <span className="text-xs text-sky-700">
                 审批链（按权限与密级动态路由）：
                 {routePreview.map((s, i) => (
                   <span key={s.seq}>

@@ -470,7 +470,7 @@ export default function DirectoryConfigPanel({ embedded = false }: { embedded?: 
       {/* Header with Tabs */}
       <div className="border-b border-slate-200">
         <div className={`px-6 pb-2 flex items-center justify-between ${embedded ? 'pt-4' : 'pt-5'}`}>
-          {!embedded && <h2 className="text-lg font-bold text-slate-800">目录配置</h2>}
+          {!embedded && <h2 className="text-base font-bold text-slate-800">目录配置</h2>}
           <button
             onClick={saveAllConfig}
             className={`flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors ${embedded ? 'ml-auto' : ''}`}
@@ -600,7 +600,7 @@ export default function DirectoryConfigPanel({ embedded = false }: { embedded?: 
                     <Calendar className="w-4 h-4 text-sky-600" />
                     <span className="text-xs font-medium text-sky-600">年份范围</span>
                   </div>
-                  <div className="text-lg font-bold text-slate-800">{minYear} ~ {maxYear}</div>
+                  <div className="text-base font-bold text-slate-800">{minYear} ~ {maxYear}</div>
                   <div className="text-xs text-slate-500 mt-1">共 {maxYear && minYear ? maxYear - minYear + 1 : 0} 年跨度</div>
                 </div>
                 <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100">
@@ -608,7 +608,7 @@ export default function DirectoryConfigPanel({ embedded = false }: { embedded?: 
                     <CheckCircle className="w-4 h-4 text-emerald-600" />
                     <span className="text-xs font-medium text-emerald-600">已启用</span>
                   </div>
-                  <div className="text-lg font-bold text-slate-800">{selectedYears.size} 年</div>
+                  <div className="text-base font-bold text-slate-800">{selectedYears.size} 年</div>
                   <div className="text-xs text-slate-500 mt-1">已配置年份数量</div>
                 </div>
                 <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
@@ -616,7 +616,7 @@ export default function DirectoryConfigPanel({ embedded = false }: { embedded?: 
                     <Clock className="w-4 h-4 text-amber-600" />
                     <span className="text-xs font-medium text-amber-600">最近年份</span>
                   </div>
-                  <div className="text-lg font-bold text-slate-800">{maxYear || '-'}</div>
+                  <div className="text-base font-bold text-slate-800">{maxYear || '-'}</div>
                   <div className="text-xs text-slate-500 mt-1">当前最新档案年份</div>
                 </div>
               </div>

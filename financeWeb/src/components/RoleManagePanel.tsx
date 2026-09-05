@@ -121,7 +121,7 @@ const RoleManagePanel: React.FC = () => {
         <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2">
           <Shield className="w-4 h-4 text-slate-600" />
           <span className="text-sm font-bold text-slate-800">业务角色</span>
-          <span className="text-[10px] text-slate-400 ml-auto">{ROLE_ORDER.length} 个</span>
+          <span className="text-xs text-slate-400 ml-auto">{ROLE_ORDER.length} 个</span>
         </div>
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
           {ROLE_ORDER.map((role) => {
@@ -137,15 +137,15 @@ const RoleManagePanel: React.FC = () => {
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${ROLE_BADGE_COLORS[role]}`}>
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${ROLE_BADGE_COLORS[role]}`}>
                     {ROLE_LABELS[role]}
                   </span>
-                  <span className="text-[10px] text-slate-400 ml-auto">{users.length} 人</span>
+                  <span className="text-xs text-slate-400 ml-auto">{users.length} 人</span>
                 </div>
-                <div className="text-[10px] text-slate-400 mt-1 leading-relaxed">{ROLE_DESCRIPTIONS[role]}</div>
+                <div className="text-xs text-slate-400 mt-1 leading-relaxed">{ROLE_DESCRIPTIONS[role]}</div>
                 <div className="flex items-center gap-1 mt-1.5 flex-wrap">
                   {users.map((u) => (
-                    <span key={u.id} className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded-full">
+                    <span key={u.id} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded-full">
                       {u.name}
                     </span>
                   ))}
@@ -159,7 +159,7 @@ const RoleManagePanel: React.FC = () => {
       {/* 右：三维授权 */}
       <div className="flex-1 flex flex-col min-w-0">
         <div className="px-5 py-3 bg-white border-b border-slate-200 flex items-center gap-3 shrink-0">
-          <span className={`text-[11px] px-2 py-1 rounded-full font-bold ${ROLE_BADGE_COLORS[selectedRole]}`}>
+          <span className={`text-xs px-2 py-1 rounded-full font-bold ${ROLE_BADGE_COLORS[selectedRole]}`}>
             {ROLE_LABELS[selectedRole]}
           </span>
           <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
@@ -203,13 +203,13 @@ const RoleManagePanel: React.FC = () => {
                 <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
                   <Building2 className="w-3.5 h-3.5 text-slate-500" />
                   <span className="text-xs font-bold text-slate-700">检索门户</span>
-                  <span className="text-[10px] text-slate-400">
+                  <span className="text-xs text-slate-400">
                     {PORTAL_MENU_KEYS.filter((k) => grantedSet.has(k)).length}/{PORTAL_MENU_KEYS.length}
                   </span>
                   <button
                     type="button"
                     onClick={() => setGroupMenus(selectedRole, [...PORTAL_MENU_KEYS], !PORTAL_MENU_KEYS.every((k) => grantedSet.has(k)))}
-                    className="ml-auto flex items-center gap-1 text-[10px] text-sky-600 hover:text-sky-800 transition-colors"
+                    className="ml-auto flex items-center gap-1 text-xs text-sky-600 hover:text-sky-800 transition-colors"
                   >
                     {PORTAL_MENU_KEYS.every((k) => grantedSet.has(k))
                       ? <><CheckSquare className="w-3 h-3" />取消全组</>
@@ -248,14 +248,14 @@ const RoleManagePanel: React.FC = () => {
                     <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
                       <group.Icon className="w-3.5 h-3.5 text-slate-500" />
                       <span className="text-xs font-bold text-slate-700">{group.label}</span>
-                      <span className="text-[10px] text-slate-400">{grantedCount}/{itemKeys.length}</span>
+                      <span className="text-xs text-slate-400">{grantedCount}/{itemKeys.length}</span>
                       <button
                         type="button"
                         onClick={() => {
                           setGroupMenus(selectedRole, itemKeys, !allGranted);
                           triggerToast(`${group.label}：${allGranted ? '已整组取消' : '已整组授权'}`, 'success');
                         }}
-                        className="ml-auto flex items-center gap-1 text-[10px] text-sky-600 hover:text-sky-800 transition-colors"
+                        className="ml-auto flex items-center gap-1 text-xs text-sky-600 hover:text-sky-800 transition-colors"
                       >
                         {allGranted ? <><CheckSquare className="w-3 h-3" />取消全组</> : <><Square className="w-3 h-3" />全选本组</>}
                       </button>
@@ -313,7 +313,7 @@ const RoleManagePanel: React.FC = () => {
                 <div className="flex items-center gap-2 mb-3">
                   <Building2 className="w-4 h-4 text-slate-500" />
                   <span className="text-xs font-bold text-slate-700">全宗范围</span>
-                  <span className="text-[10px] text-slate-400">对应参考模型 S_ROLERIGHT 全宗树授权</span>
+                  <span className="text-xs text-slate-400">对应参考模型 S_ROLERIGHT 全宗树授权</span>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <button
@@ -351,7 +351,7 @@ const RoleManagePanel: React.FC = () => {
                   })}
                 </div>
                 {scope.fonds !== '*' && scope.fonds.length === 0 && (
-                  <p className="mt-2 text-[10px] text-rose-500">未选择任何全宗：该角色将查不到任何档案数据</p>
+                  <p className="mt-2 text-xs text-rose-500">未选择任何全宗：该角色将查不到任何档案数据</p>
                 )}
               </div>
 
@@ -360,7 +360,7 @@ const RoleManagePanel: React.FC = () => {
                 <div className="flex items-center gap-2 mb-3">
                   <Layers3 className="w-4 h-4 text-slate-500" />
                   <span className="text-xs font-bold text-slate-700">档案门类</span>
-                  <span className="text-[10px] text-slate-400">对应参考模型「档案库」维度（LIBCODE）</span>
+                  <span className="text-xs text-slate-400">对应参考模型「档案库」维度（LIBCODE）</span>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <button
@@ -404,7 +404,7 @@ const RoleManagePanel: React.FC = () => {
                 <div className="flex items-center gap-2 mb-3">
                   <Users className="w-4 h-4 text-slate-500" />
                   <span className="text-xs font-bold text-slate-700">部门范围</span>
-                  <span className="text-[10px] text-slate-400">行级过滤：部门为空的公共件对本部门可见</span>
+                  <span className="text-xs text-slate-400">行级过滤：部门为空的公共件对本部门可见</span>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   {DEPT_MODE_LABELS.map((d) => (
@@ -421,7 +421,7 @@ const RoleManagePanel: React.FC = () => {
                       <div className={`text-xs font-bold ${scope.deptMode === d.value ? 'text-emerald-700' : 'text-slate-600'}`}>
                         {d.label}
                       </div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">{d.hint}</div>
+                      <div className="text-xs text-slate-400 mt-0.5">{d.hint}</div>
                     </button>
                   ))}
                 </div>
@@ -432,7 +432,7 @@ const RoleManagePanel: React.FC = () => {
                 <div className="flex items-center gap-2 mb-3">
                   <Lock className="w-4 h-4 text-slate-500" />
                   <span className="text-xs font-bold text-slate-700">密级上限</span>
-                  <span className="text-[10px] text-slate-400">有效密级 = min(人员密级, 角色上限)；人员密级在人员管理页维护</span>
+                  <span className="text-xs text-slate-400">有效密级 = min(人员密级, 角色上限)；人员密级在人员管理页维护</span>
                 </div>
                 <div className="grid grid-cols-4 gap-2">
                   {CLEARANCE_LABELS.map((label, idx) => (
@@ -450,7 +450,7 @@ const RoleManagePanel: React.FC = () => {
                     </button>
                   ))}
                 </div>
-                <p className="mt-2 text-[10px] text-slate-400">
+                <p className="mt-2 text-xs text-slate-400">
                   高于上限的档案：检索/目录不可见，内容读取 403，需通过借阅审批调阅（自动触发升级审批链）。
                 </p>
               </div>
@@ -464,7 +464,7 @@ const RoleManagePanel: React.FC = () => {
             <div className="max-w-2xl bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
               <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-100">
                 <span className="text-xs font-bold text-slate-700">操作权限矩阵</span>
-                <span className="text-[10px] text-slate-400 ml-2">对应参考模型 6 位 QX 权限码</span>
+                <span className="text-xs text-slate-400 ml-2">对应参考模型 6 位 QX 权限码</span>
               </div>
               <div className="divide-y divide-slate-100">
                 {OPERATION_KEYS.map((op) => {
@@ -489,7 +489,7 @@ const RoleManagePanel: React.FC = () => {
                           style={{ left: granted ? '1.125rem' : '0.125rem' }} />
                       </span>
                       <span className="text-xs font-bold text-slate-700 w-28 shrink-0">{OPERATION_LABELS[op]}</span>
-                      <span className="text-[10px] text-slate-400 flex-1">{hints[op]}</span>
+                      <span className="text-xs text-slate-400 flex-1">{hints[op]}</span>
                     </button>
                   );
                 })}

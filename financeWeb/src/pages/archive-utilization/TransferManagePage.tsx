@@ -22,7 +22,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useAppStore } from '../../stores/appStore';
 import {
   fetchTransferBatches, createTransferBatch, prepareTransferBatch,
-  receiveTransferBatch, rejectTransferBatch, deleteTransferBatch,
+  receiveTransferBatch, rejectTransferBatch, deleteTransferBatch, downloadTransferRegister,
   type TransferBatch,
 } from '../../services/transferService';
 
@@ -111,12 +111,27 @@ const TransferManagePage: React.FC = () => {
       else if (action === 'receive') await receiveTransferBatch(id);
       else if (action === 'reject') await rejectTransferBatch(id);
       else await deleteTransferBatch(id);
-      triggerToast({ prepare: '清册已生成，批次转待签收', receive: '签收完成，批次已归档', reject: '批次已退回待准备', delete: '批次已删除' }[action], 'success');
+      triggerToast({
+        // T14：清册为服务端真实生成（法定字段 HTML，随档留存 /{全宗}/_移交清册/，可下载打印）
+        prepare: '移交清册已生成并随档留存（法定字段齐备，可下载打印）',
+        // T14：签收前服务端逐卷执行 gd∪yj 全口径四性检测，未通过即阻断
+        receive: '接收检测通过（gd∪yj 全口径），签收完成，批次已归档',
+        reject: '批次已退回待准备', delete: '批次已删除',
+      }[action], 'success');
       await reload();
     } catch (e) {
       triggerToast('操作失败：' + (e instanceof Error ? e.message : ''), 'warning');
     } finally {
       setActioning(null);
+    }
+  };
+
+  /** 下载服务端生成的移交清册（T14） */
+  const handleDownloadRegister = async (id: string, registerNo?: string) => {
+    try {
+      await downloadTransferRegister(id, `移交清册-${registerNo || id}.html`);
+    } catch (e) {
+      triggerToast('清册下载失败：' + (e instanceof Error ? e.message : ''), 'warning');
     }
   };
 
@@ -230,18 +245,26 @@ const TransferManagePage: React.FC = () => {
                           </button>
                         </>
                       )}
-                      <button type="button" title="打印移交清册"
-                        onClick={(e) => { e.stopPropagation(); setExpandedId(tr.id); setTimeout(() => window.print(), 200); }}
-                        className="px-2.5 py-1 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-md hover:bg-slate-50">
-                        <Download className="w-3 h-3" />
-                      </button>
+                      {tr.registerFileNode ? (
+                        <button type="button" title="下载移交清册（服务端生成，法定字段）"
+                          onClick={(e) => { e.stopPropagation(); void handleDownloadRegister(tr.id, tr.registerNo); }}
+                          className="px-2.5 py-1 text-xs font-medium text-sky-700 bg-sky-50 border border-sky-200 rounded-md hover:bg-sky-100">
+                          <Download className="w-3 h-3" />
+                        </button>
+                      ) : tr.status === 'received' ? (
+                        <button type="button" title="清册文件缺失" disabled
+                          className="px-2.5 py-1 text-xs font-medium text-slate-300 bg-slate-50 border border-slate-100 rounded-md cursor-not-allowed">
+                          <Download className="w-3 h-3" />
+                        </button>
+                      ) : null}
                     </div>
                     {isExpanded && (
                       <div className="px-5 pb-4 bg-slate-50 text-xs space-y-3">
-                        <div className="grid grid-cols-3 gap-3 pt-3">
+                        <div className="grid grid-cols-4 gap-3 pt-3">
                           <div><span className="text-slate-400">移交人:</span> {tr.fromPerson || '—'}</div>
                           <div><span className="text-slate-400">接收人:</span> {tr.toPerson || '待确认'}</div>
                           <div><span className="text-slate-400">签收时间:</span> {tr.receivedAt ? tr.receivedAt.slice(0, 19).replace('T', ' ') : '—'}</div>
+                          <div><span className="text-slate-400">清册编号:</span> <span className="font-mono">{tr.registerNo || '（待生成）'}</span></div>
                         </div>
                         {/* 移交清册（卷明细实时解析） */}
                         <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
@@ -249,18 +272,18 @@ const TransferManagePage: React.FC = () => {
                           <table className="w-full">
                             <thead>
                               <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-                                <th className="px-4 py-3 text-left text-[13px] font-semibold">案卷题名</th>
-                                <th className="px-4 py-3 text-left text-[13px] font-semibold w-44">档号</th>
-                                <th className="px-4 py-3 text-left text-[13px] font-semibold w-16">件数</th>
-                                <th className="px-4 py-3 text-left text-[13px] font-semibold w-20">状态</th>
+                                <th className="px-4 py-3 text-left text-sm font-semibold">案卷题名</th>
+                                <th className="px-4 py-3 text-left text-sm font-semibold w-44">档号</th>
+                                <th className="px-4 py-3 text-left text-sm font-semibold w-16">件数</th>
+                                <th className="px-4 py-3 text-left text-sm font-semibold w-20">状态</th>
                               </tr>
                             </thead>
                             <tbody>
                               {(tr.volumes || []).map((v) => (
                                 <tr key={v.nodeId} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
                                   <td className="px-4 py-3 text-sm text-slate-800">{v.title}</td>
-                                  <td className="px-4 py-3 font-mono text-[13px] text-slate-600">{v.volumeCode || '—'}</td>
-                                  <td className="px-4 py-3 font-mono text-[13px] text-slate-600">{v.totalItems}</td>
+                                  <td className="px-4 py-3 font-mono text-sm text-slate-600">{v.volumeCode || '—'}</td>
+                                  <td className="px-4 py-3 font-mono text-sm text-slate-600">{v.totalItems}</td>
                                   <td className="px-4 py-3.5 text-sm text-slate-600">{v.status === 'missing' ? '已删除' : v.status}</td>
                                 </tr>
                               ))}

@@ -107,10 +107,27 @@ async function upload<T>(path: string, formData: FormData): Promise<T> {
   return data as T;
 }
 
+/** 文件下载（带会话头，供清册/报告等后端文件端点；Blob 由调用方触发保存） */
+async function download(path: string): Promise<Blob> {
+  const res = await fetch(`${AMS_BASE}${path}`, {
+    headers: { ...session.amsHeaders() },
+  });
+  if (!res.ok) {
+    let message = `下载失败 (${res.status})`;
+    try {
+      const err = await res.json();
+      if (err?.message) message = err.message;
+    } catch { /* 非 JSON 错误体时用默认文案 */ }
+    throw new ApiRequestError(res.status, `HTTP_${res.status}`, message);
+  }
+  return res.blob();
+}
+
 export const http = {
   get: <T>(path: string) => request<T>('GET', path),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
   put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body),
   delete: <T>(path: string) => request<T>('DELETE', path),
   upload: <T>(path: string, formData: FormData) => upload<T>(path, formData),
+  download,
 };

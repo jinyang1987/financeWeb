@@ -135,7 +135,7 @@ const FIELD_DEFS: Array<{
   { key: 'remarks', label: '题名/备注', type: 'textarea' },
 ];
 
-const inputCls = 'mt-0.5 w-full px-2 py-1.5 text-[13px] border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-sky-200';
+const inputCls = 'mt-0.5 w-full px-2 py-1.5 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-sky-200';
 const labelCls = 'text-xs font-medium text-slate-600';
 
 const MetadataEntryModal: React.FC<MetadataEntryModalProps> = ({ open, volume, items, poolRecords, title, onClose, onSaved }) => {
@@ -464,7 +464,7 @@ const MetadataEntryModal: React.FC<MetadataEntryModalProps> = ({ open, volume, i
         <div className="flex-1 min-h-0 flex">
           {/* 左：件列表 */}
           <div className="w-60 shrink-0 border-r border-slate-100 flex flex-col">
-            <div className="px-3 py-2 text-[11px] text-slate-400 border-b border-slate-100 shrink-0">
+            <div className="px-3 py-2 text-xs text-slate-400 border-b border-slate-100 shrink-0">
               {poolMode ? `收集池件（${listEntries.length}）· 点击选择录入` : `卷内件（${listEntries.length}）· 点击选择录入`}
             </div>
             <div className="flex-1 overflow-y-auto p-1.5 space-y-1">
@@ -483,16 +483,16 @@ const MetadataEntryModal: React.FC<MetadataEntryModalProps> = ({ open, volume, i
                     }`}
                   >
                     <div className="flex items-center gap-1.5">
-                      {!poolMode && <span className="text-[10px] text-slate-400 font-mono shrink-0">#{itemNo}</span>}
+                      {!poolMode && <span className="text-xs text-slate-400 font-mono shrink-0">#{itemNo}</span>}
                       <span className={`text-xs truncate ${active ? 'text-sky-700 font-medium' : 'text-slate-700'}`}>
                         {rec?.voucherNo || id.slice(0, 10)}
                       </span>
                       {rec && isSourceDocRecord(rec) && (
-                        <span className="ml-auto shrink-0 px-1 py-px text-[10px] rounded bg-amber-100 text-amber-700">原始凭证</span>
+                        <span className="ml-auto shrink-0 px-1 py-px text-xs rounded bg-amber-100 text-amber-700">原始凭证</span>
                       )}
                     </div>
                     {rec && (
-                      <div className="text-[10px] text-slate-400 mt-0.5 truncate">
+                      <div className="text-xs text-slate-400 mt-0.5 truncate">
                         {[rec.docTypeName || rec.archiveType, rec.year && `${rec.year}年`, rec.retention].filter(Boolean).join(' · ')}
                       </div>
                     )}
@@ -612,7 +612,7 @@ const MetadataEntryModal: React.FC<MetadataEntryModalProps> = ({ open, volume, i
                       </div>
                     )}
                   </div>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-xs text-slate-400">
                     原始凭证录入依据 DA/T 95-2022 与主管部门凭证制式；扩展字段按类型字段集动态展开，落库 finance:srcDocExtFields。
                   </p>
                 </div>
@@ -660,7 +660,7 @@ const MetadataEntryModal: React.FC<MetadataEntryModalProps> = ({ open, volume, i
                       </label>
                     ))}
                   </div>
-                  <p className="text-[11px] text-slate-400 mt-3">
+                  <p className="text-xs text-slate-400 mt-3">
                     仅草稿卷内件与收集池件可录入；确认组卷后元数据即固化，如需修改请先撤销确认。
                   </p>
                 </div>
@@ -677,7 +677,7 @@ const MetadataEntryModal: React.FC<MetadataEntryModalProps> = ({ open, volume, i
             <ChevronLeft className="w-3.5 h-3.5" />
             {poolMode ? '返回组卷工作台' : '返回组卷工作台'}
           </button>
-          <span className="text-[10px] text-slate-300">元数据依据 DA/T 94-2022 件级必填项白名单</span>
+          <span className="text-xs text-slate-300">元数据依据 DA/T 94-2022 件级必填项白名单</span>
         </div>
       </div>
     </div>
@@ -687,7 +687,7 @@ const MetadataEntryModal: React.FC<MetadataEntryModalProps> = ({ open, volume, i
 /** 保存条（通用） */
 const SaveBar: React.FC<{ dirty: boolean; saving: boolean; onReset: () => void; onSave: () => void }> = ({ dirty, saving, onReset, onSave }) => (
   <div className="shrink-0 border-t border-slate-100 px-5 py-3 flex items-center justify-end gap-2">
-    {dirty && <span className="text-[11px] text-amber-600 mr-auto">有未保存修改</span>}
+    {dirty && <span className="text-xs text-amber-600 mr-auto">有未保存修改</span>}
     <button
       type="button"
       onClick={onReset}

@@ -108,7 +108,7 @@ const SliderRow: React.FC<{
     <span className="text-sm font-semibold text-slate-700 tabular-nums w-16 text-right">
       {value}{unit}
     </span>
-    {hint && <span className="text-[11px] text-slate-400">{hint}</span>}
+    {hint && <span className="text-xs text-slate-400">{hint}</span>}
   </div>
 );
 
@@ -159,7 +159,7 @@ const LivePreview: React.FC = () => {
           <ScanEye className="w-4 h-4 text-sky-600" />
           <span className="text-sm font-semibold text-slate-700">实时预览</span>
         </div>
-        <span className="text-[11px] text-slate-400">示例身份：{PREVIEW_CONTEXT.userName}({PREVIEW_CONTEXT.userId})</span>
+        <span className="text-xs text-slate-400">示例身份：{PREVIEW_CONTEXT.userName}({PREVIEW_CONTEXT.userId})</span>
       </div>
 
       {/* 模拟凭证文档 + 水印 */}
@@ -169,9 +169,9 @@ const LivePreview: React.FC = () => {
           <div className="p-5">
             <div className="text-center border-b-2 border-slate-700 pb-2 mb-3">
               <h4 className="text-base font-bold text-slate-800 tracking-[0.5em] pl-2">记 账 凭 证</h4>
-              <p className="text-[10px] text-slate-400 mt-1 tracking-normal">2026年7月18日 · 记字第 12 号 · 附件 3 张</p>
+              <p className="text-xs text-slate-400 mt-1 tracking-normal">2026年7月18日 · 记字第 12 号 · 附件 3 张</p>
             </div>
-            <table className="w-full text-[10px] border-collapse">
+            <table className="w-full text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-50">
                   <th className="border border-slate-300 px-1.5 py-1 font-semibold text-slate-600">摘要</th>
@@ -206,7 +206,7 @@ const LivePreview: React.FC = () => {
                 </tr>
               </tbody>
             </table>
-            <div className="flex justify-between mt-3 text-[9px] text-slate-400">
+            <div className="flex justify-between mt-3 text-xs text-slate-400">
               <span>会计主管：李敏</span>
               <span>记账：王芳</span>
               <span>出纳：赵强</span>
@@ -214,7 +214,7 @@ const LivePreview: React.FC = () => {
             </div>
             {/* 模拟印章 */}
             <div className="absolute bottom-8 right-6 w-16 h-16 rounded-full border-[3px] border-red-400/60 flex items-center justify-center rotate-[-15deg]">
-              <span className="text-[8px] text-red-500/70 font-bold text-center leading-tight">财务专用章</span>
+              <span className="text-xs text-red-500/70 font-bold text-center leading-tight">财务专用章</span>
             </div>
           </div>
 
@@ -236,27 +236,27 @@ const LivePreview: React.FC = () => {
 
         {/* 水印文本内容 */}
         <div className="mt-4 mx-auto max-w-[380px]">
-          <p className="text-[11px] font-medium text-slate-500 mb-1.5">水印文本（动态变量实时绑定）</p>
-          <div className="bg-slate-800 rounded-lg px-3 py-2.5 font-mono text-[11px] leading-relaxed text-slate-200">
+          <p className="text-xs font-medium text-slate-500 mb-1.5">水印文本（动态变量实时绑定）</p>
+          <div className="bg-slate-800 rounded-lg px-3 py-2.5 font-mono text-xs leading-relaxed text-slate-200">
             {lines.map((line, i) => (
               <p key={i} className="truncate">{line}</p>
             ))}
           </div>
           <div className="flex flex-wrap gap-1.5 mt-3">
-            <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full ${config.scenes.preview ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+            <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${config.scenes.preview ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
               <Eye className="w-3 h-3" />预览
             </span>
-            <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full ${config.scenes.download ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+            <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${config.scenes.download ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
               <Download className="w-3 h-3" />下载
             </span>
-            <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full ${config.scenes.print ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+            <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${config.scenes.print ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
               <Printer className="w-3 h-3" />打印
             </span>
-            <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full ${config.security.antiTamper ? 'bg-sky-50 text-sky-600' : 'bg-slate-100 text-slate-400'}`}>
+            <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${config.security.antiTamper ? 'bg-sky-50 text-sky-600' : 'bg-slate-100 text-slate-400'}`}>
               <Shield className="w-3 h-3" />防篡改
             </span>
             {config.security.blindWatermark && (
-              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-violet-50 text-violet-600">
+              <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-violet-50 text-violet-600">
                 <Lock className="w-3 h-3" />盲水印
               </span>
             )}
@@ -317,7 +317,7 @@ const WatermarkConfigPage: React.FC = () => {
       <div className="px-6 pt-6 pb-2 shrink-0">
         <div className="flex items-center gap-3 mb-1">
           <Droplets className="w-5 h-5 text-sky-600" />
-          <h2 className="text-lg font-bold text-slate-800">水印配置</h2>
+          <h2 className="text-base font-bold text-slate-800">水印配置</h2>
           {saved && (
             <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full animate-in fade-in">
               配置已保存
@@ -430,7 +430,7 @@ const WatermarkConfigPage: React.FC = () => {
                         />
                       </div>
                       <h4 className="text-sm font-semibold text-slate-700">{title}</h4>
-                      <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">{desc}</p>
+                      <p className="text-xs text-slate-400 mt-1 leading-relaxed">{desc}</p>
                     </div>
                   ))}
                 </div>
@@ -606,9 +606,9 @@ const WatermarkConfigPage: React.FC = () => {
                     <table className="w-full">
                       <thead>
                         <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-                          <th className="px-4 py-3 text-left text-[13px] font-semibold">变量</th>
-                          <th className="px-4 py-3 text-left text-[13px] font-semibold">示例</th>
-                          <th className="px-4 py-3 text-left text-[13px] font-semibold">来源</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold">变量</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold">示例</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold">来源</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -620,7 +620,7 @@ const WatermarkConfigPage: React.FC = () => {
                           ['{docStatus}', '【已作废】', '档案状态字段'],
                         ].map(([v, ex, src]) => (
                           <tr key={v} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
-                            <td className="px-4 py-3 font-mono text-[13px] text-sky-700">{v}</td>
+                            <td className="px-4 py-3 font-mono text-sm text-sky-700">{v}</td>
                             <td className="px-4 py-3.5 text-sm text-slate-600">{ex}</td>
                             <td className="px-4 py-3.5 text-sm text-slate-600">{src}</td>
                           </tr>
@@ -756,7 +756,7 @@ const WatermarkConfigPage: React.FC = () => {
                 <div className="divide-y divide-slate-50">
                   <ConfigRow label="盲水印（暗水印）" desc="频域数字水印：拍照/截图/裁剪/压缩后仍可提取泄露人工号">
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold text-violet-600 bg-violet-50 border border-violet-200 rounded px-1.5 py-0.5">高阶</span>
+                      <span className="text-xs font-bold text-violet-600 bg-violet-50 border border-violet-200 rounded px-1.5 py-0.5">高阶</span>
                       <Toggle
                         checked={config.security.blindWatermark}
                         onChange={() => updateSecurity({ blindWatermark: !config.security.blindWatermark })}
@@ -765,7 +765,7 @@ const WatermarkConfigPage: React.FC = () => {
                   </ConfigRow>
                   <ConfigRow label="防截屏控制" desc="移动端/桌面客户端禁用截屏键，截屏时黑屏">
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold text-violet-600 bg-violet-50 border border-violet-200 rounded px-1.5 py-0.5">高阶</span>
+                      <span className="text-xs font-bold text-violet-600 bg-violet-50 border border-violet-200 rounded px-1.5 py-0.5">高阶</span>
                       <Toggle
                         checked={config.security.preventScreenshot}
                         onChange={() => updateSecurity({ preventScreenshot: !config.security.preventScreenshot })}
@@ -806,7 +806,7 @@ const WatermarkConfigPage: React.FC = () => {
                         })}
                       </div>
                       {config.exemptions.roles.length > 0 && (
-                        <p className="flex items-center gap-1.5 text-[11px] text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mt-3">
+                        <p className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mt-3">
                           <UserX className="w-3.5 h-3.5 shrink-0" />
                           豁免角色用户的所有操作均无水印，泄露风险请自行评估
                         </p>
@@ -853,7 +853,7 @@ const WatermarkConfigPage: React.FC = () => {
                   <ConfigRow label="失败降级（安全失败）" desc="加水印服务故障时阻断下载，绝不暴露无水印原文件">
                     <div className="flex items-center gap-2">
                       {config.download.failSecure && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5">
+                        <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5">
                           <CheckCircle2 className="w-3 h-3" />推荐
                         </span>
                       )}

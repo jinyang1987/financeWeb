@@ -76,13 +76,13 @@ const PortalGeneralSearch: React.FC<PortalGeneralSearchProps> = ({ onOpenDetail 
               value={portalKeyword}
               onChange={(e) => setPortalKeyword(e.target.value)}
               placeholder="凭证号 / 摘要 / 往来单位 / 单据号 / 档号 / 科目 / 制单人 / 正文…"
-              className="w-full h-9 pl-9 pr-3 text-[13px] border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+              className="w-full h-9 pl-9 pr-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
             />
           </div>
           <select
             value={portalType}
             onChange={(e) => setPortalType(e.target.value)}
-            className="h-9 px-3 text-[13px] border border-slate-200 rounded-lg bg-white cursor-pointer hover:border-slate-300"
+            className="h-9 px-3 text-sm border border-slate-200 rounded-lg bg-white cursor-pointer hover:border-slate-300"
           >
             <option value="">全部类别</option>
             <option value="KP">会计凭证</option>
@@ -93,7 +93,7 @@ const PortalGeneralSearch: React.FC<PortalGeneralSearchProps> = ({ onOpenDetail 
           <select
             value={year}
             onChange={(e) => setYear(e.target.value)}
-            className="h-9 px-3 text-[13px] border border-slate-200 rounded-lg bg-white cursor-pointer hover:border-slate-300"
+            className="h-9 px-3 text-sm border border-slate-200 rounded-lg bg-white cursor-pointer hover:border-slate-300"
           >
             <option value="">全部年度</option>
             {facets.years.map((y) => <option key={y} value={y}>{y}年</option>)}
@@ -101,31 +101,31 @@ const PortalGeneralSearch: React.FC<PortalGeneralSearchProps> = ({ onOpenDetail 
           <button
             type="button"
             onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center gap-1.5 h-9 px-3 text-[13px] rounded-lg border transition-colors cursor-pointer ${
+            className={`flex items-center gap-1.5 h-9 px-3 text-sm rounded-lg border transition-colors cursor-pointer ${
               showFilters ? 'bg-sky-50 text-sky-700 border-sky-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
             }`}
           >
             <SlidersHorizontal className="w-3.5 h-3.5" />
             高级筛选
             {activeFilterCount > 0 && (
-              <span className="bg-sky-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">{activeFilterCount}</span>
+              <span className="bg-sky-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">{activeFilterCount}</span>
             )}
           </button>
-          <span className="text-[13px] text-slate-400 shrink-0">共 {totalItems} 条</span>
+          <span className="text-sm text-slate-400 shrink-0">共 {totalItems} 条</span>
         </div>
 
         {/* 高级筛选（可折叠） */}
         {showFilters && (
-          <div className="max-w-7xl mx-auto mt-2.5 flex items-center gap-2 text-[13px] text-slate-500 flex-wrap">
+          <div className="max-w-7xl mx-auto mt-2.5 flex items-center gap-2 text-sm text-slate-500 flex-wrap">
             <span className="text-slate-400">科目：</span>
             <select value={subject} onChange={(e) => setSubject(e.target.value)}
-              className="h-8 px-2 border border-slate-200 rounded-lg text-[13px] bg-white">
+              className="h-8 px-2 border border-slate-200 rounded-lg text-sm bg-white">
               <option value="">全部科目</option>
               {facets.subjects.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
             <span className="text-slate-400">部门：</span>
             <select value={dept} onChange={(e) => setDept(e.target.value)}
-              className="h-8 px-2 border border-slate-200 rounded-lg text-[13px] bg-white">
+              className="h-8 px-2 border border-slate-200 rounded-lg text-sm bg-white">
               <option value="">全部部门</option>
               {facets.departments.map((d) => <option key={d} value={d}>{d}</option>)}
             </select>
@@ -133,13 +133,13 @@ const PortalGeneralSearch: React.FC<PortalGeneralSearchProps> = ({ onOpenDetail 
             <input
               type="number" placeholder="最低"
               value={amountFrom} onChange={(e) => setAmountFrom(e.target.value)}
-              className="h-8 px-2 border border-slate-200 rounded-lg w-24 text-[13px]"
+              className="h-8 px-2 border border-slate-200 rounded-lg w-24 text-sm"
             />
             <span>—</span>
             <input
               type="number" placeholder="最高"
               value={amountTo} onChange={(e) => setAmountTo(e.target.value)}
-              className="h-8 px-2 border border-slate-200 rounded-lg w-24 text-[13px]"
+              className="h-8 px-2 border border-slate-200 rounded-lg w-24 text-sm"
             />
             <button
               type="button"
@@ -166,15 +166,15 @@ const PortalGeneralSearch: React.FC<PortalGeneralSearchProps> = ({ onOpenDetail 
               <table className="w-full text-sm table-fixed">
                 <thead>
                   <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-44">档号</th>
-                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-24">凭证号</th>
-                    <th className="px-4 py-3 text-left text-[13px] font-semibold">摘要 / 题名</th>
-                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-20">类别</th>
-                    <th className="px-4 py-3 text-center text-[13px] font-semibold w-20">期间</th>
-                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-28">会计科目</th>
-                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-20">部门</th>
-                    <th className="px-4 py-3 text-right text-[13px] font-semibold w-28">金额</th>
-                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-40">状态</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold w-44">档号</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold w-24">凭证号</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">摘要 / 题名</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold w-20">类别</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold w-20">期间</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold w-28">会计科目</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold w-20">部门</th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold w-28">金额</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold w-40">状态</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -184,28 +184,28 @@ const PortalGeneralSearch: React.FC<PortalGeneralSearchProps> = ({ onOpenDetail 
                       onClick={() => onOpenDetail(r)}
                       className="border-b border-slate-200/60 last:border-0 hover:bg-sky-50/50 cursor-pointer transition-colors"
                     >
-                      <td className="px-4 py-3 font-mono text-[13px] text-slate-600 truncate" title={r.archiveCode}>
+                      <td className="px-4 py-3 font-mono text-sm text-slate-600 truncate" title={r.archiveCode}>
                         {r.archiveCode || '—'}
                       </td>
-                      <td className="px-4 py-3 font-mono text-[13px] text-slate-700 truncate" title={r.voucherNo}>
+                      <td className="px-4 py-3 font-mono text-sm text-slate-700 truncate" title={r.voucherNo}>
                         {r.voucherNo || '—'}
                       </td>
                       <td className="px-4 py-3 text-sm text-slate-800 truncate" title={r.remarks || r.summary || ''}>
                         {r.remarks || r.summary || '—'}
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-600 whitespace-nowrap">
+                        <span className="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-600 whitespace-nowrap">
                           {r.archiveType}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-center font-mono text-[13px] text-slate-600">{fmtPeriod(r)}</td>
+                      <td className="px-4 py-3 text-center font-mono text-sm text-slate-600">{fmtPeriod(r)}</td>
                       <td className="px-4 py-3.5 text-sm text-slate-600 truncate" title={r.accountSubject || ''}>
                         {r.accountSubject || '—'}
                       </td>
                       <td className="px-4 py-3.5 text-sm text-slate-600 truncate" title={r.department || ''}>
                         {r.department || '—'}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-[13px] text-slate-800">
+                      <td className="px-4 py-3 text-right font-mono text-sm text-slate-800">
                         ¥{r.amount.toLocaleString('zh-CN', { minimumFractionDigits: 2 })}
                       </td>
                       <td className="px-4 py-3">

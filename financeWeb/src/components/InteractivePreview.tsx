@@ -79,35 +79,35 @@ export const InteractivePreview: React.FC<InteractivePreviewProps> = ({
                 }`}
               >
                 <div className="flex items-start justify-between">
-                  <span className={`p-1.5 rounded text-[10px] font-bold font-mono ${
+                  <span className={`p-1.5 rounded text-xs font-bold font-mono ${
                     file.contentType === 'xml' 
                       ? 'bg-amber-50 text-amber-600' 
                       : (file.contentType === 'ofd' ? 'bg-sky-50 text-sky-100' : 'bg-rose-50 text-rose-600')
                   }`}>
                     {file.contentType.toUpperCase()}
                   </span>
-                  <span className="text-[10px] text-slate-400 font-mono">{file.size}</span>
+                  <span className="text-xs text-slate-400 font-mono">{file.size}</span>
                 </div>
                 <div className="mt-2 text-xs">
                   <h4 className={`font-semibold line-clamp-2 ${isActive ? 'text-sky-700' : 'text-slate-700'}`}>
                     {file.name}
                   </h4>
-                  <p className="text-[10px] text-slate-400 mt-1">{file.type}</p>
+                  <p className="text-xs text-slate-400 mt-1">{file.type}</p>
                 </div>
                 
                 {/* Micro cryptographic badges inside file item */}
-                <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
+                <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
                   <div className="flex items-center gap-1">
                     <Hash className="w-2.5 h-2.5 text-slate-400" />
                     <span className="font-mono truncate max-w-[80px]">{file.hash.slice(0, 10)}</span>
                   </div>
                   {file.signatureVerified ? (
-                    <span className="text-[9px] bg-teal-50 text-teal-700 px-1 rounded flex items-center gap-0.5 font-bold">
+                    <span className="text-xs bg-teal-50 text-teal-700 px-1 rounded flex items-center gap-0.5 font-bold">
                       <Check className="w-2 h-2" />
                       已验签
                     </span>
                   ) : (
-                    <span className="text-[9px] bg-slate-100 text-slate-500 px-1 rounded">
+                    <span className="text-xs bg-slate-100 text-slate-500 px-1 rounded">
                       无数字签名
                     </span>
                   )}
@@ -128,7 +128,7 @@ export const InteractivePreview: React.FC<InteractivePreviewProps> = ({
           <div className="flex items-center gap-1.5">
             <button
               onClick={handlePrint}
-              className="p-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded text-[11px] font-bold flex items-center gap-1.5 cursor-pointer"
+              className="p-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded text-xs font-bold flex items-center gap-1.5 cursor-pointer"
               title="排版套打"
             >
               <Printer className="w-3 h-3" />
@@ -136,7 +136,7 @@ export const InteractivePreview: React.FC<InteractivePreviewProps> = ({
             </button>
             <button
               onClick={handleDownload}
-              className="p-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded text-[11px] font-bold flex items-center gap-1.5 cursor-pointer"
+              className="p-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded text-xs font-bold flex items-center gap-1.5 cursor-pointer"
               title="校验下载"
             >
               <Download className="w-3 h-3" />
@@ -151,9 +151,9 @@ export const InteractivePreview: React.FC<InteractivePreviewProps> = ({
             <div className="flex-1 flex flex-col min-h-0">
               {/* Dynamic stamp bar */}
               <div className="bg-white px-4 py-2 border-b border-slate-100 text-xs text-slate-600 flex items-center justify-between shrink-0">
-                <span className="font-mono text-[10px] text-slate-400 select-all">SHA-256 Checksum: {activeFile.hash}</span>
+                <span className="font-mono text-xs text-slate-400 select-all">SHA-256 Checksum: {activeFile.hash}</span>
                 {activeFile.signatureVerified && (
-                  <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded font-bold flex items-center gap-1">
+                  <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded font-bold flex items-center gap-1">
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     已通过国家电子发票真实性签名查验
                   </span>
@@ -170,14 +170,14 @@ export const InteractivePreview: React.FC<InteractivePreviewProps> = ({
                     <div className="absolute top-12 right-12 border-3 border-emerald-500/80 text-emerald-600/90 font-bold px-4 py-1.5 rounded-lg text-xs leading-tight tracking-wide text-center uppercase pointer-events-none select-none rotate-[-8deg] flex flex-col items-center">
                       <Award className="w-4 h-4 mb-0.5" />
                       <span>国标四性自验证</span>
-                      <span className="text-[8px] font-mono mt-0.5">SHA-256 OK</span>
+                      <span className="text-xs font-mono mt-0.5">SHA-256 OK</span>
                     </div>
 
                     {/* Logo/Header */}
                     <div className="flex justify-between items-center border-b border-slate-200 pb-3">
                       <div>
                         <h3 className="text-sm font-bold text-slate-900">电子会计档案记账主件 (PDF/A COMPLIANT)</h3>
-                        <p className="text-[10px] text-slate-400 font-mono mt-0.5">Voucher Reference Code: Z1-2026-FOND</p>
+                        <p className="text-xs text-slate-400 font-mono mt-0.5">Voucher Reference Code: Z1-2026-FOND</p>
                       </div>
                       <span className="text-xs font-mono font-bold text-slate-800">记账凭证号：{record.voucherNo}</span>
                     </div>
@@ -208,21 +208,21 @@ export const InteractivePreview: React.FC<InteractivePreviewProps> = ({
                     </table>
 
                     {/* Bottom Signers Details */}
-                    <div className="grid grid-cols-2 gap-4 pt-3 text-[11px] text-slate-400">
+                    <div className="grid grid-cols-2 gap-4 pt-3 text-xs text-slate-400">
                       <div>
                         <span className="block font-bold">上传及校验经办:</span>
                         <span className="text-slate-600 font-mono">jinlinrun198x (首席财务审核官)</span>
                       </div>
                       <div className="text-right">
                         <span className="block font-bold">审计哈希锁(Blockchain Hashing Block):</span>
-                        <span className="text-slate-600 font-mono text-[9px] break-all">{record.auditLogs[0]?.id || 'N/A'}</span>
+                        <span className="text-slate-600 font-mono text-xs break-all">{record.auditLogs[0]?.id || 'N/A'}</span>
                       </div>
                     </div>
                   </div>
                 )}
 
                 {activeFile.contentType === 'xml' && (
-                  <div className="border-2 border-slate-100 rounded-xl p-4 max-w-2xl mx-auto w-full font-mono text-[11px] space-y-1 bg-slate-50 leading-relaxed shadow-sm">
+                  <div className="border-2 border-slate-100 rounded-xl p-4 max-w-2xl mx-auto w-full font-mono text-xs space-y-1 bg-slate-50 leading-relaxed shadow-sm">
                     {/* Styling xml preview with clean syntax coloration */}
                     <p className="text-slate-400">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</p>
                     <p className="text-sky-600">&lt;InvoiceRoot xmlns="http://chinaxml.chinatax.gov.cn/v4"&gt;</p>
@@ -263,7 +263,7 @@ export const InteractivePreview: React.FC<InteractivePreviewProps> = ({
                         </div>
 
                         {/* 真实修复能力待后端落地；当前仅提示处理路径（2026-08-16 移除假自修复按钮） */}
-                        <p className="text-[11px] text-slate-400 pt-3 border-t border-rose-100">
+                        <p className="text-xs text-slate-400 pt-3 border-t border-rose-100">
                           请联系系统供应商重新导出嵌入国标字体的版式文件后重新上传；系统暂不支持在线修复。
                         </p>
                       </div>
@@ -280,7 +280,7 @@ export const InteractivePreview: React.FC<InteractivePreviewProps> = ({
                           <Award className="w-5 h-5 text-sky-600" />
                           <div>
                             <span className="text-xs font-bold text-slate-800">国标专用会计要素版式文件 (OFD/A-1)</span>
-                            <span className="block text-[10px] text-teal-600 font-bold mt-1">√ 标宋/防伪数字公章已完成静态嵌入</span>
+                            <span className="block text-xs text-teal-600 font-bold mt-1">√ 标宋/防伪数字公章已完成静态嵌入</span>
                           </div>
                         </div>
 
@@ -300,7 +300,7 @@ export const InteractivePreview: React.FC<InteractivePreviewProps> = ({
                           </div>
                         </div>
 
-                        <div className="bg-slate-50 border border-slate-100 rounded p-3 text-[11px] text-slate-500 mt-4 leading-relaxed">
+                        <div className="bg-slate-50 border border-slate-100 rounded p-3 text-xs text-slate-500 mt-4 leading-relaxed">
                           提示：由于已一键“嵌入仿宋/黑体/标宋汉字字形网格”，该OFD已通过全生命周期长效可用度检测，可安全地迁移、合并或刻盘永久归档。
                         </div>
                       </div>
@@ -316,9 +316,9 @@ export const InteractivePreview: React.FC<InteractivePreviewProps> = ({
                       </div>
                       <div className="text-center">
                         <span className="text-xs font-bold text-slate-800 block">业务审批流程单明细截图</span>
-                        <span className="text-[10px] text-slate-400 block mt-1">{activeFile.name} | 大小：{activeFile.size}</span>
+                        <span className="text-xs text-slate-400 block mt-1">{activeFile.name} | 大小：{activeFile.size}</span>
                       </div>
-                      <span className="text-[10px] bg-slate-200 text-slate-600 font-bold px-2 py-0.5 rounded-full mt-2 select-none">
+                      <span className="text-xs bg-slate-200 text-slate-600 font-bold px-2 py-0.5 rounded-full mt-2 select-none">
                         非电子发票、属于凭据型图片附件
                       </span>
                     </div>
@@ -333,8 +333,8 @@ export const InteractivePreview: React.FC<InteractivePreviewProps> = ({
                       </div>
                       <div className="text-center">
                         <span className="text-xs font-bold text-slate-800 block">支持性非通用电子格式</span>
-                        <span className="text-[10px] text-slate-400 block mt-1">{activeFile.name} | 大小：{activeFile.size}</span>
-                        <p className="text-[10px] text-slate-400 max-w-xs mt-2 mx-auto">
+                        <span className="text-xs text-slate-400 block mt-1">{activeFile.name} | 大小：{activeFile.size}</span>
+                        <p className="text-xs text-slate-400 max-w-xs mt-2 mx-auto">
                           本系统推荐采用国家标准版式(OFD或PDF)保存归档主体。为兼容业务，此二进制辅助底稿已在Alfresco中计算SHA进行版本固化。
                         </p>
                       </div>

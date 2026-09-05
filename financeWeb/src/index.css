@@ -16,11 +16,12 @@
     --font-sans: 'Geist Variable', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', system-ui, sans-serif;
     /* 编号等宽字体栈（档号/凭证号/节点号列用 font-mono） */
     --font-mono: ui-monospace, 'SF Mono', Consolas, 'Courier New', monospace;
-    /* 字阶 token（全站基线上抬到 14px，层级靠字重+灰度而非缩字号） */
-    --text-display: 20px;      /* 系统名 */
-    --text-title: 16px;        /* 页面标题、卡片标题 */
-    --text-tab: 15px;          /* 页签 */
+    /* 字阶 token（2026-09-05 字阶收口：全站 5 档闭集 display20/title16/tab15/body14/aux12） */
+    --text-display: 20px;      /* 系统名、驾驶舱大标题 */
+    --text-title: 16px;        /* 页面标题、卡片/面板标题 */
+    --text-tab: 15px;          /* 页签（唯一合法用途） */
     --text-body: 14px;         /* 正文/表格/表单（全站基线，= text-sm） */
+    --text-aux: 12px;          /* 唯一辅助档：徽章/时间戳/次要说明（= text-xs） */
     /* 尺寸 token */
     --spacing-row-table: 3.5;  /* 表格行高 48px（text-sm 行高 20px + py-3.5×2） */
     --spacing-row-form: 2.5;   /* 表单项行高 40px（输入框 py-2.5×2 + 20px） */

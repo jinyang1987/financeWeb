@@ -53,7 +53,7 @@ const Modal: React.FC<{
                 {icon}
               </div>
             )}
-            <h3 className="text-lg font-bold text-slate-800">{title}</h3>
+            <h3 className="text-base font-bold text-slate-800">{title}</h3>
           </div>
           <button
             type="button"
@@ -581,14 +581,14 @@ export const PersonnelManagePanel: React.FC = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-                  <th className="px-4 py-3 text-left text-[13px] font-semibold">账号</th>
-                  <th className="px-4 py-3 text-left text-[13px] font-semibold">姓名</th>
-                  <th className="px-4 py-3 text-left text-[13px] font-semibold">邮箱</th>
-                  <th className="px-4 py-3 text-left text-[13px] font-semibold">部门</th>
-                  <th className="px-4 py-3 text-left text-[13px] font-semibold">岗位</th>
-                  <th className="px-4 py-3 text-left text-[13px] font-semibold">人员密级</th>
-                  <th className="px-4 py-3 text-left text-[13px] font-semibold">有效人员</th>
-                  <th className="px-4 py-3 text-center text-[13px] font-semibold">操作</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">账号</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">姓名</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">邮箱</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">部门</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">岗位</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">人员密级</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">有效人员</th>
+                  <th className="px-4 py-3 text-center text-sm font-semibold">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -606,7 +606,7 @@ export const PersonnelManagePanel: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-sm text-slate-800">{p.name}</td>
-                    <td className="px-4 py-3 font-mono text-[13px] text-slate-600">{p.email}</td>
+                    <td className="px-4 py-3 font-mono text-sm text-slate-600">{p.email}</td>
                     <td className="px-4 py-3">
                       {p.org ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md text-xs font-medium">

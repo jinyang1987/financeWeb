@@ -170,7 +170,7 @@ export const OrgManagePanel: React.FC = () => {
               <>
                 <input type="text" value={newDeptName} onChange={(e) => setNewDeptName(e.target.value)}
                   placeholder={isUnit ? '部门名称' : '下级部门名称'}
-                  className="w-24 border border-amber-300 rounded px-1.5 py-0.5 text-[11px] focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  className="w-24 border border-amber-300 rounded px-1.5 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-amber-500"
                   autoFocus onClick={(e) => e.stopPropagation()}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') handleCreateDept(node.id);
@@ -279,7 +279,7 @@ export const OrgManagePanel: React.FC = () => {
               <h3 className="text-base font-bold text-slate-800 mb-5 flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-amber-600" />
                 单位信息 <span className="text-sm font-normal text-slate-400 ml-1">— {selectedNode.data.name}</span>
-                <span className="ml-auto text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">只读</span>
+                <span className="ml-auto text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">只读</span>
               </h3>
               <div className="space-y-5">
                 <div>

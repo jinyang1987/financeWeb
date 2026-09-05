@@ -67,7 +67,7 @@ const MyBorrowPage: React.FC = () => {
             <ShieldAlert className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
             <div>
               <p className="text-xs font-bold text-red-700">借阅权限已熔断</p>
-              <p className="text-[11px] text-red-600 mt-0.5 leading-relaxed">
+              <p className="text-xs text-red-600 mt-0.5 leading-relaxed">
                 您名下有逾期未还的实体档案，系统已从底层锁定「新建借阅单」功能。
                 请立即归还逾期档案，归还核销后权限自动恢复。逾期信息已每日抄送您的直属主管。
               </p>
@@ -90,7 +90,7 @@ const MyBorrowPage: React.FC = () => {
               <Icon className="w-4 h-4" />
               {label}
               {badge !== undefined && (
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === key ? 'bg-sky-600 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${activeTab === key ? 'bg-sky-600 text-white' : 'bg-slate-200 text-slate-600'}`}>
                   {badge}
                 </span>
               )}

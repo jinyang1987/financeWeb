@@ -292,15 +292,16 @@ const UnassignedPool: React.FC<UnassignedPoolProps> = ({
             全选 ({records.length} 条)
           </label>
 
-          {/* ★ 操作区：按钮常显等高（h-8），未勾选时置灰——不再用占位文字，杜绝行高跳动（2026-08-19） */}
-          <div className="flex items-center gap-1.5" ref={menuRef}>
+          {/* ★ 操作区：按钮常显等高（h-8），未勾选时置灰——不再用占位文字，杜绝行高跳动（2026-08-19）；
+              2026-09-05 新增「元数据/建档」后按钮渐多：容器 flex-wrap 允许换行，按钮文字 nowrap 不折行 */}
+          <div className="flex items-center gap-1.5 flex-wrap" ref={menuRef}>
             {/* 主操作：直接组卷 → 一键创建案卷并加入选中凭证 */}
             <button
               type="button"
               onClick={onCreateAndAdd}
               disabled={selectedIds.size === 0}
               title={selectedIds.size === 0 ? '请先勾选左侧凭证' : '以选中凭证创建案卷'}
-              className="flex h-8 items-center gap-1.5 px-3 text-[13px] font-medium rounded-lg transition-colors bg-sky-600 text-white hover:bg-sky-700 shadow-sm disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed"
+              className="flex h-8 items-center gap-1.5 px-3 text-sm font-medium whitespace-nowrap shrink-0 rounded-lg transition-colors bg-sky-600 text-white hover:bg-sky-700 shadow-sm disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed"
             >
               <Plus className="w-3.5 h-3.5" />
               组卷{selectedIds.size > 0 ? `（${selectedIds.size}）` : ''}
@@ -312,7 +313,7 @@ const UnassignedPool: React.FC<UnassignedPoolProps> = ({
                 onClick={() => setShowVolumeMenu(!showVolumeMenu)}
                 disabled={selectedIds.size === 0 || draftVolumes.length === 0}
                 title={selectedIds.size === 0 ? '请先勾选左侧凭证' : draftVolumes.length === 0 ? '暂无草稿状态的案卷' : '加入已有草稿案卷'}
-                className="flex h-8 items-center gap-1 px-3 text-[13px] font-medium rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 transition-colors disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
+                className="flex h-8 items-center gap-1 px-3 text-sm font-medium whitespace-nowrap shrink-0 rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 transition-colors disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
               >
                 加入已有
                 <ChevronDown className="w-3.5 h-3.5 opacity-50" />
@@ -330,12 +331,12 @@ const UnassignedPool: React.FC<UnassignedPoolProps> = ({
                         >
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
                           <span className="font-medium text-slate-700 flex-1 truncate">{v.title || v.volumeCode || '未命名案卷'}</span>
-                          <span className="text-[10px] text-slate-400">草稿</span>
+                          <span className="text-xs text-slate-400">草稿</span>
                         </button>
                       ))}
                       {volumes.filter(v => v.status !== 'draft').length > 0 && (
                         <div className="py-1 border-t border-slate-100">
-                          <div className="px-3 py-1 text-[10px] text-slate-400 uppercase tracking-wider">已确认 · 不可加入</div>
+                          <div className="px-3 py-1 text-xs text-slate-400 uppercase tracking-wider">已确认 · 不可加入</div>
                           {volumes.filter(v => v.status !== 'draft').map((v) => (
                             <div
                               key={v.id}
@@ -344,7 +345,7 @@ const UnassignedPool: React.FC<UnassignedPoolProps> = ({
                             >
                               <span className="w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0" />
                               <span className="text-slate-500 flex-1 truncate">{v.volumeCode || v.title || '未命名案卷'}</span>
-                              <span className="text-[10px] text-slate-400">{statusLabel(v.status)}</span>
+                              <span className="text-xs text-slate-400">{statusLabel(v.status)}</span>
                             </div>
                           ))}
                         </div>
@@ -358,7 +359,7 @@ const UnassignedPool: React.FC<UnassignedPoolProps> = ({
                 type="button"
                 onClick={onUnlinkSelection}
                 title="解除所选原始凭证与其记账凭证的挂接"
-                className="flex h-8 items-center gap-1.5 px-3 text-[13px] font-medium rounded-lg border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors"
+                className="flex h-8 items-center gap-1.5 px-3 text-sm font-medium whitespace-nowrap shrink-0 rounded-lg border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors"
               >
                 <Link2 className="w-3.5 h-3.5" />
                 解挂（{unlinkableCount}）
@@ -369,7 +370,7 @@ const UnassignedPool: React.FC<UnassignedPoolProps> = ({
                 onClick={onLinkSelection}
                 disabled={linkableCount === 0}
                 title={linkableCount === 0 ? '勾选 1 张记账凭证 + N 张未挂接的原始凭证后可组件' : '将所选原始凭证挂接到记账凭证，形成「件」单元'}
-                className="flex h-8 items-center gap-1.5 px-3 text-[13px] font-medium rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 transition-colors disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
+                className="flex h-8 items-center gap-1.5 px-3 text-sm font-medium whitespace-nowrap shrink-0 rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 transition-colors disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
               >
                 <Link2 className="w-3.5 h-3.5" />
                 组件{linkableCount > 0 ? `（${linkableCount}）` : ''}
@@ -381,7 +382,7 @@ const UnassignedPool: React.FC<UnassignedPoolProps> = ({
               type="button"
               onClick={() => onEditMetadata(Array.from(selectedIds))}
               title={selectedIds.size === 0 ? '编辑本页全部散件元数据（也可先勾选）' : '编辑勾选件的元数据'}
-              className="flex h-8 items-center gap-1.5 px-3 text-[13px] font-medium rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 transition-colors"
+              className="flex h-8 items-center gap-1.5 px-3 text-sm font-medium whitespace-nowrap shrink-0 rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 transition-colors"
             >
               <ClipboardList className="w-3.5 h-3.5" />
               元数据
@@ -391,7 +392,7 @@ const UnassignedPool: React.FC<UnassignedPoolProps> = ({
               type="button"
               onClick={onCreateMetadataOnly}
               title="无文件建档：先登记元数据台账，电子文件到档后再补充"
-              className="flex h-8 items-center gap-1.5 px-3 text-[13px] font-medium rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 transition-colors"
+              className="flex h-8 items-center gap-1.5 px-3 text-sm font-medium whitespace-nowrap shrink-0 rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 transition-colors"
             >
               <FilePlus2 className="w-3.5 h-3.5" />
               建档
@@ -402,7 +403,7 @@ const UnassignedPool: React.FC<UnassignedPoolProps> = ({
               onClick={() => onBatchDelete(Array.from(selectedIds))}
               disabled={selectedIds.size === 0}
               title={selectedIds.size === 0 ? '请先勾选左侧凭证' : '删除选中记录'}
-              className="flex h-8 items-center gap-1.5 px-3 text-[13px] font-medium rounded-lg border border-red-200 bg-white text-red-600 hover:bg-red-50 transition-colors disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
+              className="flex h-8 items-center gap-1.5 px-3 text-sm font-medium whitespace-nowrap shrink-0 rounded-lg border border-red-200 bg-white text-red-600 hover:bg-red-50 transition-colors disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
             >
               <Trash2 className="w-3.5 h-3.5" />
               删除{selectedIds.size > 0 ? `（${selectedIds.size}）` : ''}
@@ -433,14 +434,14 @@ const UnassignedPool: React.FC<UnassignedPoolProps> = ({
               .filter(Boolean);
             return (
               <div className="px-4 py-2 bg-sky-50/60 border-l-2 border-sky-300 space-y-1">
-                <div className="text-[11px] font-medium text-sky-700">所附原始凭证（{atts.length} 张，随本凭证整体组卷）</div>
+                <div className="text-xs font-medium text-sky-700">所附原始凭证（{atts.length} 张，随本凭证整体组卷）</div>
                 {atts.map((a) => (
                   <div key={a.id} className="flex items-center gap-3 text-xs text-slate-600 py-0.5">
                     <Paperclip className="w-3 h-3 text-amber-500 shrink-0" />
                     <span className="font-mono font-medium text-slate-700">{a.voucherNo}</span>
                     {a.amount > 0 && <span>¥{a.amount.toLocaleString('zh-CN', { minimumFractionDigits: 2 })}</span>}
                     {a.year && <span className="text-slate-400">{a.year}-{a.month}</span>}
-                    <span className="px-1 py-px text-[10px] rounded bg-amber-100 text-amber-700">原始凭证</span>
+                    <span className="px-1 py-px text-xs rounded bg-amber-100 text-amber-700">原始凭证</span>
                   </div>
                 ))}
               </div>
@@ -638,7 +639,7 @@ const VolumeCard: React.FC<VolumeCardProps> = ({
         </span>
 
         {/* 状态标签 — 紧跟标题 */}
-        <span className={`px-1.5 py-0.5 text-[11px] font-medium rounded-full border shrink-0 ${statusColors[volume.status] || ''}`}>
+        <span className={`px-1.5 py-0.5 text-xs font-medium rounded-full border shrink-0 ${statusColors[volume.status] || ''}`}>
           {statusLabels[volume.status] || volume.status}
         </span>
       </div>
@@ -647,7 +648,7 @@ const VolumeCard: React.FC<VolumeCardProps> = ({
       {expanded && (
         <div className="px-3 pb-2.5 space-y-2">
           {/* 元数据 — 空案卷不显示件数 */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-500">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
             {/* ★ 类别/期限显示中文名（archiveTypeCode 是档号用数字代码，直接显示不友好） */}
             <span>类别: {volume.archiveType || ARCHIVE_TYPE_CATEGORY_NAMES[toCategoryCode(volume.archiveTypeCode, volume.archiveType)] || '—'}</span>
             <span>期限: {volume.retention || volume.retentionCode || '—'}</span>
@@ -717,13 +718,13 @@ const VolumeCard: React.FC<VolumeCardProps> = ({
                       </span>
                       {/* 该凭证的附件数 */}
                       {(attachmentCountMap.get(item.recordId) || 0) > 0 && (
-                        <span className="text-[10px] text-amber-500 bg-amber-50 px-1 rounded shrink-0">
+                        <span className="text-xs text-amber-500 bg-amber-50 px-1 rounded shrink-0">
                           <Paperclip className="w-3 h-3 inline" />{attachmentCountMap.get(item.recordId)}
                         </span>
                       )}
                       {/* 悬挂归属徽标：父件不在本卷的原始凭证才需要（在卷的已收进附件组块） */}
                       {rec?.parentRecordId && children.length === 0 && (
-                        <span className="text-[10px] text-sky-600 bg-sky-50 px-1 rounded shrink-0" title="所属记账凭证（不在本卷）">
+                        <span className="text-xs text-sky-600 bg-sky-50 px-1 rounded shrink-0" title="所属记账凭证（不在本卷）">
                           附于 {recordMap.get(rec.parentRecordId)?.voucherNo || rec.parentRecordId.slice(0, 8)}
                         </span>
                       )}
@@ -753,7 +754,7 @@ const VolumeCard: React.FC<VolumeCardProps> = ({
                     {/* ★ 附件组块：所附原始凭证列表化呈现（与主行同样的列表感，2026-08-20） */}
                     {children.length > 0 && (
                       <div className="ml-7 mr-1 mb-1 rounded-lg border border-sky-100 bg-sky-50/40 overflow-hidden">
-                        <div className="px-2.5 py-1 text-[10px] font-medium text-sky-700 bg-sky-100/60 border-b border-sky-100 flex items-center gap-1">
+                        <div className="px-2.5 py-1 text-xs font-medium text-sky-700 bg-sky-100/60 border-b border-sky-100 flex items-center gap-1">
                           <Paperclip className="w-3 h-3" />
                           所附原始凭证（{children.length} 张 · 与本凭证为一件）
                         </div>
@@ -777,12 +778,12 @@ const VolumeCard: React.FC<VolumeCardProps> = ({
                                   title="随所属凭证为一件"
                                 />
                               )}
-                              <span className="text-[10px] text-slate-400 w-6 shrink-0">#{sub.itemNo}</span>
+                              <span className="text-xs text-slate-400 w-6 shrink-0">#{sub.itemNo}</span>
                               <span className="flex-1 truncate text-slate-600">
                                 {subRec?.voucherNo || sub.recordArchiveCode || sub.recordId}
                               </span>
                               {subRec && (
-                                <span className="text-[11px] text-slate-400">{formatAmount(subRec.amount)}</span>
+                                <span className="text-xs text-slate-400">{formatAmount(subRec.amount)}</span>
                               )}
                               <button
                                 type="button"
@@ -827,7 +828,7 @@ const VolumeCard: React.FC<VolumeCardProps> = ({
 
           {/* 四性检测提示（2026-08-25：检测统一在移交=推送至保管库时自动执行，组卷环节不检测） */}
           {volume.status === 'draft' && (
-            <div className="flex items-start gap-1.5 text-[10px] text-slate-400 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5">
+            <div className="flex items-start gap-1.5 text-xs text-slate-400 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5">
               <Shield className="w-3 h-3 shrink-0 mt-px" />
               <span>四性检测在「移交至档案保管」时按规定自动执行，未通过将阻断移交；检测明细见 档案整理→快速检测</span>
             </div>
@@ -919,7 +920,7 @@ const VolumeCard: React.FC<VolumeCardProps> = ({
                 </div>
               )}
               {/* ★ 四性检测状态（移交时自动执行；展示最近一次结果，2026-08-25） */}
-              <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium ${
+              <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium ${
                 lastCheck == null
                   ? 'bg-slate-100 text-slate-500'
                   : lastCheck.allPass
@@ -1113,7 +1114,7 @@ const PillBtn: React.FC<{
     onClick={onClick}
     disabled={disabled}
     title={title}
-    className={`flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded-full transition-colors whitespace-nowrap disabled:opacity-35 disabled:hover:bg-transparent ${
+    className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full transition-colors whitespace-nowrap disabled:opacity-35 disabled:hover:bg-transparent ${
       danger ? 'text-amber-300 hover:bg-amber-400/20' : 'text-slate-100 hover:bg-white/10'
     }`}
   >
@@ -1253,18 +1254,18 @@ const MoveItemsModal: React.FC<{
               <input type="radio" name="move-target" checked={targetId === v.id} onChange={() => setTargetId(v.id)} />
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-semibold text-slate-700 truncate">{v.title || v.volumeCode || '未命名案卷'}</div>
-                <div className="text-[10px] text-slate-400">{v.year} 年 · {itemsCountOf(v.id)} 件 · 转入后追加至尾部</div>
+                <div className="text-xs text-slate-400">{v.year} 年 · {itemsCountOf(v.id)} 件 · 转入后追加至尾部</div>
               </div>
             </label>
           ))}
           {incompatible.length > 0 && (
             <div className="pt-1">
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider px-1 pb-1">不可转入（类别/年度/期限不一致）</p>
+              <p className="text-xs text-slate-400 uppercase tracking-wider px-1 pb-1">不可转入（类别/年度/期限不一致）</p>
               {incompatible.map((v) => (
                 <div key={v.id} className="flex items-center gap-2.5 p-2 border border-slate-100 rounded-xl opacity-50">
                   <div className="flex-1 min-w-0">
                     <div className="text-xs text-slate-500 truncate">{v.title || v.volumeCode || '未命名案卷'}</div>
-                    <div className="text-[10px] text-slate-400">{v.year} 年 · {itemsCountOf(v.id)} 件 · {v.retention || v.retentionCode || '期限未设'}</div>
+                    <div className="text-xs text-slate-400">{v.year} 年 · {itemsCountOf(v.id)} 件 · {v.retention || v.retentionCode || '期限未设'}</div>
                   </div>
                 </div>
               ))}
@@ -1350,7 +1351,7 @@ const MergeVolumesModal: React.FC<{
               <input type="checkbox" checked={picked.has(v.id)} onChange={() => toggle(v.id)} />
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-semibold text-slate-700 truncate">{v.title || v.volumeCode || '未命名案卷'}</div>
-                <div className="text-[10px] text-slate-400">{v.year} 年 · {itemsCountOf(v.id)} 件</div>
+                <div className="text-xs text-slate-400">{v.year} 年 · {itemsCountOf(v.id)} 件</div>
               </div>
             </label>
           ))}
@@ -1476,7 +1477,7 @@ const TransferVolumeModal: React.FC<{
               ['卷内件数', `${itemCount} 件`],
             ] as const).map(([k, v]) => (
               <div key={k} className="bg-slate-50 rounded-lg px-3 py-2">
-                <div className="text-[10px] text-slate-400">{k}</div>
+                <div className="text-xs text-slate-400">{k}</div>
                 <div className="font-medium text-slate-700 mt-0.5 truncate" title={v}>{v}</div>
               </div>
             ))}
@@ -1545,7 +1546,7 @@ const TransferVolumeModal: React.FC<{
                 />
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-semibold text-slate-700">{opt.title}</div>
-                  <div className="text-[11px] text-slate-500 mt-0.5">{opt.desc}</div>
+                  <div className="text-xs text-slate-500 mt-0.5">{opt.desc}</div>
                 </div>
               </label>
             ))}
@@ -1564,20 +1565,20 @@ const TransferVolumeModal: React.FC<{
                   <button
                     type="button"
                     onClick={() => setPickPos(null)}
-                    className="text-[11px] text-slate-400 hover:text-slate-600 underline"
+                    className="text-xs text-slate-400 hover:text-slate-600 underline"
                   >
                     重选
                   </button>
                 </div>
               ) : (
-                <div className="text-[11px] text-slate-400">请点击上方虚线空格位选定上架位置（灰块为已占用）</div>
+                <div className="text-xs text-slate-400">请点击上方虚线空格位选定上架位置（灰块为已占用）</div>
               )}
             </div>
           )}
 
           {/* 业务后果披露（选择上架时） */}
           {mode !== 'none' && (
-            <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 leading-relaxed">
+            <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 leading-relaxed">
               上架以「盒」为单位：本卷归入的档案盒（含盒内既有案卷）将整体定位在架；
               盒上架后不再接收新卷，后续同类别案卷移交将自动开新盒。
             </div>
@@ -1585,14 +1586,14 @@ const TransferVolumeModal: React.FC<{
 
           {/* 库房未配置密集架时的降级说明 */}
           {!loading && !storageReady && !loadErr && (
-            <div className="text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 leading-relaxed">
+            <div className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 leading-relaxed">
               库房尚未配置密集架，本次仅可移交归盒；如需上架，请先在 档案保管 → 实体档案库房 新增密集架，
               或移交后在「待上架区」补上架。
             </div>
           )}
 
           {loadErr && (
-            <div className="text-[11px] text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
               库房数据加载失败：{loadErr}（仍可仅移交归盒，上架可在实体档案库房补做）
             </div>
           )}
@@ -1602,7 +1603,7 @@ const TransferVolumeModal: React.FC<{
               {submitIssues.length > 0 && (
                 <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
                   {submitIssues.map((iss, i) => (
-                    <div key={i} className="flex items-start gap-1.5 text-[11px] text-red-700 bg-white/70 border border-red-100 rounded px-2 py-1">
+                    <div key={i} className="flex items-start gap-1.5 text-xs text-red-700 bg-white/70 border border-red-100 rounded px-2 py-1">
                       <AlertCircle className="w-3 h-3 shrink-0 mt-px" />
                       <span className="min-w-0">
                         <strong>{iss.name}</strong>：{iss.note}
@@ -1617,7 +1618,7 @@ const TransferVolumeModal: React.FC<{
               <button
                 type="button"
                 onClick={() => useAppStore.getState().setActiveMainMenu('quick-check')}
-                className="inline-flex items-center gap-1 text-[11px] font-medium text-sky-700 hover:text-sky-900 underline"
+                className="inline-flex items-center gap-1 text-xs font-medium text-sky-700 hover:text-sky-900 underline"
               >
                 到「档案整理 → 快速检测」查看完整报告
               </button>
@@ -1998,11 +1999,11 @@ const VolumeWorkspacePage: React.FC = () => {
                 </button>
               )}
               {isSrc && (r.parentRecordId ? (
-                <span className="shrink-0 px-1 py-px text-[10px] rounded bg-sky-100 text-sky-700" title="所属记账凭证（随其整体组卷）">
+                <span className="shrink-0 px-1 py-px text-xs rounded bg-sky-100 text-sky-700" title="所属记账凭证（随其整体组卷）">
                   附于 {parentNo || r.parentRecordId!.slice(0, 8)}
                 </span>
               ) : (
-                <span className="shrink-0 px-1 py-px text-[10px] rounded bg-amber-100 text-amber-700" title="未挂接：不会随任何凭证成单元；勾选 1 张记账凭证 + 本件后点【组件】">
+                <span className="shrink-0 px-1 py-px text-xs rounded bg-amber-100 text-amber-700" title="未挂接：不会随任何凭证成单元；勾选 1 张记账凭证 + 本件后点【组件】">
                   待挂接
                 </span>
               ))}
@@ -3028,7 +3029,7 @@ const VolumeWorkspacePage: React.FC = () => {
           {itemSel && (
             <div className="sticky bottom-3 z-20 flex justify-center pointer-events-none mt-2 shrink-0">
               <div className="pointer-events-auto flex items-center gap-0.5 pl-3 pr-1.5 py-1.5 bg-slate-800 text-white rounded-full shadow-2xl animate-in slide-in-from-bottom-3 fade-in duration-200 max-w-full">
-                <span className="text-[11px] font-medium text-slate-300 whitespace-nowrap mr-1 truncate max-w-[140px]" title={selInfo.volumeTitle}>
+                <span className="text-xs font-medium text-slate-300 whitespace-nowrap mr-1 truncate max-w-[140px]" title={selInfo.volumeTitle}>
                   「{selInfo.volumeTitle}」已选 {itemSel.ids.size} 件
                 </span>
                 <PillBtn
@@ -3116,7 +3117,7 @@ const VolumeWorkspacePage: React.FC = () => {
               数据与文件完整保留，可随时在「回收站」恢复。
             </p>
             {deleteConfirm.attachCount > 0 && (
-              <p className="mt-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-amber-700 text-[13px]">
+              <p className="mt-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-amber-700 text-sm">
                 其中含 {deleteConfirm.attachCount} 张随凭证挂接的原始凭证，将随凭证一并移入（恢复时整件还原）。
               </p>
             )}

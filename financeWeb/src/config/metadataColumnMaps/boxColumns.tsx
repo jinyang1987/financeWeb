@@ -29,7 +29,7 @@ const BOX_STATUS_CLS: Record<BoxStatus, string> = {
 };
 
 const StatusBadge: React.FC<{ status: BoxStatus }> = ({ status }) => (
-  <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-[11px] font-semibold ${BOX_STATUS_CLS[status] || BOX_STATUS_CLS.active}`}>
+  <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-xs font-semibold ${BOX_STATUS_CLS[status] || BOX_STATUS_CLS.active}`}>
     {BOX_STATUS_LABELS[status] || status}
   </span>
 );
@@ -81,7 +81,7 @@ export const BOX_COLUMN_MAP: Record<string, ColumnDef> = {
   B11: {
     metaId: 'B11', label: '卷号起止', width: '180px', align: 'left',
     accessor: (b) => b.volumeCodeRange
-      ? <span className="font-mono text-[10px] text-slate-500">{b.volumeCodeRange}</span>
+      ? <span className="font-mono text-xs text-slate-500">{b.volumeCodeRange}</span>
       : <span className="text-slate-300 text-xs">—</span>,
   },
   B12: {

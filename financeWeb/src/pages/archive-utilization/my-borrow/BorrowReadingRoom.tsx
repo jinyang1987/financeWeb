@@ -81,7 +81,7 @@ const ReadingModal: React.FC<ReadingModalProps> = ({ order, fulfillment, record,
           <FileText className="w-4 h-4 text-white/80 shrink-0" />
           <div className="flex-1 min-w-0">
             <div className="text-sm font-bold text-white truncate">{record.remarks || record.voucherNo}</div>
-            <div className="text-[10px] text-white/60 font-mono">{record.archiveCode} · 借阅单 {order.orderNo}</div>
+            <div className="text-xs text-white/60 font-mono">{record.archiveCode} · 借阅单 {order.orderNo}</div>
           </div>
           <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs shrink-0 ${urgent ? 'bg-white text-red-600' : 'bg-red-500/90 text-white'}`}>
             <Timer className="w-3.5 h-3.5" />
@@ -150,7 +150,7 @@ const ReadingModal: React.FC<ReadingModalProps> = ({ order, fulfillment, record,
 
         {/* 底部：权限门控操作 */}
         <div className="px-5 py-3 bg-white border-t border-slate-200 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2 text-[11px] text-slate-400">
+          <div className="flex items-center gap-2 text-xs text-slate-400">
             <ShieldAlert className="w-3.5 h-3.5" />
             已授权权限：{perms.map((p) => PERM_LABELS[p]).join(' / ') || '无'} · 到期自动收回
           </div>
@@ -271,11 +271,11 @@ const GrantCard: React.FC<GrantCardProps> = ({ order, fulfillment, record, perms
       </div>
       <div className="flex-1 min-w-0">
         <div className="text-sm font-semibold text-slate-800 truncate">{record.remarks || record.voucherNo}</div>
-        <div className="text-[11px] text-slate-400 mt-0.5 font-mono truncate">{record.archiveCode}</div>
+        <div className="text-xs text-slate-400 mt-0.5 font-mono truncate">{record.archiveCode}</div>
         <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-          <span className="text-[10px] text-slate-400">借阅单 {order.orderNo}</span>
+          <span className="text-xs text-slate-400">借阅单 {order.orderNo}</span>
           {perms.map((p) => (
-            <span key={p} className="text-[10px] px-1.5 py-0.5 rounded-full bg-sky-50 text-sky-600 border border-sky-100">
+            <span key={p} className="text-xs px-1.5 py-0.5 rounded-full bg-sky-50 text-sky-600 border border-sky-100">
               {PERM_LABELS[p]}
             </span>
           ))}

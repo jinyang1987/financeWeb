@@ -51,7 +51,7 @@ const ConnectionConfigPage: React.FC = () => {
             >
               <t.Icon className="w-4 h-4" />
               {t.label}
-              <span className="text-[10px] font-normal opacity-70 hidden xl:inline">{t.desc}</span>
+              <span className="text-xs font-normal opacity-70 hidden xl:inline">{t.desc}</span>
             </button>
           ))}
         </div>

@@ -111,7 +111,8 @@ export const DetailSection: React.FC<DetailSectionProps> = ({ icon, title, badge
   <section className={`bg-white border border-slate-200 rounded-xl p-4 ${className || ''}`}>
     <div className="flex items-center gap-2 mb-3">
       {icon}
-      <span className="text-xs font-semibold text-slate-700">{title}</span>
+      {/* T17/字阶收口：区块标题 14/600（title 语义由 SectionTitle 承载，此处保持紧凑） */}
+      <span className="text-sm font-semibold text-slate-700">{title}</span>
       {badges}
     </div>
     {children}
@@ -191,8 +192,8 @@ export const DetailPanelHeader: React.FC<DetailPanelHeaderProps> = ({ icon, titl
   <div className="flex items-center gap-2 px-3 py-3 border-b border-slate-200">
     {icon}
     <div className="min-w-0 flex-1">
-      <div className="text-sm font-semibold text-slate-700 truncate">{title}</div>
-      {subtitle && <div className="text-[11px] text-slate-400 mt-0.5">{subtitle}</div>}
+      <div className="text-base font-semibold text-slate-700 truncate">{title}</div>
+      {subtitle && <div className="text-xs text-slate-400 mt-0.5">{subtitle}</div>}
     </div>
   </div>
 );

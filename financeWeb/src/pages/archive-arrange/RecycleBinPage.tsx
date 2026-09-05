@@ -226,14 +226,14 @@ const RecycleBinPage: React.FC = () => {
             )}
             {src && (r.parentRecordId ? (
               <span
-                className="shrink-0 px-1 py-px text-[10px] rounded bg-sky-100 text-sky-700"
+                className="shrink-0 px-1 py-px text-xs rounded bg-sky-100 text-sky-700"
                 title="所属记账凭证（不在本页回收站内——或已先恢复/入卷）"
               >
                 附于 {parentNo || r.parentRecordId.slice(0, 8)}
               </span>
             ) : (
               <span
-                className="shrink-0 px-1 py-px text-[10px] rounded bg-amber-100 text-amber-700"
+                className="shrink-0 px-1 py-px text-xs rounded bg-amber-100 text-amber-700"
                 title="未挂接的原始凭证"
               >
                 待挂接
@@ -334,7 +334,7 @@ const RecycleBinPage: React.FC = () => {
               const atts = attachmentsOf(r.id);
               return (
                 <div className="px-4 py-2 bg-sky-50/60 border-l-2 border-sky-300 space-y-1">
-                  <div className="text-[11px] font-medium text-sky-700">
+                  <div className="text-xs font-medium text-sky-700">
                     所附原始凭证（{atts.length} 张，随本凭证一并处理）
                   </div>
                   {atts.map((a) => (

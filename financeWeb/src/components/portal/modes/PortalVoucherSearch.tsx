@@ -145,13 +145,13 @@ const PortalVoucherSearch: React.FC<PortalVoucherSearchProps> = ({ onOpenDetail 
               <table className="w-full text-sm table-fixed">
                 <thead>
                   <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-28">凭证号</th>
-                    <th className="px-4 py-3 text-left text-[13px] font-semibold">摘要</th>
-                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-36">会计科目</th>
-                    <th className="px-4 py-3 text-center text-[13px] font-semibold w-20">期间</th>
-                    <th className="px-4 py-3 text-center text-[13px] font-semibold w-20">制单人</th>
-                    <th className="px-4 py-3 text-right text-[13px] font-semibold w-28">金额</th>
-                    <th className="px-4 py-3 text-left text-[13px] font-semibold w-40">状态</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold w-28">凭证号</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">摘要</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold w-36">会计科目</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold w-20">期间</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold w-20">制单人</th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold w-28">金额</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold w-40">状态</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -161,7 +161,7 @@ const PortalVoucherSearch: React.FC<PortalVoucherSearchProps> = ({ onOpenDetail 
                       onClick={() => onOpenDetail(r)}
                       className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 cursor-pointer transition-colors"
                     >
-                      <td className="px-4 py-3 font-mono text-[13px] font-semibold text-slate-800 truncate" title={r.voucherNo}>
+                      <td className="px-4 py-3 font-mono text-sm font-semibold text-slate-800 truncate" title={r.voucherNo}>
                         {r.voucherNo}
                       </td>
                       <td className="px-4 py-3 text-sm text-slate-800 truncate" title={r.remarks || ''}>
@@ -170,13 +170,13 @@ const PortalVoucherSearch: React.FC<PortalVoucherSearchProps> = ({ onOpenDetail 
                       <td className="px-4 py-3.5 text-sm text-slate-600 truncate" title={r.accountSubject || ''}>
                         {r.accountSubject || '—'}
                       </td>
-                      <td className="px-4 py-3 text-center font-mono text-[13px] text-slate-600">
+                      <td className="px-4 py-3 text-center font-mono text-sm text-slate-600">
                         {r.year}{r.month ? `-${r.month.padStart(2, '0')}` : ''}
                       </td>
-                      <td className="px-4 py-3 text-center text-[13px] text-slate-600 truncate" title={r.preparer || ''}>
+                      <td className="px-4 py-3 text-center text-sm text-slate-600 truncate" title={r.preparer || ''}>
                         {r.preparer || '—'}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-[13px] text-slate-800">
+                      <td className="px-4 py-3 text-right font-mono text-sm text-slate-800">
                         ¥{r.amount.toLocaleString('zh-CN', { minimumFractionDigits: 2 })}
                       </td>
                       <td className="px-4 py-3">

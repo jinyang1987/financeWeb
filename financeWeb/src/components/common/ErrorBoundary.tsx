@@ -43,7 +43,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
             </div>
 
             <div className="space-y-2">
-              <h3 className="text-lg font-bold text-slate-800">
+              <h3 className="text-base font-bold text-slate-800">
                 页面渲染异常
               </h3>
               <p className="text-sm text-slate-500 leading-relaxed">

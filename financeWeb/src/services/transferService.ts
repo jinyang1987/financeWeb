@@ -41,6 +41,9 @@ export interface TransferBatch {
   transferDate: string;
   receivedAt: string;
   volumes?: TransferBatchVolume[];   // resolveVolumes=true 时返回
+  // ── T14 移交清册真实生成 ──
+  registerNo?: string;               // 清册编号（YJ-日期-短id）
+  registerFileNode?: string;         // 清册文件节点（随档留存）
 }
 
 // ─── API ───
@@ -73,6 +76,17 @@ export async function createTransferBatch(cmd: {
 
 export async function prepareTransferBatch(id: string): Promise<TransferBatch> {
   return http.post(`/transfers/${id}/prepare`);
+}
+
+/** 下载移交清册 HTML（T14 真实清册；打印/随批交换） */
+export async function downloadTransferRegister(id: string, filename: string): Promise<void> {
+  const blob = await http.download(`/transfers/${id}/register-file`);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export async function receiveTransferBatch(id: string): Promise<TransferBatch> {

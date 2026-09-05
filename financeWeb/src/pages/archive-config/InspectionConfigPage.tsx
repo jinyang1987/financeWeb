@@ -96,7 +96,7 @@ const ItemsLibraryTab: React.FC = () => {
             启用的检测项即实际执行的检测方案：归档环节在确认组卷时自动执行、移交环节在移交归盒时自动执行（未过阻断），长期保存环节由固化巡检定时任务与快速检测页执行。
           </p>
         </div>
-        <span className="text-[11px] text-slate-400 shrink-0 mt-0.5">
+        <span className="text-xs text-slate-400 shrink-0 mt-0.5">
           {items.filter((i) => i.enabled).length} / {items.length} 项启用
         </span>
       </div>
@@ -108,14 +108,14 @@ const ItemsLibraryTab: React.FC = () => {
           <div key={ph} className="border border-slate-200 rounded-xl overflow-hidden">
             <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center gap-2">
               <span className="text-xs font-bold text-slate-700">{PHASE_LABELS[ph]}</span>
-              <span className="text-[10px] text-slate-400">
+              <span className="text-xs text-slate-400">
                 {phaseItems.filter((i) => i.enabled).length}/{phaseItems.length} 项启用
               </span>
             </div>
             <div className="grid grid-cols-4 divide-x divide-slate-100">
               {DIM_ORDER.map((dim) => (
                 <div key={dim} className="p-3 space-y-2">
-                  <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full border ${DIM_BADGE[dim]}`}>
+                  <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded-full border ${DIM_BADGE[dim]}`}>
                     {DIMENSION_LABELS[dim]}
                   </span>
                   {phaseItems.filter((i) => i.dimension === dim).map((item) => (
@@ -137,15 +137,15 @@ const ItemsLibraryTab: React.FC = () => {
                         }`} />
                       </button>
                       <div className="min-w-0">
-                        <div className="text-[11px] font-medium text-slate-700 leading-snug">{item.name}</div>
-                        <div className="text-[9.5px] text-slate-400 mt-0.5 font-mono">
+                        <div className="text-xs font-medium text-slate-700 leading-snug">{item.name}</div>
+                        <div className="text-xs text-slate-400 mt-0.5 font-mono">
                           {item.code}{item.standard_ref && item.standard_ref !== '—' ? ` · ${item.standard_ref}` : ''}
                         </div>
                       </div>
                     </div>
                   ))}
                   {phaseItems.filter((i) => i.dimension === dim).length === 0 && (
-                    <div className="text-[10px] text-slate-300 px-1">—</div>
+                    <div className="text-xs text-slate-300 px-1">—</div>
                   )}
                 </div>
               ))}
@@ -308,7 +308,7 @@ const InspectionConfigPage: React.FC = () => {
       <div className="px-6 pt-6 pb-2">
         <div className="flex items-center gap-3 mb-1">
           <Settings className="w-5 h-5 text-sky-600" />
-          <h2 className="text-lg font-bold text-slate-800">四性检测配置</h2>
+          <h2 className="text-base font-bold text-slate-800">四性检测配置</h2>
           {saved && (
             <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full animate-in fade-in">
               配置已保存（服务端检测引擎即时生效）
@@ -529,7 +529,7 @@ const InspectionConfigPage: React.FC = () => {
                           key={k}
                           type="button"
                           onClick={() => setPlan({ ...plan, security: { ...plan.security, sensitiveKeywords: [...plan.security.sensitiveKeywords, k] } })}
-                          className="px-2 py-0.5 text-[11px] text-slate-400 border border-dashed border-slate-200 rounded-full hover:text-rose-600 hover:border-rose-300 cursor-pointer"
+                          className="px-2 py-0.5 text-xs text-slate-400 border border-dashed border-slate-200 rounded-full hover:text-rose-600 hover:border-rose-300 cursor-pointer"
                         >
                           +{k}
                         </button>

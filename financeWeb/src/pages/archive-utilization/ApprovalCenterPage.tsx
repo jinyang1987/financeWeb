@@ -99,12 +99,12 @@ const ApprovalCenterPage: React.FC = () => {
               <span className="font-mono text-sm font-bold text-slate-800">{order.orderNo}</span>
               <span className="text-xs text-slate-500">{order.applicantName} · {order.applicantDept}</span>
               {actionable && step && (
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 font-medium">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 font-medium">
                   待您审批：{step.roleLabel}
                 </span>
               )}
               {order.items.some((i) => i.securityLevel === '秘密' || i.securityLevel === '机密') && (
-                <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">
+                <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">
                   <Lock className="w-2.5 h-2.5" />涉密档案
                 </span>
               )}
@@ -113,7 +113,7 @@ const ApprovalCenterPage: React.FC = () => {
               {order.reasonType} · {order.items.length} 件档案 · {order.startDate} ~ {order.endDate} · {order.createdAt.slice(0, 16)} 提交
             </div>
           </div>
-          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0 ${
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${
             order.status === 'approving' ? 'bg-sky-100 text-sky-700'
             : order.status === 'rejected' ? 'bg-red-100 text-red-700'
             : 'bg-emerald-100 text-emerald-700'
@@ -135,11 +135,11 @@ const ApprovalCenterPage: React.FC = () => {
               <table className="w-full">
                 <thead>
                   <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-                    <th className="px-4 py-3 text-left text-[13px] font-semibold">题名</th>
-                    <th className="px-4 py-3 text-left text-[13px] font-semibold">介质</th>
-                    <th className="px-4 py-3 text-left text-[13px] font-semibold">库存</th>
-                    <th className="px-4 py-3 text-left text-[13px] font-semibold">密级</th>
-                    <th className="px-4 py-3 text-left text-[13px] font-semibold">申请权限</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">题名</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">介质</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">库存</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">密级</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">申请权限</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -149,7 +149,7 @@ const ApprovalCenterPage: React.FC = () => {
                         <FileText className="w-3 h-3 inline mr-1 text-slate-400" />{item.title}
                       </td>
                       <td className="px-4 py-3">
-                        <span className="flex items-center gap-1 text-[13px] text-slate-600">
+                        <span className="flex items-center gap-1 text-sm text-slate-600">
                           {item.mediaType === 'electronic' ? <Cloud className="w-3 h-3 text-sky-400" /> : <HardDrive className="w-3 h-3 text-amber-400" />}
                           {item.mediaType === 'electronic' ? '纯电子' : item.mediaType === 'paper' ? '纯实体' : '混合'}
                         </span>
@@ -162,7 +162,7 @@ const ApprovalCenterPage: React.FC = () => {
                             : <span className="text-amber-600">已借出</span>}
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${SECURITY_COLORS[item.securityLevel]}`}>
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${SECURITY_COLORS[item.securityLevel]}`}>
                           {item.securityLevel}
                         </span>
                       </td>
@@ -282,7 +282,7 @@ const ApprovalCenterPage: React.FC = () => {
               }`}
             >
               <Icon className="w-4 h-4" />{label}
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${tab === key ? 'bg-sky-600 text-white' : 'bg-slate-200 text-slate-600'}`}>{count}</span>
+              <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${tab === key ? 'bg-sky-600 text-white' : 'bg-slate-200 text-slate-600'}`}>{count}</span>
             </button>
           ))}
         </div>
@@ -303,7 +303,7 @@ const ApprovalCenterPage: React.FC = () => {
 
       {pending.length > 0 && tab === 'pending' && (
         <div className="px-6 py-2.5 bg-amber-50 border-t border-amber-100 shrink-0">
-          <div className="flex items-center gap-2 text-[11px] text-amber-700">
+          <div className="flex items-center gap-2 text-xs text-amber-700">
             <AlertTriangle className="w-3.5 h-3.5" />
             动态路由规则：仅在线浏览 → 部门经理+档案管理员；含下载/打印/实体外借 → 升级财务总监；涉密（薪酬/高管报销）→ 强制 HRVP 会签
           </div>

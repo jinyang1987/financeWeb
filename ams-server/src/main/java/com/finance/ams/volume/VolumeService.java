@@ -315,6 +315,23 @@ public class VolumeService {
       return n == null ? Integer.MAX_VALUE : n;
     }));
 
+    // ── T12 组卷刚性服务端强制（2026-08-29）：先全量校验后移动，违规整体拒绝 ──
+    // 校验对象 = 卷内既有件 + 本次加入件（预演合并视图）；任何一件破坏不变式即 409。
+    List<Map<String, Object>> merged = new ArrayList<>(existing);
+    for (String rid : recordIds) {
+      Map<String, Object> entry;
+      try {
+        entry = nodes.getNode(ticket, rid);
+      } catch (HttpClientErrorException e) {
+        throw RepoLayout.translate("件查询失败: " + rid, e);
+      }
+      if (!"finance:record".equals(str(entry.get("nodeType")))) {
+        throw BizException.badRequest("NOT_RECORD", "节点不是档案记录: " + rid);
+      }
+      merged.add(entry);
+    }
+    requireGroupingInvariants(vol, merged);
+
     // 插入位：先把插入位及之后的件号后移
     int insertAt = (position == null) ? existing.size()
         : Math.max(0, Math.min(position - 1, existing.size()));
@@ -394,8 +411,13 @@ public class VolumeService {
   // ═══════════════════ 确认 / 撤销 / 拆卷 ═══════════════════
 
   /**
-   * 确认组卷：赋号时机=on-confirm 时经 ams_code_serial 真取号
-   * （盒流水 scope=box + 卷流水 scope=volume），件级档号 = 卷号-{件号4}。
+   * 确认组卷：赋号时机=on-confirm 时经 ams_code_serial 真取号（卷流水 scope=VOLUME），
+   * 件级档号 = 卷号-{件号4}。
+   *
+   * 2026-08-29 T11 档号修正（缺陷 #14/#25）：去掉原「B 伪盒号段」——原实现确认时每卷烧一个
+   * BOX 流水嵌入档号（B014），与真实盒号（移交归盒时的 BOX-年-类-序号）完全脱节，属档号语义错误。
+   * 卷级档号回归 DA/T 13 基本结构：{全宗}-{门类}·{类别}·{年度}-{期限代码}-{案卷号}；
+   * 案卷号与真实盒的对应关系由移交归盒（盒号流水 + volumeCodeRange）承载，不再由档号伪造。
    */
   public Map<String, Object> confirm(String ticket, String userId, String volumeId) {
     Map<String, Object> vol = requireVolume(ticket, volumeId);
@@ -407,6 +429,9 @@ public class VolumeService {
       return n == null ? Integer.MAX_VALUE : n;
     }));
     if (records.isEmpty()) throw BizException.badRequest("VOLUME_EMPTY", "空案卷不可确认组卷");
+
+    // ── T12 组卷刚性服务端强制（与 addItems 同一校验链，防直改数据绕过）──
+    requireGroupingInvariants(vol, records);
 
     // ── 归档环节四性检测（2026-08-29 T5，DA/T 70-2018 归档必检；DA/T 94-2022 第 7.5/16.1 条）──
     // 确认组卷 = 本系统归档动作：先执行归档口径（gd）检测，不合格即阻断——卷保持草稿、不赋号，
@@ -429,10 +454,9 @@ public class VolumeService {
 
     Map<String, Object> upd = new LinkedHashMap<>();
     if (assignOnConfirm()) {
-      // 流水作用域与 P0-7 /code/next 规约一致：scope=BOX/VOLUME（大写），typeCode=KP/KB/FB/QT
-      int boxSerial = serials.next(new CodeSerialService.SerialScope("BOX", fondsCode, cat, year, null));
+      // 流水作用域与 P0-7 /code/next 规约一致：scope=VOLUME（T11 起档号不再烧 BOX 流水）
       int volSerial = serials.next(new CodeSerialService.SerialScope("VOLUME", fondsCode, cat, year, null));
-      String volumeCode = buildVolumeCode(fondsCode, typeNum, year, retCode, boxSerial, volSerial);
+      String volumeCode = buildVolumeCode(fondsCode, typeNum, year, retCode, volSerial);
 
       String today = LocalDate.now().toString();
       for (Map<String, Object> r : records) {
@@ -748,6 +772,61 @@ public class VolumeService {
     }
   }
 
+  /**
+   * 组卷刚性不变式（2026-08-29 T12 服务端强制；原「刚性靠自觉」——addItems/confirm 零校验）。
+   * 对「卷内件全量视图」校验三条 DA/T 42-2022 规则，违规 409 整体拒绝：
+   *   1. 类别一致：件 archiveType 归一后的大类必须等于卷 volumeTypeCode（凭证件进凭证卷）；
+   *   2. 年度一致：件会计年度 = 卷 volumeYear；
+   *   3. 期限一致：件保管期限（有值时）推导的期限代码 = 卷 retentionCode；
+   *   4. 凭证类同月（会计凭证按月装订成卷的刚性）：凭证大类（KP）卷内全部件的会计月份唯一。
+   * 宽容口径：件未填的字段不阻断（建件时 year/retention 必填，month 凭证类必填由推荐引擎保证；
+   * 此处只拦「填了但不一致」——数据残缺由四性检测 required-fields 收口，不在组卷环节重复报错）。
+   */
+  private void requireGroupingInvariants(Map<String, Object> vol, List<Map<String, Object>> records) {
+    String volCat = prop(vol, "finance:volumeTypeCode");
+    Integer volYear = intProp(vol, "finance:volumeYear");
+    String volRetCode = notBlank(prop(vol, "finance:retentionCode")) ? prop(vol, "finance:retentionCode")
+        : CategoryCodes.inferRetentionCode(prop(vol, "finance:volumeRetention"));
+
+    Set<Integer> months = new LinkedHashSet<>();
+    for (Map<String, Object> r : records) {
+      String title = prop(r, "finance:voucherNo");
+      // 1. 类别一致
+      String recCat = CategoryCodes.toCategoryCode(null, prop(r, "finance:archiveType"));
+      if (!recCat.equals(volCat)) {
+        throw new BizException(HttpStatus.CONFLICT, "GROUPING_CATEGORY",
+            "组卷规则校验不通过：件「" + title + "」类别（" + CategoryCodes.categoryName(recCat)
+                + "）与案卷类别（" + CategoryCodes.categoryName(volCat) + "）不一致（DA/T 42-2022 同卷同类）");
+      }
+      // 2. 年度一致
+      Integer recYear = intProp(r, "finance:year");
+      if (recYear != null && volYear != null && !recYear.equals(volYear)) {
+        throw new BizException(HttpStatus.CONFLICT, "GROUPING_YEAR",
+            "组卷规则校验不通过：件「" + title + "」会计年度（" + recYear + "）与案卷年度（" + volYear + "）不一致");
+      }
+      // 3. 期限一致（件填了期限才比）
+      String recRetention = prop(r, "finance:retention");
+      if (notBlank(recRetention) && notBlank(volRetCode)) {
+        String recRetCode = CategoryCodes.inferRetentionCode(recRetention);
+        if (!recRetCode.equals(volRetCode)) {
+          throw new BizException(HttpStatus.CONFLICT, "GROUPING_RETENTION",
+              "组卷规则校验不通过：件「" + title + "」保管期限（" + recRetention + "）与案卷保管期限（"
+                  + CategoryCodes.retentionName(volRetCode) + "）不一致");
+        }
+      }
+      // 4. 凭证类同月
+      if ("KP".equals(volCat)) {
+        Integer m = intProp(r, "finance:month");
+        if (m != null) months.add(m);
+      }
+    }
+    if ("KP".equals(volCat) && months.size() > 1) {
+      throw new BizException(HttpStatus.CONFLICT, "GROUPING_MONTH",
+          "组卷规则校验不通过：会计凭证须按月装订成卷，本卷内存在多个会计月份 " + months
+              + "（DA/T 42-2022）；请按月分别组卷或拆件");
+    }
+  }
+
   /** 卷内件按件号顺排比较器（无件号排尾） */
   private static Comparator<Map<String, Object>> itemNoComparator() {
     return Comparator.comparing(r -> {
@@ -813,11 +892,22 @@ public class VolumeService {
       break;
     }
     if (box == null) {
-      int seq = boxes.size() + 1;
-      String boxNo = "BOX-" + year + "-" + cat + "-" + String.format("%03d", seq);
+      // 盒号走流水表（2026-08-29 T11，缺陷 #23：原 boxes.size()+1 在删盒后会产生重号）。
+      // 流水作用域 BOX = {fonds}/{cat}/{year}；迁移对齐：先解析目录内既有盒号最大序号，
+      // 把流水抬升到至少 maxSeq+1（ensureAtLeast 幂等），避免历史盒（未走流水）被重号。
+      int digits = boxSerialDigits();
+      int maxExisting = 0;
+      for (Map<String, Object> b : boxes) {
+        String no = prop(b, "finance:boxNo");
+        var m = java.util.regex.Pattern.compile("-(\\d+)$").matcher(no);
+        if (m.find()) maxExisting = Math.max(maxExisting, Integer.parseInt(m.group(1)));
+      }
+      serials.ensureAtLeast(new CodeSerialService.SerialScope("BOX", fondsCode, cat, year, null), maxExisting + 1);
+      int seq = serials.next(new CodeSerialService.SerialScope("BOX", fondsCode, cat, year, null));
+      String boxNo = "BOX-" + year + "-" + cat + "-" + String.format("%0" + digits + "d", seq);
       Map<String, Object> props = new LinkedHashMap<>();
       props.put("finance:boxNo", boxNo);
-      props.put("finance:boxName", year + "年" + CategoryCodes.categoryName(cat) + " 第" + String.format("%03d", seq) + "盒"
+      props.put("finance:boxName", year + "年" + CategoryCodes.categoryName(cat) + " 第" + String.format("%0" + digits + "d", seq) + "盒"
           + (cap.enforce() ? "（限装" + cap.limit() + "件）" : ""));
       props.put("finance:typeCode", cat);
       if (notBlank(prop(vol, "finance:volumeRetention"))) props.put("finance:boxRetention", prop(vol, "finance:volumeRetention"));
@@ -913,25 +1003,37 @@ public class VolumeService {
     }
   }
 
+  /** 盒号流水位数（archive-code-config.serialDigitsBox，默认 3；T11 盒号走流水表配套） */
+  private int boxSerialDigits() {
+    try {
+      var entry = config.get("archive-code-config");
+      if (entry.isEmpty()) return 3;
+      return json.readTree(entry.get().valueJson()).path("state").path("config").path("serialDigitsBox").asInt(3);
+    } catch (Exception e) {
+      return 3;
+    }
+  }
+
   /**
-   * 卷级档号（P1-⑥ 增强：段结构可配）。
-   * 默认：{全宗4}-KU·{类别2}·{年度4}-{期限3}-B{盒流水3}-{卷流水4}（DA/T 13）。
+   * 卷级档号（P1-⑥ 段结构可配；2026-08-29 T11 修正）。
+   * 结构：{全宗}-{门类前缀}·{类别2}·{年度}-{期限代码}-{案卷号}
+   *   例：Z001-KJ·01·2026-D30-0005（永久=Y 不补零：Z001-KJ·01·2026-Y-0005）
    * 配置 ams_config('archive-code-config') 中 state.config 可覆盖：
-   *   serialDigitsVol(卷流水位数,默认4) / serialDigitsBox(盒流水位数,默认3) /
-   *   separator(段分隔符,默认-) / categoryPrefix(类别前缀,默认KU)
+   *   serialDigitsVol(卷流水位数,默认4) / separator(段分隔符,默认-) / categoryPrefix(门类前缀,默认KJ)
+   * 变更记录：
+   *   - T11 去 B 伪盒号段（与真实盒号脱节的档号语义错误，缺陷 #14/#25）；
+   *   - 期限代码不再 padLeft 补零（永久 Y 原 pad 成 00Y）；门类前缀默认 KU→KJ（会计惯例）。
    */
-  private String buildVolumeCode(String fondsCode, String typeNum, int year, String retCode,
-                                 int boxSerial, int volSerial) {
-    int volDigits = 4, boxDigits = 3;
-    String sep = "-", catPrefix = "KU";
+  private String buildVolumeCode(String fondsCode, String typeNum, int year, String retCode, int volSerial) {
+    int volDigits = 4;
+    String sep = "-", catPrefix = "KJ";
     try {
       var entry = config.get("archive-code-config");
       if (entry.isPresent()) {
         JsonNode c = json.readTree(entry.get().valueJson()).path("state").path("config");
         volDigits = c.path("serialDigitsVol").asInt(4);
-        boxDigits = c.path("serialDigitsBox").asInt(3);
         sep = c.path("separator").asText("-");
-        catPrefix = c.path("categoryPrefix").asText("KU");
+        catPrefix = c.path("categoryPrefix").asText("KJ");
       }
     } catch (Exception e) {
       log.warn("读取档号配置失败，用默认值: {}", e.getMessage());
@@ -941,8 +1043,8 @@ public class VolumeService {
     sb.append(catPrefix).append('·');
     sb.append(padLeft(typeNum, 2)).append('·');
     sb.append(year).append(sep);
-    sb.append(padLeft(retCode, 3));
-    sb.append(sep).append("B").append(String.format("%0" + boxDigits + "d", boxSerial));
+    // 期限代码原样写入（永久=Y、30年=D30、10年=D10），不补零——补零会伪造出 00Y 这类非法代码
+    sb.append(retCode == null ? "" : retCode);
     sb.append(sep).append(String.format("%0" + volDigits + "d", volSerial));
     return sb.toString();
   }

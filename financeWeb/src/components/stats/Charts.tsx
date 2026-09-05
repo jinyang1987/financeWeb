@@ -24,7 +24,7 @@ export const StatCard: React.FC<{ label: string; value: string | number; sub?: s
   <div className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-3">
     <div className={`text-2xl font-bold font-mono ${accent}`}>{value}</div>
     <div className="text-xs text-slate-500 mt-0.5">{label}</div>
-    {sub && <div className="text-[10px] text-slate-400 mt-0.5">{sub}</div>}
+    {sub && <div className="text-xs text-slate-400 mt-0.5">{sub}</div>}
   </div>
 );
 
@@ -47,7 +47,7 @@ export const Donut: React.FC<{
       <div className="absolute inset-0 rounded-full" style={{ background: `conic-gradient(${gradient})` }} />
       <div className="absolute rounded-full bg-white flex flex-col items-center justify-center shadow-inner" style={{ inset: size * 0.24 }}>
         {centerValue && <span className="text-xl font-bold font-mono text-slate-800">{centerValue}</span>}
-        {centerLabel && <span className="text-[10px] text-slate-400 mt-0.5">{centerLabel}</span>}
+        {centerLabel && <span className="text-xs text-slate-400 mt-0.5">{centerLabel}</span>}
       </div>
     </div>
   );
@@ -93,12 +93,12 @@ export const ColumnBars: React.FC<{ data: { label: string; value: number; sub?: 
     <div className="flex items-end gap-4 px-2" style={{ height }}>
       {data.map((d) => (
         <div key={d.label} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
-          <span className="text-[11px] font-mono text-slate-600">{d.value}</span>
+          <span className="text-xs font-mono text-slate-600">{d.value}</span>
           <div className="w-full max-w-[72px] bg-slate-100 rounded-t-md relative" style={{ height: '72%' }}>
             <div className="absolute bottom-0 w-full rounded-t-md transition-all duration-700" style={{ height: `${(d.value / max) * 100}%`, background: color }} />
           </div>
-          <span className="text-[11px] text-slate-500">{d.label}</span>
-          {d.sub && <span className="text-[10px] text-slate-400 -mt-0.5">{d.sub}</span>}
+          <span className="text-xs text-slate-500">{d.label}</span>
+          {d.sub && <span className="text-xs text-slate-400 -mt-0.5">{d.sub}</span>}
         </div>
       ))}
     </div>

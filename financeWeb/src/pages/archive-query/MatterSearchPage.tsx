@@ -153,28 +153,28 @@ const MatterSearchPage: React.FC = () => {
               const parent = parentRecordOf(doc);
               return (
                 <tr key={doc.id} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
-                  <td className="px-4 py-3 font-mono text-[13px] font-bold text-slate-800 whitespace-nowrap">{doc.documentNo}</td>
+                  <td className="px-4 py-3 font-mono text-sm font-bold text-slate-800 whitespace-nowrap">{doc.documentNo}</td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <span className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px]">{doc.docTypeName}</span>
+                    <span className="px-1.5 py-0.5 bg-slate-100 rounded text-xs">{doc.docTypeName}</span>
                   </td>
-                  <td className="px-4 py-3 font-mono text-[13px] text-slate-600 whitespace-nowrap">{doc.transactionDate}</td>
+                  <td className="px-4 py-3 font-mono text-sm text-slate-600 whitespace-nowrap">{doc.transactionDate}</td>
                   <td className="px-4 py-3.5 text-sm text-slate-600 max-w-[160px] truncate" title={doc.counterpartyName}>
                     <Building2 className="w-3 h-3 inline mr-1 text-slate-400" />{doc.counterpartyName}
                   </td>
-                  <td className="px-4 py-3 font-mono text-[13px] font-medium text-slate-800 text-right whitespace-nowrap">
+                  <td className="px-4 py-3 font-mono text-sm font-medium text-slate-800 text-right whitespace-nowrap">
                     ¥{doc.amountLower.toLocaleString('zh-CN', { minimumFractionDigits: 2 })}
                   </td>
                   <td className="px-4 py-3 text-sm text-slate-800 max-w-[180px] truncate" title={doc.summary}>{doc.summary}</td>
                   <td className="px-4 py-3">
                     {parent ? (
                       <div className="space-y-1">
-                        <span className="flex items-center gap-1 text-[13px] font-mono text-slate-700">
+                        <span className="flex items-center gap-1 text-sm font-mono text-slate-700">
                           <FileText className="w-3 h-3 text-slate-400" />{parent.voucherNo}
                         </span>
                         <ArchiveStatusTags record={parent} />
                       </div>
                     ) : (
-                      <span className="text-[10px] text-slate-400">未归档</span>
+                      <span className="text-xs text-slate-400">未归档</span>
                     )}
                   </td>
                 </tr>

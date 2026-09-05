@@ -158,13 +158,13 @@ const VoucherSearchPage: React.FC = () => {
           <tbody>
             {pageData.map((row) => (
               <tr key={row.id} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
-                <td className="px-4 py-3 font-mono text-[13px] font-bold text-slate-800">{row.voucherNo}</td>
-                <td className="px-4 py-3 font-mono text-[13px] text-slate-600 whitespace-nowrap">{row.year}-{row.month}</td>
+                <td className="px-4 py-3 font-mono text-sm font-bold text-slate-800">{row.voucherNo}</td>
+                <td className="px-4 py-3 font-mono text-sm text-slate-600 whitespace-nowrap">{row.year}-{row.month}</td>
                 <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap">
                   <Tag className="w-3 h-3 inline mr-1 text-slate-400" />{row.accountSubject || '—'}
                 </td>
                 <td className="px-4 py-3 text-sm text-slate-800 max-w-[220px] truncate" title={row.remarks}>{row.remarks}</td>
-                <td className="px-4 py-3 font-mono text-[13px] font-medium text-slate-800 text-right whitespace-nowrap">
+                <td className="px-4 py-3 font-mono text-sm font-medium text-slate-800 text-right whitespace-nowrap">
                   ¥{row.amount.toLocaleString('zh-CN', { minimumFractionDigits: 2 })}
                 </td>
                 <td className="px-4 py-3.5 text-sm text-slate-600">{row.preparer || '—'}</td>

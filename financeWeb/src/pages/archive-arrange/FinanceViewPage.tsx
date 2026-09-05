@@ -250,7 +250,7 @@ const FinanceViewPage: React.FC<FinanceViewPageProps> = ({
                 <card.Icon className={`w-5 h-5 ${card.iconColor}`} />
               </div>
               <div>
-                <div className={`text-2xl font-bold ${card.textColor}`}>{card.count}</div>
+                <div className={`text-xl font-bold ${card.textColor}`}>{card.count}</div>
                 <div className="text-xs text-slate-500">{card.label}</div>
               </div>
             </div>
@@ -386,7 +386,7 @@ const FinanceViewPage: React.FC<FinanceViewPageProps> = ({
             <div className="flex items-center gap-1.5">
               <h3 className="text-sm font-bold text-slate-800 truncate">{focusedEntry?.box.boxNo || displayTitle}</h3>
             </div>
-            <div className="text-[10px] text-slate-400 mt-0.5">
+            <div className="text-xs text-slate-400 mt-0.5">
               {focusedEntry ? `${focusedEntry.box.boxName} · ${listItems.length} 件` : `${listItems.length} 条${displayTitle}`}
             </div>
           </div>
@@ -415,7 +415,7 @@ const FinanceViewPage: React.FC<FinanceViewPageProps> = ({
                       <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                     )}
                   </div>
-                  <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                  <div className="flex items-center gap-2 text-xs text-slate-500">
                     {rec.amount > 0 && (
                       <><span className="font-mono text-slate-600">¥{rec.amount.toLocaleString()}</span><span className="text-slate-300">·</span></>
                     )}
@@ -424,7 +424,7 @@ const FinanceViewPage: React.FC<FinanceViewPageProps> = ({
                     {!isVoucher && <><span className="text-slate-300">·</span><span>{rec.year}年</span></>}
                   </div>
                   {isVoucher && ((rec.sourceDocumentIds?.length || 0) > 0 || (rec.childRecordIds?.length || 0) > 0) && (
-                    <div className="flex items-center gap-1 text-[10px] text-slate-400 mt-0.5">
+                    <div className="flex items-center gap-1 text-xs text-slate-400 mt-0.5">
                       <Paperclip className="w-3 h-3" />
                       {(rec.sourceDocumentIds?.length || 0) + (rec.childRecordIds?.length || 0)} 件原始凭证
                     </div>
@@ -456,7 +456,7 @@ const FinanceViewPage: React.FC<FinanceViewPageProps> = ({
     <div className="flex-1 overflow-auto animate-in fade-in duration-200 p-6 flex flex-col min-h-0">
       <div className="flex items-center justify-between mb-4 shrink-0">
         <div className="flex items-center gap-3">
-          <h2 className="text-lg font-bold text-slate-800">{displayTitle}</h2>
+          <h2 className="text-base font-bold text-slate-800">{displayTitle}</h2>
           {archiveYear && <><ChevronRight className="w-4 h-4 text-slate-300" /><span className="text-sm font-medium text-slate-500">{archiveYear}</span></>}
           {!archiveYear && <span className="text-sm text-slate-400">（全部年份）</span>}
           {hasActiveFilters && (

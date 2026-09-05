@@ -86,6 +86,10 @@ export interface PackageRecord {
   manifestXML: string;
   /** 封装备注 */
   remarks?: string;
+  /** T15 服务端包号（PKG-日期-序号；真 ZIP 已随档留存，可下载/移交/回执） */
+  serverNo?: string;
+  /** T15 服务端返回的卷数 */
+  serverTotalVolumes?: number;
 }
 
 /** 封装包 Store 状态 */

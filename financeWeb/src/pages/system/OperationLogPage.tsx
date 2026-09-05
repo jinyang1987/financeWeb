@@ -161,12 +161,12 @@ const OperationLogPage: React.FC = () => {
           <table className="w-full border-collapse text-sm">
             <thead className="sticky top-0 z-10 bg-slate-100">
               <tr className="border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-                <th className="px-4 py-3 text-left text-[13px] font-semibold w-44">时间</th>
-                <th className="px-4 py-3 text-left text-[13px] font-semibold w-36">操作人</th>
-                <th className="px-4 py-3 text-left text-[13px] font-semibold w-32">IP 地址</th>
-                <th className="px-4 py-3 text-left text-[13px] font-semibold w-36">操作</th>
-                <th className="px-4 py-3 text-left text-[13px] font-semibold w-48">对象</th>
-                <th className="px-4 py-3 text-left text-[13px] font-semibold">详情</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold w-44">时间</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold w-36">操作人</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold w-32">IP 地址</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold w-36">操作</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold w-48">对象</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">详情</th>
               </tr>
             </thead>
             <tbody>
@@ -181,28 +181,28 @@ const OperationLogPage: React.FC = () => {
                   key={row.id}
                   className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/40 transition-colors"
                 >
-                  <td className="px-4 py-2.5 font-mono text-[13px] text-slate-600 whitespace-nowrap">
+                  <td className="px-4 py-2.5 font-mono text-sm text-slate-600 whitespace-nowrap">
                     {formatTs(row.ts)}
                   </td>
                   <td className="px-4 py-2.5">
-                    <span className="text-[13px] font-medium text-slate-800">{row.actor_name || row.actor_id}</span>
+                    <span className="text-sm font-medium text-slate-800">{row.actor_name || row.actor_id}</span>
                     {row.actor_name && row.actor_name !== row.actor_id && (
-                      <span className="ml-1 text-[11px] text-slate-400 font-mono">{row.actor_id}</span>
+                      <span className="ml-1 text-xs text-slate-400 font-mono">{row.actor_id}</span>
                     )}
                   </td>
-                  <td className="px-4 py-2.5 font-mono text-[13px] text-slate-600">{row.ip || '—'}</td>
+                  <td className="px-4 py-2.5 font-mono text-sm text-slate-600">{row.ip || '—'}</td>
                   <td className="px-4 py-2.5">
                     <span className="rounded border border-sky-100 bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-800">
                       {row.action}
                     </span>
                   </td>
                   <td className="px-4 py-2.5">
-                    <span className="block max-w-[200px] truncate font-mono text-[12px] text-slate-500" title={row.target_label || row.target || ''}>
+                    <span className="block max-w-[200px] truncate font-mono text-xs text-slate-500" title={row.target_label || row.target || ''}>
                       {row.target_label || row.target || '—'}
                     </span>
                   </td>
                   <td className="px-4 py-2.5">
-                    <span className="block max-w-[360px] truncate text-[13px] text-slate-600" title={row.detail || ''}>
+                    <span className="block max-w-[360px] truncate text-sm text-slate-600" title={row.detail || ''}>
                       {row.detail || '—'}
                     </span>
                   </td>

@@ -47,7 +47,7 @@ export function LoginPage() {
             </svg>
           </div>
 
-          <h1 className="text-3xl font-bold text-white mb-3 tracking-tight">
+          <h1 className="text-xl font-bold text-white mb-3 tracking-tight">
             会计档案管理系统
           </h1>
           <p className="text-sky-200/70 text-sm leading-relaxed">
@@ -60,7 +60,7 @@ export function LoginPage() {
                 <ShieldCheck className="w-4 h-4 text-sky-300" />
               </div>
               <p className="text-white text-xs font-semibold">四性检测</p>
-              <p className="text-sky-300/60 text-[10px] mt-0.5">真实完整可用安全</p>
+              <p className="text-sky-300/60 text-xs mt-0.5">真实完整可用安全</p>
             </div>
             <div className="bg-white/5 rounded-xl p-4 backdrop-blur-sm border border-white/5">
               <div className="w-8 h-8 rounded-lg bg-sky-500/20 flex items-center justify-center mb-2">
@@ -70,20 +70,20 @@ export function LoginPage() {
                 </svg>
               </div>
               <p className="text-white text-xs font-semibold">档案管理</p>
-              <p className="text-sky-300/60 text-[10px] mt-0.5">全生命周期管控</p>
+              <p className="text-sky-300/60 text-xs mt-0.5">全生命周期管控</p>
             </div>
             <div className="bg-white/5 rounded-xl p-4 backdrop-blur-sm border border-white/5">
               <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center mb-2">
                 <Users className="w-4 h-4 text-emerald-300" />
               </div>
               <p className="text-white text-xs font-semibold">借阅闭环</p>
-              <p className="text-sky-300/60 text-[10px] mt-0.5">检索·审批·履约·归还</p>
+              <p className="text-sky-300/60 text-xs mt-0.5">检索·审批·履约·归还</p>
             </div>
           </div>
         </div>
 
         <div className="absolute bottom-8 left-0 right-0 text-center">
-          <p className="text-sky-300/30 text-[11px] tracking-widest uppercase">Electronic Accounting Archive Management System v2.0</p>
+          <p className="text-sky-300/30 text-xs tracking-widest uppercase">Electronic Accounting Archive Management System v2.0</p>
         </div>
       </div>
 
@@ -91,7 +91,7 @@ export function LoginPage() {
       <div className="w-full lg:w-[520px] flex items-center justify-center p-8 bg-white overflow-y-auto">
         <div className="w-full max-w-md py-6">
           <div className="mb-6">
-            <h2 className="text-2xl font-bold text-slate-900">欢迎登录</h2>
+            <h2 className="text-xl font-bold text-slate-900">欢迎登录</h2>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -154,7 +154,7 @@ export function LoginPage() {
           </form>
 
           <div className="mt-6 pt-5 border-t border-slate-100 text-center">
-            <p className="text-[11px] text-slate-400">会计档案管理系统 v2.0 · 符合GB/T 39719-2020标准</p>
+            <p className="text-xs text-slate-400">会计档案管理系统 v2.0 · 符合GB/T 39719-2020标准</p>
           </div>
         </div>
       </div>

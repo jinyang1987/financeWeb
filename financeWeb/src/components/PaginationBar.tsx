@@ -88,7 +88,7 @@ const PaginationBar: React.FC<PaginationBarProps> = ({
       centered ? 'justify-center relative' : 'justify-between gap-2'
     }`}>
       {/* 左侧：总条数 + 页大小（居中模式下绝对定位到左侧） */}
-      <div className={`flex items-center gap-3 text-xs text-slate-500 shrink-0 ${
+      <div className={`flex items-center gap-3 text-sm text-slate-500 shrink-0 ${
         centered ? 'absolute left-4' : ''
       }`}>
         <span className="whitespace-nowrap">
@@ -100,7 +100,7 @@ const PaginationBar: React.FC<PaginationBarProps> = ({
             <select
               value={pageSize}
               onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              className="px-1.5 py-0.5 text-xs border border-slate-300 rounded bg-white cursor-pointer hover:border-slate-400"
+              className="px-1.5 py-0.5 text-sm border border-slate-300 rounded bg-white cursor-pointer hover:border-slate-400"
             >
               {PAGE_SIZES.map((s) => (
                 <option key={s} value={s}>{s}</option>
@@ -118,7 +118,7 @@ const PaginationBar: React.FC<PaginationBarProps> = ({
           <PaginationItem>
             <PaginationPrevious
               onClick={() => currentPage > 1 && onPageChange(currentPage - 1)}
-              className={`text-xs h-8 ${currentPage <= 1 ? 'pointer-events-none opacity-40' : 'cursor-pointer hover:bg-slate-100'}`}
+              className={`text-sm h-8 ${currentPage <= 1 ? 'pointer-events-none opacity-40' : 'cursor-pointer hover:bg-slate-100'}`}
               text="上一页"
             />
           </PaginationItem>
@@ -137,7 +137,7 @@ const PaginationBar: React.FC<PaginationBarProps> = ({
                 <PaginationLink
                   isActive={p === currentPage}
                   onClick={() => onPageChange(p)}
-                  className={`text-xs min-w-8 h-8 cursor-pointer ${
+                  className={`text-sm min-w-8 h-8 cursor-pointer ${
                     p === currentPage
                       ? 'bg-sky-50 border-sky-200 text-sky-700 font-semibold'
                       : 'hover:bg-slate-100'
@@ -153,7 +153,7 @@ const PaginationBar: React.FC<PaginationBarProps> = ({
           <PaginationItem>
             <PaginationNext
               onClick={() => currentPage < totalPages && onPageChange(currentPage + 1)}
-              className={`text-xs h-8 ${currentPage >= totalPages ? 'pointer-events-none opacity-40' : 'cursor-pointer hover:bg-slate-100'}`}
+              className={`text-sm h-8 ${currentPage >= totalPages ? 'pointer-events-none opacity-40' : 'cursor-pointer hover:bg-slate-100'}`}
               text="下一页"
             />
           </PaginationItem>

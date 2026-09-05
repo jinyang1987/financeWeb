@@ -56,7 +56,7 @@ export const BorrowCartBar: React.FC = () => {
       >
         <span className="relative">
           <ShoppingCart className="w-5 h-5" />
-          <span className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-amber-400 text-slate-900 text-[10px] font-bold flex items-center justify-center">
+          <span className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-amber-400 text-slate-900 text-xs font-bold flex items-center justify-center">
             {cart.length}
           </span>
         </span>
@@ -105,7 +105,7 @@ export const BorrowCartBar: React.FC = () => {
                       <FileText className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
                       <div className="min-w-0">
                         <div className="text-xs font-semibold text-slate-800 truncate">{r.remarks || r.voucherNo}</div>
-                        <div className="text-[10px] text-slate-400 mt-0.5 font-mono">{r.archiveCode}</div>
+                        <div className="text-xs text-slate-400 mt-0.5 font-mono">{r.archiveCode}</div>
                         <div className="mt-1.5"><ArchiveStatusTags record={r} /></div>
                       </div>
                     </div>
@@ -131,7 +131,7 @@ export const BorrowCartBar: React.FC = () => {
                 去结算 · 发起借阅申请
                 <ArrowRight className="w-4 h-4" />
               </button>
-              <p className="text-[10px] text-slate-400 text-center mt-2">跨年度、跨类型的多份档案将合并为一张借阅申请单</p>
+              <p className="text-xs text-slate-400 text-center mt-2">跨年度、跨类型的多份档案将合并为一张借阅申请单</p>
             </div>
           </div>
         </div>

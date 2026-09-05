@@ -68,21 +68,21 @@ const InventoryStatsPage: React.FC = () => {
               <table className="w-full">
                 <thead>
                   <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-                    <th className="px-4 py-3 text-left text-[13px] font-semibold">类型</th>
-                    <th className="px-4 py-3 text-right text-[13px] font-semibold">件数</th>
-                    <th className="px-4 py-3 text-right text-[13px] font-semibold">卷数</th>
-                    <th className="px-4 py-3 text-right text-[13px] font-semibold">页数</th>
-                    <th className="px-4 py-3 text-right text-[13px] font-semibold">容量</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">类型</th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold">件数</th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold">卷数</th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold">页数</th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold">容量</th>
                   </tr>
                 </thead>
                 <tbody>
                   {inv.byType.map((t) => (
                     <tr key={t.code} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
                       <td className="px-4 py-3 text-sm font-medium text-slate-800">{t.label}</td>
-                      <td className="px-4 py-3 text-right font-mono text-[13px] text-slate-600">{t.records}</td>
-                      <td className="px-4 py-3 text-right font-mono text-[13px] text-slate-600">{t.volumes}</td>
-                      <td className="px-4 py-3 text-right font-mono text-[13px] text-slate-600">{t.pages.toLocaleString()}</td>
-                      <td className="px-4 py-3 text-right font-mono text-[13px] text-slate-600">{formatCapacity(t.capacityKB)}</td>
+                      <td className="px-4 py-3 text-right font-mono text-sm text-slate-600">{t.records}</td>
+                      <td className="px-4 py-3 text-right font-mono text-sm text-slate-600">{t.volumes}</td>
+                      <td className="px-4 py-3 text-right font-mono text-sm text-slate-600">{t.pages.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right font-mono text-sm text-slate-600">{formatCapacity(t.capacityKB)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -97,7 +97,7 @@ const InventoryStatsPage: React.FC = () => {
               color="#6366f1"
               height={200}
             />
-            <p className="text-[11px] text-slate-400 mt-3">按会计年度统计档案总量与案卷数，可追溯历年增长趋势</p>
+            <p className="text-xs text-slate-400 mt-3">按会计年度统计档案总量与案卷数，可追溯历年增长趋势</p>
           </SectionCard>
 
           {/* 保管期限 */}
@@ -107,7 +107,7 @@ const InventoryStatsPage: React.FC = () => {
                 <BarRow key={r.label} label={`${r.label}保管`} value={r.records} max={inv.totals.records} color={['#f59e0b', '#0ea5e9', '#6366f1'][i]} suffix={` 件 · ${r.pct}%`} />
               ))}
             </div>
-            <p className="text-[11px] text-slate-400 mt-4">依据《会计档案管理办法》（79号令）：定期保管 10 年 / 30 年，另有永久保管</p>
+            <p className="text-xs text-slate-400 mt-4">依据《会计档案管理办法》（79号令）：定期保管 10 年 / 30 年，另有永久保管</p>
           </SectionCard>
 
           {/* 载体结构 */}
@@ -128,7 +128,7 @@ const InventoryStatsPage: React.FC = () => {
                     <span className="font-mono text-emerald-600 w-12 text-right">{c.pct}%</span>
                   </div>
                 ))}
-                <p className="text-[11px] text-slate-400 pt-1">2025 年度档案为纸质+数字化副本（mixed），2026 年度为原生电子档案</p>
+                <p className="text-xs text-slate-400 pt-1">2025 年度档案为纸质+数字化副本（mixed），2026 年度为原生电子档案</p>
               </div>
             </div>
           </SectionCard>

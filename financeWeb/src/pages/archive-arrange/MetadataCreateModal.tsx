@@ -54,7 +54,7 @@ const EMPTY: FormState = {
   counterpartyTaxId: '', summary: '', amountUpper: '', businessCategory: '',
 };
 
-const inputCls = 'mt-0.5 w-full px-2 py-1.5 text-[13px] border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-sky-200';
+const inputCls = 'mt-0.5 w-full px-2 py-1.5 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-sky-200';
 const labelCls = 'text-xs font-medium text-slate-600';
 
 const MetadataCreateModal: React.FC<MetadataCreateModalProps> = ({ open, fondsCode, onClose, onCreated }) => {
@@ -209,7 +209,7 @@ const MetadataCreateModal: React.FC<MetadataCreateModalProps> = ({ open, fondsCo
               </>
             )}
           </div>
-          <p className="text-[11px] text-amber-600 mt-4 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+          <p className="text-xs text-amber-600 mt-4 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
             建档后暂无电子文件：四性检测的「文件存在性/摘要校验」将如实判不通过，补齐文件前不可确认组卷（合规约束，非缺陷）。
           </p>
         </div>

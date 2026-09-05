@@ -96,7 +96,7 @@ const ShelfPositionPicker: React.FC<ShelfPositionPickerProps> = ({ racks, positi
               key={r.code}
               type="button"
               onClick={() => selectRoom(r.code)}
-              className={`px-2.5 py-1 text-[11px] font-medium rounded-lg transition-colors ${
+              className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-colors ${
                 room === r.code ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-500 bg-slate-100 hover:bg-slate-200'
               }`}
             >
@@ -118,7 +118,7 @@ const ShelfPositionPicker: React.FC<ShelfPositionPickerProps> = ({ racks, positi
               type="button"
               onClick={() => selectRack(r.rack)}
               title={`${r.rack_name} · ${r.column_count}列×${r.layer_count}层×${r.cell_count}位 · 空 ${free} 格`}
-              className={`px-2.5 py-1 text-[11px] font-medium rounded-lg border transition-colors ${
+              className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors ${
                 active
                   ? 'border-sky-400 bg-sky-50 text-sky-700'
                   : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
@@ -162,13 +162,13 @@ const ShelfPositionPicker: React.FC<ShelfPositionPickerProps> = ({ racks, positi
                     className="absolute bottom-0 left-0 right-0 bg-emerald-400/40 rounded-b-md"
                     style={{ height: `${colCap > 0 ? Math.round((colOcc / colCap) * 100) : 0}%` }}
                   />
-                  <span className={`relative text-[10px] font-bold ${active ? 'text-sky-700' : 'text-slate-500'}`}>
+                  <span className={`relative text-xs font-bold ${active ? 'text-sky-700' : 'text-slate-500'}`}>
                     {col}
                   </span>
                 </button>
               );
             })}
-            <div className="ml-auto self-center text-[10px] text-slate-400 whitespace-nowrap pl-2">
+            <div className="ml-auto self-center text-xs text-slate-400 whitespace-nowrap pl-2">
               {rackRow.rack_name} · 空 {curStat ? curStat.capacity - curStat.occupied : 0}/{curStat?.capacity ?? 0}
             </div>
           </div>
@@ -177,7 +177,7 @@ const ShelfPositionPicker: React.FC<ShelfPositionPickerProps> = ({ racks, positi
           <div className="space-y-[3px] max-h-44 overflow-y-auto pr-1">
             {Array.from({ length: rackRow.layer_count }, (_, i) => rackRow.layer_count - i).map((layer) => (
               <div key={layer} className="flex items-center gap-1">
-                <span className="w-6 text-[10px] text-slate-400 text-right shrink-0">{layer}层</span>
+                <span className="w-6 text-xs text-slate-400 text-right shrink-0">{layer}层</span>
                 <div className="flex gap-[3px] flex-wrap">
                   {Array.from({ length: rackRow.cell_count }, (_, i) => i + 1).map((cell) => {
                     const key = cellKey(rackRow.room, rackRow.rack, column, layer, cell);

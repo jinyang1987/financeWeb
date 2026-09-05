@@ -78,7 +78,7 @@ const ComplianceStatsPage: React.FC = () => {
                   ))}
                 </div>
               </div>
-              <p className="text-[11px] text-slate-400 leading-relaxed">
+              <p className="text-xs text-slate-400 leading-relaxed">
                 库藏最早形成于 2025 年，10 年期档案 2035 年到期、30 年期 2055 年到期，当前无处置压力；
                 到期前系统应自动推送鉴定销毁任务
               </p>
@@ -105,9 +105,9 @@ const ComplianceStatsPage: React.FC = () => {
               </div>
             </div>
             <div className="mt-3 flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] text-slate-400">格式分布：</span>
+              <span className="text-xs text-slate-400">格式分布：</span>
               {cc.formatDistribution.map((f) => (
-                <span key={f.format} className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded-full font-mono">
+                <span key={f.format} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded-full font-mono">
                   {f.format} × {f.count}
                 </span>
               ))}
@@ -130,7 +130,7 @@ const ComplianceStatsPage: React.FC = () => {
                 </div>
               ))}
             </div>
-            <p className="text-[11px] text-slate-400 leading-relaxed mt-3">
+            <p className="text-xs text-slate-400 leading-relaxed mt-3">
               安全策略：借阅全程动态水印（预览/下载/打印）+ 防篡改引擎；越权访问与异常操作实时沉淀至安全审计日志（系统管理 → 安全审计日志）
             </p>
           </SectionCard>
@@ -155,7 +155,7 @@ const ComplianceStatsPage: React.FC = () => {
                 <div className="text-xs text-slate-500 mt-0.5">带水印打印（次）</div>
               </div>
             </div>
-            <p className="text-[11px] text-slate-400 leading-relaxed mt-3">
+            <p className="text-xs text-slate-400 leading-relaxed mt-3">
               审计调阅全部走借阅审批流并留痕：谁借的、看了什么、下载/打印了几次，可支撑等保与审计取证要求
             </p>
           </SectionCard>

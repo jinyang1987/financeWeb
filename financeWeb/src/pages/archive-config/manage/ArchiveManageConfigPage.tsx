@@ -42,7 +42,7 @@ const ArchiveManageConfigPage: React.FC = () => {
               key={t.key}
               type="button"
               onClick={() => setTab(t.key)}
-              className={`flex items-center gap-1.5 px-4 py-1.5 text-[13px] font-medium rounded-md transition-colors cursor-pointer ${
+              className={`flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium rounded-md transition-colors cursor-pointer ${
                 tab === t.key
                   ? 'bg-white text-slate-800 shadow-sm'
                   : 'text-slate-500 hover:text-slate-700'

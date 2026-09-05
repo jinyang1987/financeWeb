@@ -223,7 +223,7 @@ export const QuickComponentModal: React.FC<QuickComponentProps> = ({
             <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
               快速组件
               {pairCount > 0 && (
-                <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-sky-600 text-white leading-none">
+                <span className="px-1.5 py-0.5 text-xs font-semibold rounded-full bg-sky-600 text-white leading-none">
                   {pairCount}
                 </span>
               )}
@@ -241,7 +241,7 @@ export const QuickComponentModal: React.FC<QuickComponentProps> = ({
                 <Fragment key={s.n}>
                   {s.n > 1 && <span className="w-3 h-px bg-slate-200" />}
                   <span
-                    className={`flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-medium transition-colors ${
+                    className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-colors ${
                       isCurrent
                         ? 'bg-sky-600 text-white shadow-sm'
                         : isDone
@@ -253,7 +253,7 @@ export const QuickComponentModal: React.FC<QuickComponentProps> = ({
                       <Check className="w-3 h-3" />
                     ) : (
                       <span
-                        className={`w-3.5 h-3.5 rounded-full text-[9px] flex items-center justify-center leading-none ${
+                        className={`w-3.5 h-3.5 rounded-full text-xs flex items-center justify-center leading-none ${
                           isCurrent ? 'bg-white/25' : 'bg-white border border-slate-200'
                         }`}
                       >
@@ -282,14 +282,14 @@ export const QuickComponentModal: React.FC<QuickComponentProps> = ({
           <div className="w-[46%] border-r border-slate-200 flex flex-col min-h-0">
             <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between bg-white/70">
               <span className="text-xs font-semibold text-slate-600">记账凭证 · 点一下选色</span>
-              <span className="text-[11px] text-slate-400">{vouchers.length} 张</span>
+              <span className="text-xs text-slate-400">{vouchers.length} 张</span>
             </div>
             <div className="flex-1 overflow-y-auto p-3 space-y-2">
               {vouchers.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 text-center py-10">
                   <Inbox className="w-8 h-8 text-slate-300" />
                   <div className="text-xs text-slate-400">暂无可配对的记账凭证</div>
-                  <div className="text-[11px] text-slate-300">件进入待组卷池后，记账凭证会出现在这里</div>
+                  <div className="text-xs text-slate-300">件进入待组卷池后，记账凭证会出现在这里</div>
                 </div>
               ) : (
                 vouchers.map((v, i) => {
@@ -317,22 +317,22 @@ export const QuickComponentModal: React.FC<QuickComponentProps> = ({
                         <div className="flex items-center gap-2">
                           <span className={`w-2 h-2 rounded-full ${color.bar} shrink-0`} aria-hidden="true" />
                           <span className={`font-mono font-semibold text-sm ${color.text}`}>{v.voucherNo || '未编号'}</span>
-                          <span className="px-1.5 py-px text-[10px] rounded bg-slate-100 text-slate-500">{v.archiveType}</span>
+                          <span className="px-1.5 py-px text-xs rounded bg-slate-100 text-slate-500">{v.archiveType}</span>
                           {isActive ? (
-                            <span className={`ml-auto inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold text-white ${color.bar}`}>
+                            <span className={`ml-auto inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs font-semibold text-white ${color.bar}`}>
                               <span className="w-1.5 h-1.5 rounded-full bg-white/90 animate-pulse" aria-hidden="true" />
                               配对中
                             </span>
                           ) : matched.length > 0 ? (
-                            <span className="ml-auto text-[10px] text-slate-400 shrink-0">已挂 {matched.length} 张</span>
+                            <span className="ml-auto text-xs text-slate-400 shrink-0">已挂 {matched.length} 张</span>
                           ) : null}
                         </div>
-                        <div className="mt-1 text-[11px] text-slate-500 truncate">
+                        <div className="mt-1 text-xs text-slate-500 truncate">
                           {fmtAmount(v.amount)}{v.month ? ` · ${v.year}-${v.month}` : ''}
                         </div>
                         {/* 激活且还没配：虚线提示框（放松的引导感） */}
                         {isActive && matched.length === 0 && (
-                          <div className={`mt-2 rounded-lg border border-dashed ${color.border} bg-white/60 px-2.5 py-1.5 text-[11px] ${color.text}`}>
+                          <div className={`mt-2 rounded-lg border border-dashed ${color.border} bg-white/60 px-2.5 py-1.5 text-xs ${color.text}`}>
                             点右侧原始凭证，它们会染上「{color.name}」色
                           </div>
                         )}
@@ -340,7 +340,7 @@ export const QuickComponentModal: React.FC<QuickComponentProps> = ({
                         {matched.length > 0 && (
                           <div className="mt-2 space-y-1">
                             {matched.map((m) => (
-                              <div key={m.id} className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[11px] bg-white/75 border border-white shadow-sm">
+                              <div key={m.id} className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs bg-white/75 border border-white shadow-sm">
                                 <Paperclip className={`w-3 h-3 ${color.text} shrink-0`} />
                                 <span className={`font-mono font-medium ${color.text}`}>{m.voucherNo || m.archiveCode}</span>
                                 <span className="text-slate-400 flex-1 truncate">{m.summary || m.archiveType}</span>
@@ -368,7 +368,7 @@ export const QuickComponentModal: React.FC<QuickComponentProps> = ({
           <div className="flex-1 flex flex-col min-h-0">
             <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between bg-white/70">
               <span className="text-xs font-semibold text-slate-600">原始凭证 · 点一下就配对</span>
-              <span className="text-[11px] text-slate-400">
+              <span className="text-xs text-slate-400">
                 {displaySources.length} 张 · 已配 {pairCount}
               </span>
             </div>
@@ -377,7 +377,7 @@ export const QuickComponentModal: React.FC<QuickComponentProps> = ({
                 <div className="flex flex-col items-center gap-2 text-center py-10">
                   <Paperclip className="w-8 h-8 text-slate-300" />
                   <div className="text-xs text-slate-400">暂无待配对的原始凭证</div>
-                  <div className="text-[11px] text-slate-300">所有原始凭证都已名花有主</div>
+                  <div className="text-xs text-slate-300">所有原始凭证都已名花有主</div>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-2.5">
@@ -422,17 +422,17 @@ export const QuickComponentModal: React.FC<QuickComponentProps> = ({
                             <div className={`font-mono font-semibold text-xs truncate ${color ? color.text : 'text-slate-700'}`}>
                               {s.voucherNo || s.archiveCode}
                             </div>
-                            <div className="text-[10px] text-slate-400 truncate">{s.archiveType}</div>
+                            <div className="text-xs text-slate-400 truncate">{s.archiveType}</div>
                           </div>
                           {color && pairedVoucherNo && (
-                            <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold text-white ${color.bar} shrink-0`}>
+                            <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-semibold text-white ${color.bar} shrink-0`}>
                               → {pairedVoucherNo}
                             </span>
                           )}
                         </div>
                         <div className="mt-1.5 pl-2.5">
-                          <div className="text-[13px] font-semibold text-slate-700">{fmtAmount(s.amount)}</div>
-                          <div className="text-[11px] text-slate-500 truncate mt-0.5">{s.summary || '—'}</div>
+                          <div className="text-sm font-semibold text-slate-700">{fmtAmount(s.amount)}</div>
+                          <div className="text-xs text-slate-500 truncate mt-0.5">{s.summary || '—'}</div>
                         </div>
                       </div>
                     );
@@ -464,7 +464,7 @@ export const QuickComponentModal: React.FC<QuickComponentProps> = ({
             </span>
             <div className="flex-1" />
             {pairActions.length > 0 && (
-              <span className="text-[11px] text-slate-400 hidden lg:inline">
+              <span className="text-xs text-slate-400 hidden lg:inline">
                 {pairActions.map((a) => `${vouchers.find((v) => v.id === a.voucherId)?.voucherNo || ''}×${a.sourceIds.length}`).join('、')}
               </span>
             )}

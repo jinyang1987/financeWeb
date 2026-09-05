@@ -71,7 +71,7 @@ const typeBadgeCell = (r: ArchiveRecord) => {
   const cls = TYPE_BADGE[full] || 'bg-slate-100 text-slate-600 border-slate-200';
   const short = TYPE_SHORT[full] || full;
   return (
-    <span className={`inline-block px-1.5 py-px text-[10px] font-medium rounded border ${cls}`} title={full}>
+    <span className={`inline-block px-1.5 py-px text-xs font-medium rounded border ${cls}`} title={full}>
       {short}
     </span>
   );

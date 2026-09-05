@@ -32,7 +32,7 @@ const VOL_STATUS_META: Record<VolumeStatus, { label: string; cls: string }> = {
 const StatusBadge: React.FC<{ status: VolumeStatus }> = ({ status }) => {
   const m = VOL_STATUS_META[status] || VOL_STATUS_META.draft;
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-[11px] font-semibold ${m.cls}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-xs font-semibold ${m.cls}`}>
       {m.label}
     </span>
   );
@@ -123,7 +123,7 @@ export const VOLUME_COLUMN_MAP: Record<string, ColumnDef> = {
   V19: {
     metaId: 'V19', label: '数字化副本哈希', width: '160px', align: 'left',
     accessor: (v) => v.digitalHash
-      ? <span className="font-mono text-[10px] text-slate-400">{v.digitalHash.slice(0, 16)}…</span>
+      ? <span className="font-mono text-xs text-slate-400">{v.digitalHash.slice(0, 16)}…</span>
       : <span className="text-slate-300 text-xs">—</span>,
   },
   V20: {

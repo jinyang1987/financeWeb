@@ -248,7 +248,7 @@ export const UnitManagePanel: React.FC = () => {
           </button>
           <Building2 className="w-4 h-4 text-sky-500 shrink-0" />
           <span className="truncate flex-1 min-w-0">{node.data.name}</span>
-          <span className="text-[10px] text-slate-400 ml-0.5 shrink-0">{node.data.code}</span>
+          <span className="text-xs text-slate-400 ml-0.5 shrink-0">{node.data.code}</span>
 
           {/* 添加子单位 */}
           <button
@@ -328,7 +328,7 @@ export const UnitManagePanel: React.FC = () => {
             {/* 空状态提示 */}
             {!isAdding && node.children.length === 0 && (
               <div
-                className="text-[11px] text-slate-400 italic py-1"
+                className="text-xs text-slate-400 italic py-1"
                 style={{ paddingLeft: `${12 + (level + 1) * 18}px` }}
               >
                 暂无子单位

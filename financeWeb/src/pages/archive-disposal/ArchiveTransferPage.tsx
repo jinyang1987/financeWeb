@@ -85,7 +85,7 @@ const ArchiveTransferPage: React.FC = () => {
                 <span className="text-sm font-bold text-slate-700">{col.label}</span>
                 <span className="text-xs text-slate-400">{list.length}</span>
                 <div className="flex-1" />
-                <span className="text-[10px] text-slate-400">{col.hint}</span>
+                <span className="text-xs text-slate-400">{col.hint}</span>
               </div>
               <div className="flex-1 overflow-y-auto p-3 space-y-2">
                 {list.length === 0 ? (
@@ -99,7 +99,7 @@ const ArchiveTransferPage: React.FC = () => {
                         {isExpanded ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
                         <span className="font-mono text-xs font-bold text-slate-700">{b.transferNo}</span>
                         <div className="flex-1" />
-                        <span className="text-[10px] text-slate-400">{b.transferDate}</span>
+                        <span className="text-xs text-slate-400">{b.transferDate}</span>
                       </div>
                       <div className="mt-1.5 text-xs text-slate-500">
                         {b.fromDept || '—'} → {b.toDept} · {b.totalVolumes} 卷 / {b.totalItems} 件
@@ -107,13 +107,13 @@ const ArchiveTransferPage: React.FC = () => {
                       {isExpanded && (
                         <div className="mt-2 border-t border-slate-100 pt-2 space-y-1">
                           {(b.volumes || []).map((v) => (
-                            <div key={v.nodeId} className="flex items-center gap-2 text-[11px] text-slate-600">
+                            <div key={v.nodeId} className="flex items-center gap-2 text-xs text-slate-600">
                               <FileText className="w-3 h-3 text-slate-300 shrink-0" />
                               <span className="truncate flex-1">{v.title}</span>
                               <span className="font-mono text-slate-400">{v.volumeCode || '—'}</span>
                             </div>
                           ))}
-                          <div className="text-[10px] text-slate-400 pt-1">
+                          <div className="text-xs text-slate-400 pt-1">
                             移交人 {b.fromPerson || '—'} · 接收人 {b.toPerson || '待确认'}
                             {b.receivedAt && ` · 签收于 ${b.receivedAt.slice(0, 19).replace('T', ' ')}`}
                           </div>
@@ -150,7 +150,7 @@ const ArchiveTransferPage: React.FC = () => {
                           </>
                         )}
                         {b.status === 'received' && (
-                          <span className="flex items-center gap-1 text-[11px] text-green-600">
+                          <span className="flex items-center gap-1 text-xs text-green-600">
                             <CheckCircle2 className="w-3.5 h-3.5" /> 双方确认完成
                           </span>
                         )}

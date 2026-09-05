@@ -98,7 +98,7 @@ const ReportConfigPage: React.FC = () => {
     <div className="flex-1 overflow-auto animate-in fade-in duration-200 p-6">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-800">报告配置</h1>
+        <h1 className="text-xl font-semibold text-gray-800">报告配置</h1>
         <p className="mt-1 text-sm text-gray-500">
           报告模板登记册 · 配置持久化于配置中心（ams_config），启用状态即出报引擎的生效开关
         </p>
@@ -135,14 +135,14 @@ const ReportConfigPage: React.FC = () => {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-              <th className="px-4 py-3 text-left text-[13px] font-semibold">报告编号</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold">报告名称</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold">模板类型</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold">适用范围</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold">格式</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold">创建时间</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold">状态</th>
-              <th className="px-4 py-3 text-left text-[13px] font-semibold">操作</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold">报告编号</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold">报告名称</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold">模板类型</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold">适用范围</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold">格式</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold">创建时间</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold">状态</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -154,12 +154,12 @@ const ReportConfigPage: React.FC = () => {
               </tr>
             ) : filtered.map((row) => (
               <tr key={row.id} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
-                <td className="px-4 py-3 font-mono text-[13px] text-slate-800">{row.id}</td>
+                <td className="px-4 py-3 font-mono text-sm text-slate-800">{row.id}</td>
                 <td className="px-4 py-3 text-sm text-slate-800">{row.name}</td>
                 <td className="px-4 py-3.5 text-sm text-slate-600">{row.type}</td>
                 <td className="px-4 py-3.5 text-sm text-slate-600">{row.scope}</td>
                 <td className="px-4 py-3.5 text-sm text-slate-600">{row.format}</td>
-                <td className="px-4 py-3 font-mono text-[13px] text-slate-600">{row.createTime}</td>
+                <td className="px-4 py-3 font-mono text-sm text-slate-600">{row.createTime}</td>
                 <td className="px-4 py-3">
                   <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyles[row.status]}`}>
                     {row.status}

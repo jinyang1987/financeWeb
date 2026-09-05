@@ -86,9 +86,48 @@ public class OcrService {
       if (mimeType.startsWith("image/")) {
         return ocrImage(bytes, mimeType);
       }
+      // T16（缺陷 #21）：OFD 版式文件文本抽取——OFD 为 ZIP 容器，TextObject/TextCode 节点
+      // 携带版面文字，直接抽取（零成本、零误差），不依赖 OCR 引擎；失败回退 OCR 无通道。
+      if ("application/ofd".equals(mimeType) || mimeType.contains("ofd")) {
+        return extractOfdText(bytes);
+      }
       return "";
     } catch (Exception e) {
       log.warn("OCR 识别失败: {}", e.getMessage());
+      return "";
+    }
+  }
+
+  /**
+   * OFD 文本抽取（T16 全文索引覆盖）：遍历 ZIP 条目，抽取 <TextCode> 文本节点
+   * （OFD 版式文字的标准载体）。抽取顺序按条目名（Document→Page 顺序）保证阅读序。
+   */
+  private String extractOfdText(byte[] bytes) {
+    try (java.util.zip.ZipInputStream zis = new java.util.zip.ZipInputStream(new ByteArrayInputStream(bytes))) {
+      StringBuilder sb = new StringBuilder();
+      java.util.Map<String, String> texts = new java.util.TreeMap<>();
+      java.util.zip.ZipEntry entry;
+      while ((entry = zis.getNextEntry()) != null) {
+        String name = entry.getName();
+        if (entry.isDirectory() || !name.toLowerCase().endsWith(".xml")) continue;
+        String xml = new String(zis.readAllBytes(), StandardCharsets.UTF_8);
+        if (!xml.contains("TextCode")) continue;
+        // 逐个 <TextCode ...>文本</TextCode> 抽取（含自闭合空节点跳过）
+        java.util.regex.Matcher m = java.util.regex.Pattern
+            .compile("<TextCode[^>]*>([^<]*)</TextCode>").matcher(xml);
+        StringBuilder pageText = new StringBuilder();
+        while (m.find()) {
+          String t = m.group(1).trim();
+          if (!t.isEmpty()) pageText.append(t);
+        }
+        if (pageText.length() > 0) texts.put(name, pageText.toString());
+      }
+      for (String t : texts.values()) sb.append(t).append('\n');
+      String out = sb.toString().trim();
+      log.info("OFD 文本抽取: {} 字节 → {} 字符（{} 个含文本条目）", bytes.length, out.length(), texts.size());
+      return out;
+    } catch (Exception e) {
+      log.warn("OFD 文本抽取失败: {}", e.getMessage());
       return "";
     }
   }

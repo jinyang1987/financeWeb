@@ -204,7 +204,7 @@ const FieldMapPanel: React.FC = () => {
       <div className="w-64 shrink-0 bg-white border border-slate-200 rounded-xl flex flex-col overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-100">
           <div className="text-sm font-semibold text-slate-700">来源系统</div>
-          <div className="text-[11px] text-slate-400 mt-0.5">每个业务系统一份映射配置</div>
+          <div className="text-xs text-slate-400 mt-0.5">每个业务系统一份映射配置</div>
         </div>
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
           {configs.length === 0 && !loading && (
@@ -222,7 +222,7 @@ const FieldMapPanel: React.FC = () => {
               }`}
             >
               <div className="font-mono font-medium">{c.sourceSystem}</div>
-              <div className="text-[10px] text-slate-400 mt-0.5">
+              <div className="text-xs text-slate-400 mt-0.5">
                 {c.mappingCount ?? c.mappings?.length ?? 0} 条规则 · {c.enabled ? '已启用' : '未启用'}
               </div>
             </button>
@@ -314,7 +314,7 @@ const FieldMapPanel: React.FC = () => {
                 )}
               </div>
               <div className="px-3 py-2">
-                <div className="flex items-center gap-2 px-2 py-1.5 text-[11px] font-semibold text-slate-500">
+                <div className="flex items-center gap-2 px-2 py-1.5 text-xs font-semibold text-slate-500">
                   <span className="w-20 shrink-0">适用类别</span>
                   <span className="w-48 shrink-0">档案标准字段</span>
                   <span className="flex-1">来源字段路径（支持 a.b 嵌套）</span>

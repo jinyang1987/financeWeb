@@ -80,7 +80,7 @@ const PortalHomePage: React.FC<PortalHomePageProps> = ({ onSearch, onOpenMode })
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-3">
             <img src="/logo.png" alt="会计档案" className="h-10 w-auto object-contain rounded-lg" />
-            <h1 className="text-3xl font-bold tracking-tight text-slate-800">会计档案检索门户</h1>
+            <h1 className="text-xl font-bold tracking-tight text-slate-800">会计档案检索门户</h1>
           </div>
           <p className="text-sm text-slate-400">
             融合后台「档案查询」全部检索能力 · 在线调阅 · 借阅申请一站式办理
@@ -137,7 +137,7 @@ const PortalHomePage: React.FC<PortalHomePageProps> = ({ onSearch, onOpenMode })
           <div className="flex items-center gap-2 mb-3">
             <span className="text-xs font-semibold text-slate-500 tracking-wide">检索能力</span>
             <div className="flex-1 h-px bg-slate-200" />
-            <span className="text-[11px] text-slate-400">与后台「档案查询」菜单一致</span>
+            <span className="text-xs text-slate-400">与后台「档案查询」菜单一致</span>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {SEARCH_MODE_CARDS.map((c) => (
@@ -152,7 +152,7 @@ const PortalHomePage: React.FC<PortalHomePageProps> = ({ onSearch, onOpenMode })
                 </div>
                 <div className="min-w-0">
                   <div className="text-sm font-bold text-slate-800">{c.label}</div>
-                  <div className="text-[11px] text-slate-400 truncate mt-0.5">{c.desc}</div>
+                  <div className="text-xs text-slate-400 truncate mt-0.5">{c.desc}</div>
                 </div>
               </button>
             ))}
@@ -167,7 +167,7 @@ const PortalHomePage: React.FC<PortalHomePageProps> = ({ onSearch, onOpenMode })
             </div>
             <div>
               <div className="text-xl font-bold text-slate-800">{archivedVouchers}</div>
-              <div className="text-[11px] text-slate-400">已归档凭证</div>
+              <div className="text-xs text-slate-400">已归档凭证</div>
             </div>
           </div>
           <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center gap-3">
@@ -176,7 +176,7 @@ const PortalHomePage: React.FC<PortalHomePageProps> = ({ onSearch, onOpenMode })
             </div>
             <div>
               <div className="text-xl font-bold text-slate-800">{fanzongs.length}</div>
-              <div className="text-[11px] text-slate-400">全宗单位</div>
+              <div className="text-xs text-slate-400">全宗单位</div>
             </div>
           </div>
           <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center gap-3">
@@ -185,12 +185,12 @@ const PortalHomePage: React.FC<PortalHomePageProps> = ({ onSearch, onOpenMode })
             </div>
             <div>
               <div className="text-xl font-bold text-slate-800">6 种</div>
-              <div className="text-[11px] text-slate-400">检索模式</div>
+              <div className="text-xs text-slate-400">检索模式</div>
             </div>
           </div>
         </div>
 
-        <div className="mt-8 text-[11px] text-slate-300">
+        <div className="mt-8 text-xs text-slate-300">
           电子会计档案管理系统 · 检索门户（前台） — 进入后台管理请点右上角
         </div>
       </div>

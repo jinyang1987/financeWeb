@@ -73,7 +73,7 @@ const PortalSearchPage: React.FC<PortalSearchPageProps> = ({ onOpenDetail, onGoH
               </button>
             );
           })}
-          <div className="ml-auto text-[11px] text-slate-400 hidden md:block">
+          <div className="ml-auto text-xs text-slate-400 hidden md:block">
             检索能力与后台「档案查询」一致 · 关键词：{portalKeyword || '—'}
           </div>
         </div>

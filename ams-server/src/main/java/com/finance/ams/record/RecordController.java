@@ -117,7 +117,11 @@ public class RecordController {
 
     String filename = file.getOriginalFilename() == null ? "未命名文件" : file.getOriginalFilename();
     String mime = file.getContentType() == null ? "application/octet-stream" : file.getContentType();
-    Map<String, Object> view = service.create(userId, ticket, cmd, filename, mime, file.getBytes());
+    // T16 格式闸口（缺陷 #20）：魔数嗅探，不采信客户端自报 mime；可执行/白名单外一律 415
+    byte[] fileBytes = file.getBytes();
+    var sniff = com.finance.ams.util.FileTypeSniffer.sniffAndGate(fileBytes, filename, mime);
+    mime = sniff.mime();
+    Map<String, Object> view = service.create(userId, ticket, cmd, filename, mime, fileBytes);
     oplog.append(me.account(), me.name(), "上传建件", strOf(view.get("voucherNo")),
         null, "文件：" + filename, OperationLogService.clientIp(request));
     return view;
@@ -320,7 +324,10 @@ public class RecordController {
     perm.requireFunction(me, "voucher-manager", "volume-workspace");
     String filename = file.getOriginalFilename() == null ? "未命名文件" : file.getOriginalFilename();
     String mime = file.getContentType() == null ? "application/octet-stream" : file.getContentType();
-    Map<String, Object> view = service.attachContent(me.account(), ticket, nodeId, filename, mime, file.getBytes());
+    // T16 格式闸口：补文件与上传同口径（魔数嗅探、白名单外 415）
+    byte[] fileBytes = file.getBytes();
+    var sniff = com.finance.ams.util.FileTypeSniffer.sniffAndGate(fileBytes, filename, mime);
+    Map<String, Object> view = service.attachContent(me.account(), ticket, nodeId, filename, sniff.mime(), fileBytes);
     oplog.append(me.account(), me.name(), "补充文件", nodeId, null,
         "纯元数据件补齐电子文件：" + filename, OperationLogService.clientIp(request));
     return view;

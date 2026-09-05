@@ -20,9 +20,9 @@ public final class CategoryCodes {
 
   /** 中文类别名 → DA/T 数字代码 */
   private static final Map<String, String> NAME_TO_NUM = Map.of(
-      "记账凭证", "01", "会计凭证", "01", "原始凭证", "01",
-      "会计账簿", "02",
-      "财务报告", "03", "财务报表", "03",
+      "记账凭证", "01", "会计凭证", "01", "原始凭证", "01", "凭证", "01",
+      "会计账簿", "02", "账簿", "02",
+      "财务报告", "03", "财务报表", "03", "报表", "03",
       "其他会计资料", "04");
 
   /** 视图大类代码 → 中文名 */
@@ -65,5 +65,15 @@ public final class CategoryCodes {
     if ("永久".equals(retention)) return "Y";
     var m = java.util.regex.Pattern.compile("(\\d+)").matcher(retention);
     return m.find() ? "D" + m.group(1) : "D30";
+  }
+
+  /** 期限代码 → 中文名（组卷校验报错用：Y→永久、D30→30年、D10→10年） */
+  public static String retentionName(String retentionCode) {
+    return switch (retentionCode == null ? "" : retentionCode) {
+      case "Y" -> "永久";
+      case "D30" -> "30年";
+      case "D10" -> "10年";
+      default -> retentionCode == null ? "" : retentionCode;
+    };
   }
 }

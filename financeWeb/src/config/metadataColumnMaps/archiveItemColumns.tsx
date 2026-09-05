@@ -37,7 +37,7 @@ const SOURCE_COLUMN: ColumnDef = {
     const isElectronic = r.carrierType === 'electronic' || r.source === 'digital-native';
     const modeLabel = isElectronic ? '电子文件' : '纸质副本';
     return (
-      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold border ${
+      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold border ${
         isElectronic
           ? 'bg-sky-50 text-sky-700 border-sky-200'
           : 'bg-amber-50 text-amber-700 border-amber-200'
@@ -99,7 +99,7 @@ export const ARCHIVE_ITEM_COLUMN_MAP: Record<string, ColumnDef> = {
         '原始凭证': 'bg-emerald-50 text-emerald-700',
       };
       const cls = colorMap[r.archiveType] || 'bg-slate-50 text-slate-600';
-      return <span className={`px-2 py-0.5 rounded-full font-bold text-[10.5px] ${cls}`}>{r.archiveType}</span>;
+      return <span className={`px-2 py-0.5 rounded-full font-bold text-xs ${cls}`}>{r.archiveType}</span>;
     },
     width: '100px',
     align: 'center',
@@ -149,7 +149,7 @@ export const ARCHIVE_ITEM_COLUMN_MAP: Record<string, ColumnDef> = {
     accessor: (r) => {
       const isPermanent = r.retention === '永久';
       return (
-        <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${
+        <span className={`px-2 py-0.5 rounded font-bold text-xs ${
           isPermanent ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-slate-100 text-slate-600'
         }`}>
           {r.retention}
@@ -184,7 +184,7 @@ export const ARCHIVE_ITEM_COLUMN_MAP: Record<string, ColumnDef> = {
     metaId: 'M19',
     label: '密级',
     accessor: () => (
-      <span className="px-2 py-0.5 rounded text-[10px] bg-slate-50 text-slate-400">内部</span>
+      <span className="px-2 py-0.5 rounded text-xs bg-slate-50 text-slate-400">内部</span>
     ),
     width: '60px',
     align: 'center',
@@ -198,7 +198,7 @@ export const ARCHIVE_ITEM_COLUMN_MAP: Record<string, ColumnDef> = {
       return (
         <div className="flex gap-1 flex-wrap">
           {types.map(t => (
-            <span key={t} className="px-1.5 py-0.5 text-[10px] bg-slate-100 text-slate-600 rounded font-mono">{t}</span>
+            <span key={t} className="px-1.5 py-0.5 text-xs bg-slate-100 text-slate-600 rounded font-mono">{t}</span>
           ))}
         </div>
       );
@@ -271,7 +271,7 @@ export const ARCHIVE_ITEM_COLUMN_MAP: Record<string, ColumnDef> = {
     accessor: (r) => {
       const main = r.components[0];
       return main
-        ? <span className="px-1.5 py-0.5 text-[10px] bg-slate-100 text-slate-600 rounded font-mono">{main.contentType.toUpperCase()}</span>
+        ? <span className="px-1.5 py-0.5 text-xs bg-slate-100 text-slate-600 rounded font-mono">{main.contentType.toUpperCase()}</span>
         : <span className="text-slate-300">—</span>;
     },
     width: '96px',
@@ -285,7 +285,7 @@ export const ARCHIVE_ITEM_COLUMN_MAP: Record<string, ColumnDef> = {
       const main = r.components[0];
       const hash = main?.hash;
       return hash
-        ? <span className="font-mono text-[10px] text-slate-500 max-w-[120px] truncate block" title={hash}>{hash.slice(0, 12)}…</span>
+        ? <span className="font-mono text-xs text-slate-500 max-w-[120px] truncate block" title={hash}>{hash.slice(0, 12)}…</span>
         : <span className="text-slate-300">—</span>;
     },
     width: '100px',
@@ -299,8 +299,8 @@ export const ARCHIVE_ITEM_COLUMN_MAP: Record<string, ColumnDef> = {
       const main = r.components[0];
       if (!main) return <span className="text-slate-300">—</span>;
       return main.signatureVerified
-        ? <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-50 text-emerald-700 font-medium"><Check className="w-2.5 h-2.5 inline mr-0.5" />{main.signer || '已验证'}</span>
-        : <span className="px-2 py-0.5 rounded text-[10px] bg-slate-50 text-slate-400">未签名</span>;
+        ? <span className="px-2 py-0.5 rounded text-xs bg-emerald-50 text-emerald-700 font-medium"><Check className="w-2.5 h-2.5 inline mr-0.5" />{main.signer || '已验证'}</span>
+        : <span className="px-2 py-0.5 rounded text-xs bg-slate-50 text-slate-400">未签名</span>;
     },
     width: '100px',
     align: 'center',

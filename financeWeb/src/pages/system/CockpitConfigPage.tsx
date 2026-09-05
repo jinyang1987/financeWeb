@@ -110,7 +110,7 @@ const CockpitConfigPage: React.FC = () => {
                 </div>
 
                 {/* 序号 */}
-                <span className={`w-6 h-6 rounded-md flex items-center justify-center text-[11px] font-bold shrink-0 ${m.enabled ? 'bg-slate-800 text-white' : 'bg-slate-200 text-slate-400'}`}>
+                <span className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold shrink-0 ${m.enabled ? 'bg-slate-800 text-white' : 'bg-slate-200 text-slate-400'}`}>
                   {idx + 1}
                 </span>
 
@@ -118,9 +118,9 @@ const CockpitConfigPage: React.FC = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className={`text-sm font-semibold ${m.enabled ? 'text-slate-800' : 'text-slate-400'}`}>{m.title}</span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${DOMAIN_COLORS[m.domain]}`}>{m.domain}统计</span>
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${DOMAIN_COLORS[m.domain]}`}>{m.domain}统计</span>
                   </div>
-                  <p className="text-[11px] text-slate-400 mt-0.5 truncate">{m.description}</p>
+                  <p className="text-xs text-slate-400 mt-0.5 truncate">{m.description}</p>
                 </div>
 
                 {/* 宽度切换 */}
@@ -131,7 +131,7 @@ const CockpitConfigPage: React.FC = () => {
                       type="button"
                       disabled={!m.enabled}
                       onClick={() => setSize(m.id, size)}
-                      className={`px-2.5 py-1 text-[11px] rounded-md font-medium transition-all cursor-pointer disabled:opacity-40 ${
+                      className={`px-2.5 py-1 text-xs rounded-md font-medium transition-all cursor-pointer disabled:opacity-40 ${
                         m.size === size ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                       }`}
                     >
@@ -158,7 +158,7 @@ const CockpitConfigPage: React.FC = () => {
           </div>
         </div>
 
-        <p className="text-[11px] text-slate-400 text-center">
+        <p className="text-xs text-slate-400 text-center">
           配置自动保存（localStorage）· 大屏页按此处顺序与宽度实时渲染 · 默认布局涵盖 库藏/流程/利用/合规 四大统计域
         </p>
       </div>

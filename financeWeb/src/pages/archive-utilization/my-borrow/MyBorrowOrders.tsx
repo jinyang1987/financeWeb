@@ -50,18 +50,18 @@ function FulfillmentRow({ f }: { f: Fulfillment }) {
       <Icon className={`w-4 h-4 shrink-0 ${f.type === 'electronic' ? 'text-sky-500' : 'text-amber-500'}`} />
       <div className="flex-1 min-w-0">
         <div className="text-xs font-medium text-slate-700 truncate">{f.volumeTitle}</div>
-        <div className="text-[10px] text-slate-400">
+        <div className="text-xs text-slate-400">
           {f.type === 'electronic' ? '电子授权（件级）' : `实体外借（整卷 · ${f.physicalMode === 'copy' ? '复印件' : '原件'}）`}
           {f.lentAt && ` · 借出 ${f.lentAt.slice(0, 10)}`}
           {f.returnedAt && ` · 归还 ${f.returnedAt.slice(0, 10)}`}
         </div>
       </div>
       {f.status === 'queued' && (
-        <span className="flex items-center gap-1 text-[10px] text-purple-600">
+        <span className="flex items-center gap-1 text-xs text-purple-600">
           <Hourglass className="w-3 h-3" />优先预约队列中
         </span>
       )}
-      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${FULFILLMENT_COLORS[f.status]}`}>
+      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${FULFILLMENT_COLORS[f.status]}`}>
         {FULFILLMENT_STATUS_LABELS[f.status]}
       </span>
     </div>
@@ -116,11 +116,11 @@ const MyBorrowOrders: React.FC = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2.5 flex-wrap">
                     <span className="font-mono text-sm font-bold text-slate-800">{order.orderNo}</span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${ORDER_STATUS_COLORS[order.status]}`}>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ORDER_STATUS_COLORS[order.status]}`}>
                       {ORDER_STATUS_LABELS[order.status]}
                     </span>
                     {order.status === 'approving' && currentStep && (
-                      <span className="flex items-center gap-1 text-[10px] text-sky-600">
+                      <span className="flex items-center gap-1 text-xs text-sky-600">
                         <Clock className="w-3 h-3" />待{currentStep.roleLabel}（{currentStep.assigneeName}）审批
                       </span>
                     )}
@@ -166,7 +166,7 @@ const MyBorrowOrders: React.FC = () => {
                                   : <Clock className={`w-4 h-4 ${isCurrent ? 'text-sky-500' : 'text-slate-300'}`} />}
                               <div>
                                 <div className="text-xs font-semibold text-slate-700">{step.roleLabel}</div>
-                                <div className="text-[10px] text-slate-400">
+                                <div className="text-xs text-slate-400">
                                   {step.actedBy || step.assigneeName}
                                   {step.comment ? ` · ${step.comment}` : isCurrent ? ' · 审批中' : ''}
                                 </div>
@@ -185,11 +185,11 @@ const MyBorrowOrders: React.FC = () => {
                       <table className="w-full">
                         <thead>
                           <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-                            <th className="px-4 py-3 text-left text-[13px] font-semibold">题名</th>
-                            <th className="px-4 py-3 text-left text-[13px] font-semibold">类型</th>
-                            <th className="px-4 py-3 text-left text-[13px] font-semibold">介质</th>
-                            <th className="px-4 py-3 text-left text-[13px] font-semibold">密级</th>
-                            <th className="px-4 py-3 text-left text-[13px] font-semibold">申请权限</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold">题名</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold">类型</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold">介质</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold">密级</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold">申请权限</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -255,7 +255,7 @@ const MyBorrowOrders: React.FC = () => {
                     </div>
                   )}
                   {order.status === 'terminated' && (
-                    <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                    <div className="flex items-center gap-1.5 text-xs text-slate-400">
                       <Ban className="w-3.5 h-3.5" />该单已终止，全部权限已收回
                     </div>
                   )}

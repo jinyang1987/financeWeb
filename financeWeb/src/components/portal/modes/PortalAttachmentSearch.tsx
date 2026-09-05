@@ -197,7 +197,7 @@ const PortalAttachmentSearch: React.FC<PortalAttachmentSearchProps> = ({ onOpenD
         <div className="flex items-center gap-2">
           <FileText className="w-4 h-4 text-emerald-600" />
           <span className="text-sm font-semibold text-slate-700">原始凭证附件检索</span>
-          <span className="text-[11px] text-slate-400">共 {filtered.length} 份附件 · 按所属记账凭证号查找 · 点击行查看所属凭证</span>
+          <span className="text-xs text-slate-400">共 {filtered.length} 份附件 · 按所属记账凭证号查找 · 点击行查看所属凭证</span>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -207,7 +207,7 @@ const PortalAttachmentSearch: React.FC<PortalAttachmentSearchProps> = ({ onOpenD
               showFilters ? 'bg-sky-50 text-sky-600 border-sky-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
             }`}
           >
-            筛选{activeFilterCount > 0 && <span className="bg-sky-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">{activeFilterCount}</span>}
+            筛选{activeFilterCount > 0 && <span className="bg-sky-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">{activeFilterCount}</span>}
           </button>
           {activeFilterCount > 0 && (
             <button type="button" onClick={clearAll}
@@ -284,15 +284,15 @@ const PortalAttachmentSearch: React.FC<PortalAttachmentSearchProps> = ({ onOpenD
                 <table className="w-full text-sm table-fixed">
                   <thead>
                     <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-                      <th className="px-4 py-3 text-left text-[13px] font-semibold w-36">单据编号</th>
-                      <th className="px-4 py-3 text-left text-[13px] font-semibold w-28">类型</th>
-                      <th className="px-4 py-3 text-center text-[13px] font-semibold w-16">载体</th>
-                      <th className="px-4 py-3 text-center text-[13px] font-semibold w-20">四性</th>
-                      <th className="px-4 py-3 text-center text-[13px] font-semibold w-24">日期</th>
-                      <th className="px-4 py-3 text-left text-[13px] font-semibold w-36">对方单位</th>
-                      <th className="px-4 py-3 text-left text-[13px] font-semibold">摘要</th>
-                      <th className="px-4 py-3 text-right text-[13px] font-semibold w-28">金额</th>
-                      <th className="px-4 py-3 text-left text-[13px] font-semibold w-24">所属凭证</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold w-36">单据编号</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold w-28">类型</th>
+                      <th className="px-4 py-3 text-center text-sm font-semibold w-16">载体</th>
+                      <th className="px-4 py-3 text-center text-sm font-semibold w-20">四性</th>
+                      <th className="px-4 py-3 text-center text-sm font-semibold w-24">日期</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold w-36">对方单位</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold">摘要</th>
+                      <th className="px-4 py-3 text-right text-sm font-semibold w-28">金额</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold w-24">所属凭证</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -308,41 +308,41 @@ const PortalAttachmentSearch: React.FC<PortalAttachmentSearchProps> = ({ onOpenD
                             parent ? 'hover:bg-sky-50/50 cursor-pointer' : 'opacity-60 cursor-not-allowed'
                           }`}
                         >
-                          <td className="px-4 py-3 font-mono text-[13px] font-semibold text-slate-800 truncate" title={doc.documentNo}>
+                          <td className="px-4 py-3 font-mono text-sm font-semibold text-slate-800 truncate" title={doc.documentNo}>
                             {doc.documentNo}
                           </td>
                           <td className="px-4 py-3">
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 whitespace-nowrap">
+                            <span className="text-xs px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 whitespace-nowrap">
                               {doc.docTypeName}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-center">
                             {doc.carrierType === 'electronic' ? (
-                              <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-sky-50 text-sky-600 whitespace-nowrap">
+                              <span className="inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-full bg-sky-50 text-sky-600 whitespace-nowrap">
                                 <Monitor className="w-2.5 h-2.5" />电子
                               </span>
                             ) : (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 whitespace-nowrap">纸质</span>
+                              <span className="text-xs px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 whitespace-nowrap">纸质</span>
                             )}
                           </td>
                           <td className="px-4 py-3 text-center">
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap ${
+                            <span className={`text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap ${
                               st === 'pass' ? 'bg-emerald-50 text-emerald-600' : st === 'warn' ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-500'
                             }`}>
                               {st === 'pass' ? '四性通过' : st === 'warn' ? '部分异常' : '四性失败'}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-center font-mono text-[13px] text-slate-600">{doc.transactionDate}</td>
+                          <td className="px-4 py-3 text-center font-mono text-sm text-slate-600">{doc.transactionDate}</td>
                           <td className="px-4 py-3.5 text-sm text-slate-600 truncate" title={doc.counterpartyName}>
                             {doc.counterpartyName || '—'}
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-800 truncate" title={doc.summary}>
                             {doc.summary || '—'}
                           </td>
-                          <td className="px-4 py-3 text-right font-mono text-[13px] text-slate-800">
+                          <td className="px-4 py-3 text-right font-mono text-sm text-slate-800">
                             ¥{doc.amountLower.toLocaleString('zh-CN', { minimumFractionDigits: 2 })}
                           </td>
-                          <td className="px-4 py-3 font-mono text-[13px] truncate">
+                          <td className="px-4 py-3 font-mono text-sm truncate">
                             {parent
                               ? <span className="text-sky-700" title={`所属凭证 ${parent.voucherNo}`}>{parent.voucherNo}</span>
                               : <span className="text-slate-300">未归档</span>}

@@ -88,16 +88,38 @@ public class TransferController {
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
       @PathVariable String id) {
     guard(userId, ticket);
-    return service.prepare(userId, id);
+    return service.prepare(userId, ticket, id);
   }
 
+  /** GET /{id}/register-file — 下载移交清册 HTML（打印/随批交换；T14） */
+  @GetMapping("/{id}/register-file")
+  public ResponseEntity<byte[]> registerFile(
+      @RequestHeader(value = "X-User-Id", required = false) String userId,
+      @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
+      @PathVariable String id) {
+    guard(userId, ticket);
+    Map<String, Object> content = service.registerContent(ticket, id);
+    byte[] bytes = (byte[]) content.get("bytes");
+    String filename = String.valueOf(content.get("filename"));
+    String encoded = java.net.URLEncoder.encode(filename, java.nio.charset.StandardCharsets.UTF_8)
+        .replace("+", "%20");
+    return ResponseEntity.ok()
+        .contentType(org.springframework.http.MediaType.TEXT_HTML)
+        .header("Content-Disposition", "attachment; filename*=UTF-8''" + encoded)
+        .body(bytes);
+  }
+
+  /**
+   * POST /{id}/receive — 签收（prepared → received）。
+   * T14 接收方检测入口：签收前逐卷 gd∪yj 全口径四性检测，未通过 409 阻断。
+   */
   @PostMapping("/{id}/receive")
   public Map<String, Object> receive(
       @RequestHeader(value = "X-User-Id", required = false) String userId,
       @RequestHeader(value = "X-Alfresco-Ticket", required = false) String ticket,
       @PathVariable String id) {
     guard(userId, ticket);
-    return service.receive(userId, id);
+    return service.receive(userId, ticket, id);
   }
 
   @PostMapping("/{id}/reject")

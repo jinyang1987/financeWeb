@@ -59,10 +59,10 @@ export const Header: React.FC<HeaderProps> = ({ onLogout, fondsLoading, onFanzon
 
         {/* 页面标题（min-w-0 + truncate：标题再长也只截断自身，不挤压右侧工具栏） */}
         <div className="min-w-0">
-          <span className="text-[12px] font-bold text-slate-500 block tracking-wider uppercase select-none truncate">
+          <span className="text-xs font-bold text-slate-500 block tracking-wider uppercase select-none truncate">
             {pageTitle.subtitle}
           </span>
-          <h1 className="text-[15px] font-semibold tracking-tight text-slate-800 truncate">
+          <h1 className="text-base font-semibold tracking-tight text-slate-800 truncate">
             {pageTitle.title}
           </h1>
         </div>
@@ -79,8 +79,8 @@ export const Header: React.FC<HeaderProps> = ({ onLogout, fondsLoading, onFanzon
         >
           <Search className="w-5 h-5 text-sky-600 shrink-0" />
           <div className="flex flex-col items-start leading-tight">
-            <span className="text-[11px] text-slate-400 font-medium">前台</span>
-            <span className="text-[14px] font-semibold text-slate-700">检索门户</span>
+            <span className="text-xs text-slate-400 font-medium">前台</span>
+            <span className="text-sm font-semibold text-slate-700">检索门户</span>
           </div>
         </button>
 
@@ -92,15 +92,15 @@ export const Header: React.FC<HeaderProps> = ({ onLogout, fondsLoading, onFanzon
           >
             <Building className="w-5 h-5 text-sky-600 shrink-0" />
             <div className="flex flex-col items-start flex-1 min-w-0">
-              <span className="text-[11px] text-slate-400 font-medium leading-tight">当前全宗</span>
-              <span className="text-[14px] font-semibold text-slate-700 truncate max-w-[160px]">
+              <span className="text-xs text-slate-400 font-medium leading-tight">当前全宗</span>
+              <span className="text-sm font-semibold text-slate-700 truncate max-w-[160px]">
                 {fondsLoading
                   ? '加载中...'
                   : fanzongs.find((f) => f.code === currentFanzongCode)?.name || currentFanzongCode}
               </span>
             </div>
             {!fondsLoading && (
-              <span className="text-[11px] font-mono text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
+              <span className="text-xs font-mono text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
                 {currentFanzongCode}
               </span>
             )}
@@ -136,19 +136,19 @@ export const Header: React.FC<HeaderProps> = ({ onLogout, fondsLoading, onFanzon
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-[13px] font-semibold truncate">{f.name}</span>
+                        <span className="text-sm font-semibold truncate">{f.name}</span>
                         {f.status === 'custodial' && (
-                          <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded font-medium shrink-0">
+                          <span className="text-xs text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded font-medium shrink-0">
                             代管
                           </span>
                         )}
                       </div>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[11px] font-mono text-slate-400">{f.code}</span>
+                        <span className="text-xs font-mono text-slate-400">{f.code}</span>
                         {f.address && (
                           <>
-                            <span className="text-[10px] text-slate-300">|</span>
-                            <span className="text-[11px] text-slate-400 truncate">{f.address}</span>
+                            <span className="text-xs text-slate-300">|</span>
+                            <span className="text-xs text-slate-400 truncate">{f.address}</span>
                           </>
                         )}
                       </div>
@@ -181,8 +181,8 @@ export const Header: React.FC<HeaderProps> = ({ onLogout, fondsLoading, onFanzon
               <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-[#F8FAFC]" />
             </div>
             <div className="hidden lg:flex flex-col items-start">
-              <span className="font-semibold text-slate-700 text-[15px] leading-tight">{currentUser?.name || '未登录'}</span>
-              <span className="text-[12px] text-slate-400 leading-tight">
+              <span className="font-semibold text-slate-700 text-base leading-tight">{currentUser?.name || '未登录'}</span>
+              <span className="text-xs text-slate-400 leading-tight">
                 {currentUser?.roles.map((r) => ROLE_LABELS[r]).join(' / ') || ''}
               </span>
             </div>
@@ -196,7 +196,7 @@ export const Header: React.FC<HeaderProps> = ({ onLogout, fondsLoading, onFanzon
                 <Repeat className="w-3.5 h-3.5 text-slate-500" />
                 <span className="text-xs font-bold text-slate-600">切换身份（演示）</span>
                 {currentUser && (
-                  <span className="ml-auto text-[10px] text-slate-400">{currentUser.dept} · {currentUser.position}</span>
+                  <span className="ml-auto text-xs text-slate-400">{currentUser.dept} · {currentUser.position}</span>
                 )}
               </div>
               <div className="max-h-80 overflow-y-auto py-1">
@@ -216,12 +216,12 @@ export const Header: React.FC<HeaderProps> = ({ onLogout, fondsLoading, onFanzon
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[13px] font-semibold text-slate-800">{u.name}</span>
-                          <span className="text-[10px] text-slate-400">{u.dept}</span>
+                          <span className="text-sm font-semibold text-slate-800">{u.name}</span>
+                          <span className="text-xs text-slate-400">{u.dept}</span>
                         </div>
                         <div className="flex items-center gap-1 mt-0.5 flex-wrap">
                           {u.roles.map((r) => (
-                            <span key={r} className="text-[10px] px-1.5 py-px rounded-full bg-slate-100 text-slate-500">{ROLE_LABELS[r]}</span>
+                            <span key={r} className="text-xs px-1.5 py-px rounded-full bg-slate-100 text-slate-500">{ROLE_LABELS[r]}</span>
                           ))}
                         </div>
                       </div>

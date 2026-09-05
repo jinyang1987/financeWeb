@@ -58,7 +58,7 @@ const ChecksBadge: React.FC<{
   const all = vals.every(Boolean);
   if (all) {
     return (
-      <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
+      <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
         <CheckCircle2 className="w-3 h-3" />全部通过
       </span>
     );
@@ -66,13 +66,13 @@ const ChecksBadge: React.FC<{
   // ★ 2026-08-20：从未检测（全 false 且未运行过）≠ 存在异常——如实区分，避免误导
   if (!inspectionRan && vals.every((v) => !v)) {
     return (
-      <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500" title="四性检测尚未执行（检测在案卷级运行）">
+      <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500" title="四性检测尚未执行（检测在案卷级运行）">
         未检测
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700" title="四性检测存在未通过项">
+    <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700" title="四性检测存在未通过项">
       <AlertTriangle className="w-3 h-3" />存在异常
     </span>
   );
@@ -131,7 +131,7 @@ const SourceDocRow: React.FC<{
           : <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
         }
         {/* 附件序号 */}
-        <span className="text-[10px] font-mono text-amber-500 bg-amber-50 px-1 rounded shrink-0">
+        <span className="text-xs font-mono text-amber-500 bg-amber-50 px-1 rounded shrink-0">
           附{sd.attachmentSequence || '-'}
         </span>
         <span className="text-xs font-semibold text-slate-700 shrink-0">{sd.docTypeName}</span>
@@ -140,7 +140,7 @@ const SourceDocRow: React.FC<{
         <span className="text-xs font-mono font-medium text-slate-700">
           ¥{fmt(Math.abs(sd.amountLower))}
         </span>
-        <span className="text-[11px] text-slate-400 truncate max-w-[120px]">{sd.counterpartyName}</span>
+        <span className="text-xs text-slate-400 truncate max-w-[120px]">{sd.counterpartyName}</span>
         {sd.checks.real && sd.checks.complete && sd.checks.usable && sd.checks.safe ? (
           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
         ) : (
@@ -152,10 +152,10 @@ const SourceDocRow: React.FC<{
       {isExpanded && (
         <div className="border-t border-slate-100 bg-slate-50/50 px-4 py-3 space-y-3">
           {/* 所属记账凭证 + 附件序号 */}
-          <div className="flex items-center gap-4 text-[11px]">
+          <div className="flex items-center gap-4 text-xs">
             <span className="text-slate-400">所属凭证：</span>
             <span className="text-slate-700 font-mono font-semibold">{sd.parentVoucherNo}</span>
-            <span className="text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded text-[10px]">
+            <span className="text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded text-xs">
               第 {sd.attachmentSequence || 1} 份附件
             </span>
           </div>
@@ -168,7 +168,7 @@ const SourceDocRow: React.FC<{
           {/* 类型特有扩展字段 */}
           {extFields.length > 0 && (
             <div>
-              <div className="text-[10px] text-slate-400 uppercase tracking-wider mb-1.5 font-semibold">
+              <div className="text-xs text-slate-400 uppercase tracking-wider mb-1.5 font-semibold">
                 {sd.docTypeName} · 专有字段
               </div>
               <FieldGrid fields={extFields} columns={2} />
@@ -176,7 +176,7 @@ const SourceDocRow: React.FC<{
           )}
 
           {/* 审批 + 文件 */}
-          <div className="flex items-center gap-4 text-[11px] text-slate-500">
+          <div className="flex items-center gap-4 text-xs text-slate-500">
             {sd.preparer && <span>制单人：{sd.preparer}</span>}
             {sd.reviewer && <span>审核人：{sd.reviewer}</span>}
             <span>附件：{sd.attachmentCount} 张</span>
@@ -187,7 +187,7 @@ const SourceDocRow: React.FC<{
           {sd.files.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {sd.files.map((f, i) => (
-                <span key={i} className="inline-flex items-center gap-1 text-[10px] bg-white border border-slate-200 rounded px-2 py-1 text-slate-600">
+                <span key={i} className="inline-flex items-center gap-1 text-xs bg-white border border-slate-200 rounded px-2 py-1 text-slate-600">
                   <FileText className="w-3 h-3 text-slate-400" />
                   {f.name}
                   {f.signatureVerified && <CheckCircle2 className="w-3 h-3 text-emerald-400" />}
@@ -197,7 +197,7 @@ const SourceDocRow: React.FC<{
           )}
 
           {sd.remarks && (
-            <div className="text-[10px] text-slate-500 bg-white rounded px-2 py-1.5 border border-slate-100">
+            <div className="text-xs text-slate-500 bg-white rounded px-2 py-1.5 border border-slate-100">
               <StickyNote className="w-3 h-3 inline mr-0.5" />{sd.remarks}
             </div>
           )}
@@ -215,10 +215,10 @@ const LegacyChildRow: React.FC<{ child: ArchiveRecord }> = ({ child }) => (
     <div className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0" />
     <div className="flex-1 min-w-0">
       <div className="text-xs font-medium text-sky-700">{child.voucherNo}</div>
-      <div className="text-[10px] text-sky-500">
+      <div className="text-xs text-sky-500">
         {child.archiveType} · ¥{child.amount.toLocaleString()} · {child.archiveCode}
       </div>
-      {child.remarks && <div className="text-[10px] text-sky-400 truncate mt-0.5">{child.remarks}</div>}
+      {child.remarks && <div className="text-xs text-sky-400 truncate mt-0.5">{child.remarks}</div>}
     </div>
   </div>
 );
@@ -397,14 +397,14 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
         <div>
           <div className="flex items-center gap-2">
             <div className="text-sm font-bold text-slate-800">{record.voucherNo}</div>
-            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+            <span className={`text-xs px-1.5 py-0.5 rounded-full ${
               isSourceDoc ? 'bg-amber-50 text-amber-700' : 'bg-sky-50 text-sky-600'
             }`}>
               {isSourceDoc ? '原始凭证' : '记账凭证'}
             </span>
           </div>
           {isVoucher ? (
-            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+            <span className={`text-xs px-1.5 py-0.5 rounded-full ${
               record.status === '已组卷' ? 'bg-emerald-50 text-emerald-600' :
               record.status === '待审核' ? 'bg-sky-50 text-sky-600' :
               'bg-amber-50 text-amber-600'
@@ -412,7 +412,7 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
               {record.status || '未组卷'}
             </span>
           ) : (
-            <div className="text-[10px] text-slate-500 font-mono">{record.archiveCode || '—'}</div>
+            <div className="text-xs text-slate-500 font-mono">{record.archiveCode || '—'}</div>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -447,7 +447,7 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
               {isSourceDoc ? '原始凭证信息' : isVoucher ? '记账凭证信息' : '档案条目信息'}
             </span>
             {!isVoucher && (
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+              <span className={`text-xs px-1.5 py-0.5 rounded-full ${
                 record.carrierType === 'electronic'
                   ? 'bg-sky-50 text-sky-600'
                   : 'bg-amber-50 text-amber-700'
@@ -465,7 +465,7 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
             <FieldGrid fields={summaryFields} columns={2} />
           )}
           {record.remarks && (
-            <div className="mt-2 pt-2 border-t border-slate-100 text-[11px] text-slate-500">
+            <div className="mt-2 pt-2 border-t border-slate-100 text-xs text-slate-500">
               <StickyNote className="w-3 h-3 inline mr-0.5" />{record.remarks}
             </div>
           )}
@@ -477,7 +477,7 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
             <div className="flex items-center gap-2 mb-3">
               <FileSpreadsheet className="w-4 h-4 text-sky-600" />
               <span className="text-xs font-semibold text-slate-700">凭证分录</span>
-              <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">
+              <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">
                 {entries.length} 条
               </span>
             </div>
@@ -504,7 +504,7 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
             <div className="flex items-center gap-2 mb-3">
               <Paperclip className="w-4 h-4 text-emerald-600" />
               <span className="text-xs font-semibold text-slate-700">电子附件（上传原件）</span>
-              <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">
+              <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">
                 {record.components?.length || 0} 份
               </span>
             </div>
@@ -517,7 +517,7 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-xs font-semibold text-slate-700 truncate" title={c.name}>{c.name}</div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">
+                      <div className="text-xs text-slate-400 mt-0.5">
                         {c.type} · {c.size}{c.contentType ? ` · ${c.contentType.toUpperCase()}` : ''}
                       </div>
                     </div>
@@ -556,10 +556,10 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
                     ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                     : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
                   OCR 识别正文
-                  <span className="text-[10px] text-slate-400 font-normal">{record.ocrText.length} 字</span>
+                  <span className="text-xs text-slate-400 font-normal">{record.ocrText.length} 字</span>
                 </button>
                 {ocrOpen && (
-                  <pre className="px-3 py-2 bg-slate-50/60 border-t border-slate-100 text-[11px] leading-relaxed text-slate-600 whitespace-pre-wrap max-h-64 overflow-y-auto">
+                  <pre className="px-3 py-2 bg-slate-50/60 border-t border-slate-100 text-xs leading-relaxed text-slate-600 whitespace-pre-wrap max-h-64 overflow-y-auto">
                     {record.ocrText}
                   </pre>
                 )}
@@ -573,10 +573,10 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
             <span className="text-xs font-semibold text-slate-700">
               所附原始凭证
             </span>
-            <span className="text-[10px] text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded-full">
+            <span className="text-xs text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded-full">
               附件
             </span>
-            <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">
+            <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">
               {richSourceDocs.length + childRecords.length} 份
             </span>
           </div>
@@ -586,7 +586,7 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
               <div className="text-center">
                 <Search className="w-5 h-5 text-slate-300 mx-auto mb-1" />
                 <p className="text-xs text-slate-400">暂无原始凭证附件</p>
-                <p className="text-[10px] text-slate-300 mt-0.5">原始凭证依附记账凭证存在，不独立归档</p>
+                <p className="text-xs text-slate-300 mt-0.5">原始凭证依附记账凭证存在，不独立归档</p>
               </div>
             </div>
           ) : (
@@ -628,7 +628,7 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />}
                   <div className="text-xs">
                     <div className="font-medium">{d.name}</div>
-                    <div className="text-[10px] opacity-70">{d.message}</div>
+                    <div className="text-xs opacity-70">{d.message}</div>
                   </div>
                 </div>
               ))}
@@ -645,7 +645,7 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose, 
             </div>
             <div className="space-y-1.5">
               {record.auditLogs.slice(0, 5).map((log, i) => (
-                <div key={log.id || i} className="flex items-center gap-2 text-[11px] text-slate-600">
+                <div key={log.id || i} className="flex items-center gap-2 text-xs text-slate-600">
                   <span className="text-slate-400 font-mono shrink-0 w-16">{log.timestamp?.slice(0, 16)}</span>
                   <span className="font-medium">{log.action}</span>
                   <span className="text-slate-400">— {log.operator}</span>

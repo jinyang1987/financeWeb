@@ -332,7 +332,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
       <div className="h-[64px] bg-[#F8FAFC] flex items-center justify-between px-5 shrink-0 select-none">
         <div className="flex items-center gap-3">
           <img src="/logo.png" alt="会计档案" className="h-8 w-auto object-contain shrink-0 rounded-lg" />
-          <span className="font-bold text-slate-800 text-[15px] tracking-wide">会计电子档案系统</span>
+          <span className="font-bold text-slate-800 text-sm tracking-wide">会计电子档案系统</span>
         </div>
         <button
           type="button"
