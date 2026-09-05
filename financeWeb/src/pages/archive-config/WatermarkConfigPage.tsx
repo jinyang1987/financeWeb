@@ -40,12 +40,12 @@ const Toggle: React.FC<{ checked: boolean; onChange: () => void; disabled?: bool
     type="button"
     onClick={onChange}
     disabled={disabled}
-    className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+    className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full whitespace-nowrap transition-colors cursor-pointer ${
       disabled ? 'opacity-40 cursor-not-allowed' : ''
     } ${checked ? 'bg-sky-600' : 'bg-slate-300'}`}
   >
     <span
-      className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform ${
+      className={`inline-block h-3.5 w-3.5 rounded-full whitespace-nowrap bg-white shadow-sm transition-transform ${
         checked ? 'translate-x-[18px]' : 'translate-x-[3px]'
       }`}
     />
@@ -119,7 +119,7 @@ const Chip: React.FC<{ label: string; selected: boolean; onClick: () => void; to
   <button
     type="button"
     onClick={onClick}
-    className={`px-2.5 py-1 text-xs rounded-full border transition-colors cursor-pointer ${
+    className={`px-2.5 py-1 text-xs rounded-full whitespace-nowrap border transition-colors cursor-pointer ${
       selected
         ? tone === 'sky'
           ? 'bg-sky-50 text-sky-700 border-sky-300 font-medium'
@@ -213,7 +213,7 @@ const LivePreview: React.FC = () => {
               <span>制单：张三</span>
             </div>
             {/* 模拟印章 */}
-            <div className="absolute bottom-8 right-6 w-16 h-16 rounded-full border-[3px] border-red-400/60 flex items-center justify-center rotate-[-15deg]">
+            <div className="absolute bottom-8 right-6 w-16 h-16 rounded-full whitespace-nowrap border-[3px] border-red-400/60 flex items-center justify-center rotate-[-15deg]">
               <span className="text-xs text-red-500/70 font-bold text-center leading-tight">财务专用章</span>
             </div>
           </div>
@@ -227,7 +227,7 @@ const LivePreview: React.FC = () => {
             />
           ) : (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-[1px]">
-              <span className="text-xs text-slate-400 bg-slate-100 border border-slate-200 rounded-full px-3 py-1">
+              <span className="text-xs text-slate-400 bg-slate-100 border border-slate-200 rounded-full whitespace-nowrap px-3 py-1">
                 水印已全局停用
               </span>
             </div>
@@ -243,20 +243,20 @@ const LivePreview: React.FC = () => {
             ))}
           </div>
           <div className="flex flex-wrap gap-1.5 mt-3">
-            <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${config.scenes.preview ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+            <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${config.scenes.preview ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
               <Eye className="w-3 h-3" />预览
             </span>
-            <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${config.scenes.download ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+            <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${config.scenes.download ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
               <Download className="w-3 h-3" />下载
             </span>
-            <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${config.scenes.print ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+            <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${config.scenes.print ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
               <Printer className="w-3 h-3" />打印
             </span>
-            <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${config.security.antiTamper ? 'bg-sky-50 text-sky-600' : 'bg-slate-100 text-slate-400'}`}>
+            <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${config.security.antiTamper ? 'bg-sky-50 text-sky-600' : 'bg-slate-100 text-slate-400'}`}>
               <Shield className="w-3 h-3" />防篡改
             </span>
             {config.security.blindWatermark && (
-              <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-violet-50 text-violet-600">
+              <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full whitespace-nowrap bg-violet-50 text-violet-600">
                 <Lock className="w-3 h-3" />盲水印
               </span>
             )}
@@ -319,7 +319,7 @@ const WatermarkConfigPage: React.FC = () => {
           <Droplets className="w-5 h-5 text-sky-600" />
           <h2 className="text-base font-bold text-slate-800">水印配置</h2>
           {saved && (
-            <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full animate-in fade-in">
+            <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full whitespace-nowrap animate-in fade-in">
               配置已保存
             </span>
           )}
@@ -449,10 +449,10 @@ const WatermarkConfigPage: React.FC = () => {
                       }`}
                     >
                       <div className="flex items-center gap-2 mb-1">
-                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                        <div className={`w-4 h-4 rounded-full whitespace-nowrap border-2 flex items-center justify-center ${
                           selectedPreset === tpl.id ? 'border-sky-500' : 'border-slate-300'
                         }`}>
-                          {selectedPreset === tpl.id && <div className="w-2 h-2 rounded-full bg-sky-500" />}
+                          {selectedPreset === tpl.id && <div className="w-2 h-2 rounded-full whitespace-nowrap bg-sky-500" />}
                         </div>
                         <span className="text-sm font-semibold text-slate-700">{tpl.name}</span>
                       </div>
@@ -679,7 +679,7 @@ const WatermarkConfigPage: React.FC = () => {
                           type="button"
                           title={c.label}
                           onClick={() => updateStyle({ color: c.value })}
-                          className={`w-6 h-6 rounded-full border-2 transition-all cursor-pointer ${
+                          className={`w-6 h-6 rounded-full whitespace-nowrap border-2 transition-all cursor-pointer ${
                             config.style.color === c.value ? 'border-sky-500 scale-110' : 'border-slate-200 hover:scale-105'
                           }`}
                           style={{ backgroundColor: c.value }}

@@ -279,7 +279,7 @@ export const OrgManagePanel: React.FC = () => {
               <h3 className="text-base font-bold text-slate-800 mb-5 flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-amber-600" />
                 单位信息 <span className="text-sm font-normal text-slate-400 ml-1">— {selectedNode.data.name}</span>
-                <span className="ml-auto text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">只读</span>
+                <span className="ml-auto text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full whitespace-nowrap">只读</span>
               </h3>
               <div className="space-y-5">
                 <div>

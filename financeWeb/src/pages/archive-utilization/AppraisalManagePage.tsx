@@ -260,7 +260,7 @@ const AppraisalManagePage: React.FC = () => {
                       <td className="px-4 py-3.5 text-sm text-slate-600">{v.boxNo || '—'}</td>
                       <td className="px-4 py-3.5">
                         {v.appraisalStatus
-                          ? <span className={`px-2 py-0.5 rounded-full font-medium text-xs ${STATUS_META[v.appraisalStatus]?.cls || 'bg-slate-100 text-slate-500'}`}>{STATUS_META[v.appraisalStatus]?.label || v.appraisalStatus}</span>
+                          ? <span className={`px-2 py-0.5 rounded-full whitespace-nowrap font-medium text-xs ${STATUS_META[v.appraisalStatus]?.cls || 'bg-slate-100 text-slate-500'}`}>{STATUS_META[v.appraisalStatus]?.label || v.appraisalStatus}</span>
                           : <span className="text-slate-400">未登记</span>}
                       </td>
                     </tr>
@@ -508,7 +508,7 @@ const AppraisalSection: React.FC<{
               {isExpanded ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
               <span className="text-sm text-slate-700 flex-1 truncate">{volTitle(a.volumeNode)}</span>
               <span className="text-xs text-slate-400">期满 {a.dueDate}</span>
-              <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${STATUS_META[a.status]?.cls || 'bg-slate-100 text-slate-500'}`}>
+              <span className={`px-2 py-0.5 text-xs font-medium rounded-full whitespace-nowrap ${STATUS_META[a.status]?.cls || 'bg-slate-100 text-slate-500'}`}>
                 {STATUS_META[a.status]?.label || a.status}
               </span>
               {actions(a)}

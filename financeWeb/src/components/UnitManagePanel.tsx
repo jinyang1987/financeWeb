@@ -344,7 +344,7 @@ export const UnitManagePanel: React.FC = () => {
   if (loading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-3 bg-slate-50">
-        <div className="p-3 rounded-full bg-sky-50">
+        <div className="p-3 rounded-full whitespace-nowrap bg-sky-50">
           <Loader2 className="w-6 h-6 animate-spin text-sky-500" />
         </div>
         <span className="text-sm text-slate-500">加载中...</span>
@@ -373,7 +373,7 @@ export const UnitManagePanel: React.FC = () => {
       {/* ── 顶部统计条 ── */}
       <div className="flex items-center gap-6 px-5 py-3 bg-white border-b border-slate-200 shrink-0">
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-sky-500" />
+          <div className="w-2 h-2 rounded-full whitespace-nowrap bg-sky-500" />
           <span className="text-sm text-slate-500">
             共 <span className="font-bold text-slate-800">{totalUnits}</span> 个单位
           </span>
@@ -524,7 +524,7 @@ export const UnitManagePanel: React.FC = () => {
           ) : (
             /* 空选择状态 */
             <div className="flex flex-col items-center justify-center h-full text-slate-400">
-              <div className="p-4 rounded-full bg-slate-100 mb-4">
+              <div className="p-4 rounded-full whitespace-nowrap bg-slate-100 mb-4">
                 <Building2 className="w-10 h-10 text-slate-300" />
               </div>
               <p className="text-sm text-slate-500 font-medium">请从左侧选择一个单位</p>

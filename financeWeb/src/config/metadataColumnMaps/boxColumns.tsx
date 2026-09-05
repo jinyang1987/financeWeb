@@ -38,7 +38,7 @@ const StatusBadge: React.FC<{ status: BoxStatus }> = ({ status }) => (
 export const BOX_COLUMN_MAP: Record<string, ColumnDef> = {
   B1: {
     metaId: 'B1', label: '盒号', width: '160px', align: 'left', sortable: true,
-    accessor: (b) => <span className="font-mono font-bold text-slate-800 text-xs tracking-tight">{b.boxNo}</span>,
+    accessor: (b) => <span className="font-mono font-bold text-slate-800 text-sm tracking-tight">{b.boxNo}</span>,
   },
   B2: {
     metaId: 'B2', label: '盒名称', width: '220px', align: 'left',
@@ -46,7 +46,7 @@ export const BOX_COLUMN_MAP: Record<string, ColumnDef> = {
   },
   B3: {
     metaId: 'B3', label: '类别代码', width: '90px', align: 'center',
-    accessor: (b) => <span className="font-mono text-xs text-slate-600">{b.archiveTypeCode}</span>,
+    accessor: (b) => <span className="font-mono text-sm text-slate-600">{b.archiveTypeCode}</span>,
   },
   B4: {
     metaId: 'B4', label: '会计年度', width: '90px', align: 'center', sortable: true,
@@ -54,7 +54,7 @@ export const BOX_COLUMN_MAP: Record<string, ColumnDef> = {
   },
   B5: {
     metaId: 'B5', label: '保管期限', width: '90px', align: 'center', sortable: true,
-    accessor: (b) => <span className="text-slate-600 text-xs">{b.retention || '—'}</span>,
+    accessor: (b) => <span className="text-slate-600 text-sm">{b.retention || '—'}</span>,
   },
   B6: {
     metaId: 'B6', label: '盒状态', width: '90px', align: 'center', sortable: true,
@@ -63,12 +63,12 @@ export const BOX_COLUMN_MAP: Record<string, ColumnDef> = {
   B7: {
     metaId: 'B7', label: '密级', width: '80px', align: 'center',
     accessor: (b) => b.securityLevel
-      ? <span className="text-xs text-amber-700 font-medium">{b.securityLevel}</span>
-      : <span className="text-slate-300 text-xs">普通</span>,
+      ? <span className="text-sm text-amber-700 font-medium">{b.securityLevel}</span>
+      : <span className="text-slate-300 text-sm">普通</span>,
   },
   B8: {
     metaId: 'B8', label: '存放位置', width: '140px', align: 'left',
-    accessor: (b) => <span className="text-xs text-slate-600">{b.location || '—'}</span>,
+    accessor: (b) => <span className="text-sm text-slate-600">{b.location || '—'}</span>,
   },
   B9: {
     metaId: 'B9', label: '盒内卷数', width: '80px', align: 'right', sortable: true,
@@ -76,17 +76,17 @@ export const BOX_COLUMN_MAP: Record<string, ColumnDef> = {
   },
   B10: {
     metaId: 'B10', label: '盒内件数', width: '80px', align: 'right',
-    accessor: (b) => <span className="font-mono text-xs text-slate-500">{b.totalItems ?? '—'}</span>,
+    accessor: (b) => <span className="font-mono text-sm text-slate-500">{b.totalItems ?? '—'}</span>,
   },
   B11: {
     metaId: 'B11', label: '卷号起止', width: '180px', align: 'left',
     accessor: (b) => b.volumeCodeRange
-      ? <span className="font-mono text-xs text-slate-500">{b.volumeCodeRange}</span>
-      : <span className="text-slate-300 text-xs">—</span>,
+      ? <span className="font-mono text-sm text-slate-500">{b.volumeCodeRange}</span>
+      : <span className="text-slate-300 text-sm">—</span>,
   },
   B12: {
     metaId: 'B12', label: '备注', width: '160px', align: 'left',
-    accessor: (b) => <span className="text-xs text-slate-500">{b.remarks || '—'}</span>,
+    accessor: (b) => <span className="text-sm text-slate-500">{b.remarks || '—'}</span>,
   },
 };
 

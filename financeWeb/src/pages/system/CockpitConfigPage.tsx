@@ -118,7 +118,7 @@ const CockpitConfigPage: React.FC = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className={`text-sm font-semibold ${m.enabled ? 'text-slate-800' : 'text-slate-400'}`}>{m.title}</span>
-                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${DOMAIN_COLORS[m.domain]}`}>{m.domain}统计</span>
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap font-medium ${DOMAIN_COLORS[m.domain]}`}>{m.domain}统计</span>
                   </div>
                   <p className="text-xs text-slate-400 mt-0.5 truncate">{m.description}</p>
                 </div>

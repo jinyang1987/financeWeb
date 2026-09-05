@@ -94,7 +94,7 @@ const ParamCard: React.FC<{ field: ParamField }> = ({ field }) => {
           <div className="flex items-center gap-2 mb-1">
             <Settings className="w-3.5 h-3.5 text-sky-500" />
             <span className="text-sm font-bold text-slate-700">{field.name}</span>
-            <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{field.effect}</span>
+            <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full whitespace-nowrap">{field.effect}</span>
           </div>
           <p className="text-xs text-slate-500 leading-relaxed">{field.description}</p>
         </div>
@@ -158,7 +158,7 @@ const SectionCard: React.FC<{ title: string; icon: React.ReactNode; badge?: stri
     <div className="flex items-center gap-2.5 px-5 py-4 border-b border-slate-100">
       {icon}
       <span className="text-sm font-bold text-slate-800">{title}</span>
-      {badge && <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{badge}</span>}
+      {badge && <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full whitespace-nowrap">{badge}</span>}
     </div>
     <div className="px-5 py-4">{children}</div>
   </div>
@@ -208,7 +208,7 @@ const CodeConfigTab: React.FC = () => {
                     {sec.label}
                   </span>
                   {sec.badge && (
-                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium shrink-0 ${sec.badgeCls || 'bg-slate-100 text-slate-500'}`}>
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap font-medium shrink-0 ${sec.badgeCls || 'bg-slate-100 text-slate-500'}`}>
                       {sec.badge}
                     </span>
                   )}
@@ -319,7 +319,7 @@ const AssignTimingSection: React.FC<{ assignCodeTiming: ArchiveCodeConfig['assig
                 确认组卷时自动按照档号规则生成案卷号。适用于需要标准化档号管理的档案类别。
                 生成的档号格式遵循 DA/T 13-2022 标准，包含全宗号、门类代码、年度、保管期限等段。
               </div>
-              <div className="text-xs text-sky-600 bg-sky-50 px-2 py-0.5 rounded-full inline-block mt-2">
+              <div className="text-xs text-sky-600 bg-sky-50 px-2 py-0.5 rounded-full whitespace-nowrap inline-block mt-2">
                 默认推荐
               </div>
             </div>
@@ -344,7 +344,7 @@ const AssignTimingSection: React.FC<{ assignCodeTiming: ArchiveCodeConfig['assig
                 组卷确认时不分配系统档号。会计档案使用自身的凭证号体系（如"记-001"），
                 无需额外编写系统档号。确认后案卷将标记为"已确认"状态，可直接移交。
               </div>
-              <div className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full inline-block mt-2">
+              <div className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full whitespace-nowrap inline-block mt-2">
                 适用于记账凭证类档案
               </div>
             </div>

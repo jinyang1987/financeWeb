@@ -108,7 +108,7 @@ const PortalGeneralSearch: React.FC<PortalGeneralSearchProps> = ({ onOpenDetail 
             <SlidersHorizontal className="w-3.5 h-3.5" />
             高级筛选
             {activeFilterCount > 0 && (
-              <span className="bg-sky-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">{activeFilterCount}</span>
+              <span className="bg-sky-600 text-white text-xs rounded-full whitespace-nowrap w-4 h-4 flex items-center justify-center">{activeFilterCount}</span>
             )}
           </button>
           <span className="text-sm text-slate-400 shrink-0">共 {totalItems} 条</span>

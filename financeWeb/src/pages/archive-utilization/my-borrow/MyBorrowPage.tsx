@@ -90,7 +90,7 @@ const MyBorrowPage: React.FC = () => {
               <Icon className="w-4 h-4" />
               {label}
               {badge !== undefined && (
-                <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${activeTab === key ? 'bg-sky-600 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                <span className={`text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap font-bold ${activeTab === key ? 'bg-sky-600 text-white' : 'bg-slate-200 text-slate-600'}`}>
                   {badge}
                 </span>
               )}

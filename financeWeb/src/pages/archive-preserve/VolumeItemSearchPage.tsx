@@ -361,9 +361,9 @@ const VolumeItemSearchPage: React.FC = () => {
                     { field: '摘要', value: record.remarks || '—' },
                   ].map((row) => (
                     <tr key={row.field} className="border-b border-slate-100 divide-x divide-slate-100">
-                      <td className="px-3 py-2 text-xs text-slate-600 font-medium">{row.field}</td>
-                      <td className="px-3 py-2 text-xs text-slate-400">待逐字段 OCR 抽取</td>
-                      <td className="px-3 py-2 text-xs text-slate-700">{row.value}</td>
+                      <td className="px-3 py-2 text-sm text-slate-600 font-medium">{row.field}</td>
+                      <td className="px-3 py-2 text-sm text-slate-400">待逐字段 OCR 抽取</td>
+                      <td className="px-3 py-2 text-sm text-slate-700">{row.value}</td>
                     </tr>
                   ))}
                 </tbody>

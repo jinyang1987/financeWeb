@@ -132,12 +132,12 @@ const MonitorTab: React.FC<{ batches: OpenPushBatch[]; loading: boolean; refresh
           <div className="text-xs text-slate-400 mb-1.5">四类批次分布（79号令第六条）</div>
           <div className="flex items-center gap-2 flex-wrap">
             {(['voucher', 'ledger', 'report', 'other'] as const).map((c) => (
-              <span key={c} className={`px-2 py-0.5 text-xs font-medium rounded-full border ${CATEGORY_BADGE[c]}`}>
+              <span key={c} className={`px-2 py-0.5 text-xs font-medium rounded-full whitespace-nowrap border ${CATEGORY_BADGE[c]}`}>
                 {CATEGORY_LABELS[c]} {stats.byCat[c] || 0}
               </span>
             ))}
             {(stats.byCat.mixed || 0) > 0 && (
-              <span className="px-2 py-0.5 text-xs rounded-full border bg-slate-50 text-slate-500 border-slate-200">
+              <span className="px-2 py-0.5 text-xs rounded-full whitespace-nowrap border bg-slate-50 text-slate-500 border-slate-200">
                 混合 {stats.byCat.mixed}
               </span>
             )}
@@ -197,7 +197,7 @@ const MonitorTab: React.FC<{ batches: OpenPushBatch[]; loading: boolean; refresh
                     </td>
                     <td className="px-4 py-3 text-center font-mono text-sm text-slate-600 whitespace-nowrap">{b.period || '—'}</td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`px-2 py-0.5 text-xs font-medium rounded-full border ${CATEGORY_BADGE[b.category || ''] || 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+                      <span className={`px-2 py-0.5 text-xs font-medium rounded-full whitespace-nowrap border ${CATEGORY_BADGE[b.category || ''] || 'bg-slate-50 text-slate-500 border-slate-200'}`}>
                         {catLabel(b.category)}
                       </span>
                     </td>
@@ -205,7 +205,7 @@ const MonitorTab: React.FC<{ batches: OpenPushBatch[]; loading: boolean; refresh
                       {b.destination ? (DESTINATION_LABELS[b.destination as PushDestination] || b.destination) : '—'}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${st.cls}`}>{st.label}</span>
+                      <span className={`px-2 py-0.5 text-xs font-medium rounded-full whitespace-nowrap ${st.cls}`}>{st.label}</span>
                     </td>
                     <td className="px-4 py-3 text-right font-mono text-sm">
                       <span className="text-slate-600">{b.total_count}</span>
@@ -264,7 +264,7 @@ const MonitorTab: React.FC<{ batches: OpenPushBatch[]; loading: boolean; refresh
                                   {detail.items.map((it: OpenPushItem) => (
                                     <tr key={it.id} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
                                       <td className="px-4 py-3">
-                                        <span className={`px-1.5 py-0.5 text-xs rounded-full border ${CATEGORY_BADGE[it.category || ''] || 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+                                        <span className={`px-1.5 py-0.5 text-xs rounded-full whitespace-nowrap border ${CATEGORY_BADGE[it.category || ''] || 'bg-slate-50 text-slate-500 border-slate-200'}`}>
                                           {catLabel(it.category) || it.archive_type}
                                         </span>
                                       </td>
@@ -447,7 +447,7 @@ const StandardTab: React.FC = () => (
           <BookOpenText className="w-4 h-4 text-sky-600" />
           开放接口清单（推送方调用）
         </h3>
-        <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">已上线</span>
+        <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full whitespace-nowrap">已上线</span>
       </div>
       <div className="overflow-x-auto">
       <table className="w-full text-sm min-w-[760px]">
@@ -534,7 +534,7 @@ const StandardTab: React.FC = () => (
         <div className="p-4 space-y-3">
           {CONTRACT_TYPES.map((t) => (
             <div key={t.category}>
-              <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full border mb-1.5 ${t.cls}`}>
+              <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full whitespace-nowrap border mb-1.5 ${t.cls}`}>
                 {t.category}
               </span>
               <table className="w-full text-xs">

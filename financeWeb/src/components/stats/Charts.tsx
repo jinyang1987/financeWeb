@@ -44,8 +44,8 @@ export const Donut: React.FC<{
   }).join(', ');
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
-      <div className="absolute inset-0 rounded-full" style={{ background: `conic-gradient(${gradient})` }} />
-      <div className="absolute rounded-full bg-white flex flex-col items-center justify-center shadow-inner" style={{ inset: size * 0.24 }}>
+      <div className="absolute inset-0 rounded-full whitespace-nowrap" style={{ background: `conic-gradient(${gradient})` }} />
+      <div className="absolute rounded-full whitespace-nowrap bg-white flex flex-col items-center justify-center shadow-inner" style={{ inset: size * 0.24 }}>
         {centerValue && <span className="text-xl font-bold font-mono text-slate-800">{centerValue}</span>}
         {centerLabel && <span className="text-xs text-slate-400 mt-0.5">{centerLabel}</span>}
       </div>
@@ -59,8 +59,8 @@ export const BarRow: React.FC<{ label: string; value: number; max: number; color
       <span className="text-slate-600 truncate">{label}</span>
       <span className="font-mono text-slate-700 font-medium shrink-0 ml-2">{value.toLocaleString()}{suffix}</span>
     </div>
-    <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.max((value / Math.max(1, max)) * 100, value > 0 ? 3 : 0)}%`, background: color }} />
+    <div className="h-2.5 bg-slate-100 rounded-full whitespace-nowrap overflow-hidden">
+      <div className="h-full rounded-full whitespace-nowrap transition-all duration-700" style={{ width: `${Math.max((value / Math.max(1, max)) * 100, value > 0 ? 3 : 0)}%`, background: color }} />
     </div>
   </div>
 );

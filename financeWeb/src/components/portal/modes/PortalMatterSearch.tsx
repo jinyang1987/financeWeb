@@ -169,7 +169,7 @@ const PortalMatterSearch: React.FC<PortalMatterSearchProps> = ({ onOpenDetail })
                           {doc.documentNo}
                         </td>
                         <td className="px-4 py-3">
-                          <span className="text-xs px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 whitespace-nowrap">
+                          <span className="text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap bg-slate-100 text-slate-500 whitespace-nowrap">
                             {doc.docTypeName}
                           </span>
                         </td>

@@ -455,7 +455,7 @@ const MetadataSection: React.FC<SectionProps> = ({ title, description, icon, met
                     <td className="px-4 py-3 font-mono text-sm text-slate-600">{item.englishName}</td>
                     <td className="px-4 py-3.5 text-sm text-slate-600 leading-relaxed">{item.definition}</td>
                     <td className="px-4 py-3">
-                      <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-bold ${
+                      <span className={`inline-block rounded-full whitespace-nowrap px-2 py-0.5 text-xs font-bold ${
                         item.mandatory === '必选' ? 'bg-red-50 text-red-600 border border-red-200' :
                         item.mandatory === '条件可选' ? 'bg-amber-50 text-amber-600 border border-amber-200' :
                         'bg-slate-100 text-slate-500 border border-slate-200'
@@ -473,7 +473,7 @@ const MetadataSection: React.FC<SectionProps> = ({ title, description, icon, met
                       <td className="px-4 py-3 font-mono text-sm text-slate-400">{sub.englishName}</td>
                       <td className="px-4 py-3.5 text-sm text-slate-500 leading-relaxed">{sub.definition}</td>
                       <td className="px-4 py-3">
-                        <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-bold ${
+                        <span className={`inline-block rounded-full whitespace-nowrap px-2 py-0.5 text-xs font-bold ${
                           sub.mandatory === '必选' ? 'bg-red-50 text-red-600 border border-red-200' :
                           'bg-slate-100 text-slate-500 border border-slate-200'
                         }`}>{sub.mandatory}</span>
@@ -588,7 +588,7 @@ const MetadataConfigTab: React.FC = () => {
       }`}
     >
       <span className={`flex-1 text-xs font-medium truncate ${active ? 'text-sky-700' : 'text-slate-600'}`}>{label}</span>
-      <span className={`text-xs shrink-0 px-1.5 py-0.5 rounded-full ${
+      <span className={`text-xs shrink-0 px-1.5 py-0.5 rounded-full whitespace-nowrap ${
         tone === 'box' ? 'bg-teal-50 text-teal-600' : tone === 'volume' ? 'bg-amber-50 text-amber-600' : tone === 'item' ? 'bg-sky-50 text-sky-600' : 'bg-slate-100 text-slate-500'
       }`}>
         {total} 项{mandatory > 0 ? ` · 必选 ${mandatory}` : ''}
@@ -777,13 +777,13 @@ const MetadataConfigTab: React.FC = () => {
                     <div className="text-xs text-slate-500 bg-slate-50 rounded-lg p-3 leading-relaxed">
                       <p className="font-bold text-slate-600 mb-1">实体类型分布：</p>
                       <div className="flex flex-wrap gap-2">
-                        <span className="inline-block px-2 py-0.5 bg-sky-50 text-sky-700 border border-sky-200 rounded-full">件级文件实体 {stats.fileEntityCount} 项</span>
-                        <span className="inline-block px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full">件级机构人员实体 {stats.agentEntityCount} 项</span>
-                        <span className="inline-block px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-full">件级业务实体 {stats.businessEntityCount} 项</span>
-                        <span className="inline-block px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-full">件级实体关系 {stats.relationCount} 项</span>
-                        <span className="inline-block px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-300 rounded-full font-bold">卷级元数据 {stats.volumeEntityCount} 项</span>
-                        <span className="inline-block px-2 py-0.5 bg-orange-50 text-orange-700 border border-orange-300 rounded-full font-bold">卷件关联 {stats.volumeAssociationCount} 项</span>
-                        <span className="inline-block px-2 py-0.5 bg-teal-50 text-teal-700 border border-teal-300 rounded-full font-bold">盒级元数据 {stats.boxTotalCount} 项</span>
+                        <span className="inline-block px-2 py-0.5 bg-sky-50 text-sky-700 border border-sky-200 rounded-full whitespace-nowrap">件级文件实体 {stats.fileEntityCount} 项</span>
+                        <span className="inline-block px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full whitespace-nowrap">件级机构人员实体 {stats.agentEntityCount} 项</span>
+                        <span className="inline-block px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-full whitespace-nowrap">件级业务实体 {stats.businessEntityCount} 项</span>
+                        <span className="inline-block px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-full whitespace-nowrap">件级实体关系 {stats.relationCount} 项</span>
+                        <span className="inline-block px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-300 rounded-full whitespace-nowrap font-bold">卷级元数据 {stats.volumeEntityCount} 项</span>
+                        <span className="inline-block px-2 py-0.5 bg-orange-50 text-orange-700 border border-orange-300 rounded-full whitespace-nowrap font-bold">卷件关联 {stats.volumeAssociationCount} 项</span>
+                        <span className="inline-block px-2 py-0.5 bg-teal-50 text-teal-700 border border-teal-300 rounded-full whitespace-nowrap font-bold">盒级元数据 {stats.boxTotalCount} 项</span>
                       </div>
                     </div>
                   </div>

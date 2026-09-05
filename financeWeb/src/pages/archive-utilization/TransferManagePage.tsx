@@ -40,7 +40,7 @@ const STATUS_META: Record<string, { label: string; bg: string; color: string }> 
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   const c = STATUS_META[status] || STATUS_META.pending;
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full ${c.bg} ${c.color}`}>
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full whitespace-nowrap ${c.bg} ${c.color}`}>
       {status === 'received' ? <CheckCircle2 className="w-3 h-3" /> : status === 'prepared' ? <FileText className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
       {c.label}
     </span>

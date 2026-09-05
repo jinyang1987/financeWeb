@@ -207,7 +207,7 @@ const PortalAttachmentSearch: React.FC<PortalAttachmentSearchProps> = ({ onOpenD
               showFilters ? 'bg-sky-50 text-sky-600 border-sky-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
             }`}
           >
-            筛选{activeFilterCount > 0 && <span className="bg-sky-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">{activeFilterCount}</span>}
+            筛选{activeFilterCount > 0 && <span className="bg-sky-600 text-white text-xs rounded-full whitespace-nowrap w-4 h-4 flex items-center justify-center">{activeFilterCount}</span>}
           </button>
           {activeFilterCount > 0 && (
             <button type="button" onClick={clearAll}
@@ -312,17 +312,17 @@ const PortalAttachmentSearch: React.FC<PortalAttachmentSearchProps> = ({ onOpenD
                             {doc.documentNo}
                           </td>
                           <td className="px-4 py-3">
-                            <span className="text-xs px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 whitespace-nowrap">
+                            <span className="text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap bg-slate-100 text-slate-500 whitespace-nowrap">
                               {doc.docTypeName}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-center">
                             {doc.carrierType === 'electronic' ? (
-                              <span className="inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-full bg-sky-50 text-sky-600 whitespace-nowrap">
+                              <span className="inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap bg-sky-50 text-sky-600 whitespace-nowrap">
                                 <Monitor className="w-2.5 h-2.5" />电子
                               </span>
                             ) : (
-                              <span className="text-xs px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 whitespace-nowrap">纸质</span>
+                              <span className="text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap bg-amber-50 text-amber-700 whitespace-nowrap">纸质</span>
                             )}
                           </td>
                           <td className="px-4 py-3 text-center">

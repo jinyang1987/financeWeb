@@ -177,11 +177,11 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpl
         {/* Steps */}
         <div className="grid grid-cols-2 bg-slate-50 border-b border-slate-100 p-3 shrink-0 text-xs">
           <div className={`flex items-center gap-2 justify-center py-1 border-r border-slate-200 ${activeStep === 0 ? 'text-sky-600 font-bold' : 'text-slate-400'}`}>
-            <span className="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center font-bold text-xs select-none">1</span>
+            <span className="w-5 h-5 rounded-full whitespace-nowrap bg-slate-200 flex items-center justify-center font-bold text-xs select-none">1</span>
             <span>选择文件与来源</span>
           </div>
           <div className={`flex items-center gap-2 justify-center py-1 ${activeStep === 1 ? 'text-sky-600 font-bold' : 'text-slate-400'}`}>
-            <span className="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center font-bold text-xs select-none">2</span>
+            <span className="w-5 h-5 rounded-full whitespace-nowrap bg-slate-200 flex items-center justify-center font-bold text-xs select-none">2</span>
             <span>填写元数据入库</span>
           </div>
         </div>

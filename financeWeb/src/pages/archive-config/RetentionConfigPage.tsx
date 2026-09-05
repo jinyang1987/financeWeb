@@ -292,8 +292,8 @@ const DetailRow: React.FC<{ detail: CategoryDetail; isLast: boolean; depth: numb
 
         {/* 保管期限 */}
         <div className="col-span-2 flex justify-center">
-          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${RETENTION_COLOR[detail.retention] || 'bg-slate-50 text-slate-500 border-slate-200'}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${RETENTION_DOT[detail.retention] || 'bg-slate-400'}`} />
+          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full whitespace-nowrap text-xs font-bold border ${RETENTION_COLOR[detail.retention] || 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+            <span className={`w-1.5 h-1.5 rounded-full whitespace-nowrap ${RETENTION_DOT[detail.retention] || 'bg-slate-400'}`} />
             {detail.retention}
           </span>
         </div>
@@ -355,9 +355,9 @@ const CategoryDetailTable: React.FC<{ category: ArchiveCategory }> = ({ category
           {Object.entries(retentionCounts).map(([ret, count]) => (
             <span
               key={ret}
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold border ${RETENTION_COLOR[ret] || 'bg-slate-50 text-slate-500 border-slate-200'}`}
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full whitespace-nowrap text-xs font-bold border ${RETENTION_COLOR[ret] || 'bg-slate-50 text-slate-500 border-slate-200'}`}
             >
-              <span className={`w-1.5 h-1.5 rounded-full ${RETENTION_DOT[ret] || 'bg-slate-400'}`} />
+              <span className={`w-1.5 h-1.5 rounded-full whitespace-nowrap ${RETENTION_DOT[ret] || 'bg-slate-400'}`} />
               {ret} ×{count}
             </span>
           ))}
@@ -466,7 +466,7 @@ const RetentionConfigPage: React.FC<{ embedded?: boolean }> = ({ embedded = fals
                 onClick={() => { setActiveKey('overview'); setSearchQuery(''); }}
                 icon={<LayoutGrid className="w-3.5 h-3.5 text-slate-400" />}
                 label="概览"
-                badge={<span className="text-xs px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500">{totalDetailCount} 项</span>}
+                badge={<span className="text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap bg-slate-100 text-slate-500">{totalDetailCount} 项</span>}
               />
               <div className="px-2 pt-3 pb-1 text-xs font-bold text-slate-400 uppercase tracking-wider">归档范围 · 保管期限</div>
               {ARCHIVE_CATEGORIES.map((cat) => {
@@ -479,7 +479,7 @@ const RetentionConfigPage: React.FC<{ embedded?: boolean }> = ({ embedded = fals
                     active={!searchQuery.trim() && activeKey === cat.code}
                     onClick={() => { setActiveKey(cat.code); setSearchQuery(''); }}
                     label={cat.name}
-                    badge={<span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${codeCls}`}>{cat.code} · {cat.details.length} 项</span>}
+                    badge={<span className={`text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap font-medium ${codeCls}`}>{cat.code} · {cat.details.length} 项</span>}
                   />
                 );
               })}
@@ -489,14 +489,14 @@ const RetentionConfigPage: React.FC<{ embedded?: boolean }> = ({ embedded = fals
                 onClick={() => { setActiveKey('exclusion'); setSearchQuery(''); }}
                 icon={<Ban className="w-3.5 h-3.5 text-red-400" />}
                 label="排除范围（非会计档案）"
-                badge={<span className="text-xs px-1.5 py-0.5 rounded-full bg-red-50 text-red-500">{EXCLUSION_ITEMS.length} 类</span>}
+                badge={<span className="text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap bg-red-50 text-red-500">{EXCLUSION_ITEMS.length} 类</span>}
               />
               <NavItem
                 active={!searchQuery.trim() && activeKey === 'calc'}
                 onClick={() => { setActiveKey('calc'); setSearchQuery(''); }}
                 icon={<Clock className="w-3.5 h-3.5 text-amber-400" />}
                 label="保管期限计算规则"
-                badge={<span className="text-xs px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600">4 档</span>}
+                badge={<span className="text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap bg-amber-50 text-amber-600">4 档</span>}
               />
             </nav>
           </aside>
@@ -561,7 +561,7 @@ const RetentionConfigPage: React.FC<{ embedded?: boolean }> = ({ embedded = fals
                         <tr key={idx} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
                           <td className="px-4 py-3 text-sm text-slate-800">{item.name}</td>
                           <td className="px-4 py-3 text-center">
-                            <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-50 text-red-600 border border-red-200">
+                            <span className="inline-block px-2.5 py-0.5 rounded-full whitespace-nowrap text-xs font-bold bg-red-50 text-red-600 border border-red-200">
                               {item.attribution}
                             </span>
                           </td>
@@ -583,7 +583,7 @@ const RetentionConfigPage: React.FC<{ embedded?: boolean }> = ({ embedded = fals
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="bg-white/60 rounded-lg p-3">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="w-2 h-2 rounded-full bg-red-500" />
+                          <span className="w-2 h-2 rounded-full whitespace-nowrap bg-red-500" />
                           <span className="text-xs font-bold text-red-700">永久保管</span>
                         </div>
                         <p className="text-xs text-amber-800">
@@ -593,7 +593,7 @@ const RetentionConfigPage: React.FC<{ embedded?: boolean }> = ({ embedded = fals
 
                       <div className="bg-white/60 rounded-lg p-3">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="w-2 h-2 rounded-full bg-amber-500" />
+                          <span className="w-2 h-2 rounded-full whitespace-nowrap bg-amber-500" />
                           <span className="text-xs font-bold text-amber-700">定期 30 年</span>
                         </div>
                         <p className="text-xs text-amber-800">
@@ -603,7 +603,7 @@ const RetentionConfigPage: React.FC<{ embedded?: boolean }> = ({ embedded = fals
 
                       <div className="bg-white/60 rounded-lg p-3">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="w-2 h-2 rounded-full bg-sky-500" />
+                          <span className="w-2 h-2 rounded-full whitespace-nowrap bg-sky-500" />
                           <span className="text-xs font-bold text-sky-700">定期 10 年</span>
                         </div>
                         <p className="text-xs text-amber-800">
@@ -613,7 +613,7 @@ const RetentionConfigPage: React.FC<{ embedded?: boolean }> = ({ embedded = fals
 
                       <div className="bg-white/60 rounded-lg p-3">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                          <span className="w-2 h-2 rounded-full whitespace-nowrap bg-emerald-500" />
                           <span className="text-xs font-bold text-emerald-700">定期 5 年</span>
                         </div>
                         <p className="text-xs text-amber-800">

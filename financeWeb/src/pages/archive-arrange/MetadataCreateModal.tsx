@@ -118,7 +118,7 @@ const MetadataCreateModal: React.FC<MetadataCreateModalProps> = ({ open, fondsCo
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-200 shrink-0">
-          <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-full whitespace-nowrap bg-emerald-100 flex items-center justify-center shrink-0">
             <FilePlus2 className="w-5 h-5 text-emerald-600" />
           </div>
           <div className="min-w-0 flex-1">

@@ -80,7 +80,7 @@ const ReportRow: React.FC<{
           <div className="font-medium truncate max-w-[260px] flex items-center gap-1.5" title={targetName}>
             {targetName}
             {isReviewRow && (
-              <span className="px-1.5 py-0.5 text-xs rounded-full bg-violet-50 text-violet-600 border border-violet-200 shrink-0">人工复检</span>
+              <span className="px-1.5 py-0.5 text-xs rounded-full whitespace-nowrap bg-violet-50 text-violet-600 border border-violet-200 shrink-0">人工复检</span>
             )}
           </div>
           <div className="text-xs text-slate-400 font-mono truncate max-w-[260px]">{report.target_node}</div>
@@ -99,8 +99,8 @@ const ReportRow: React.FC<{
         </td>
         <td className="px-4 py-3 text-center whitespace-nowrap">
           {allPass
-            ? <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700">通过</span>
-            : <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-600">未通过（{failed.length} 项）</span>}
+            ? <span className="px-2 py-0.5 text-xs font-medium rounded-full whitespace-nowrap bg-emerald-100 text-emerald-700">通过</span>
+            : <span className="px-2 py-0.5 text-xs font-medium rounded-full whitespace-nowrap bg-red-100 text-red-600">未通过（{failed.length} 项）</span>}
         </td>
         <td className="px-4 py-3.5 text-sm text-slate-500 whitespace-nowrap">{report.operator || '系统'}</td>
       </tr>
@@ -148,16 +148,16 @@ const ReportRow: React.FC<{
                     <tbody>
                       {items.map((it, i) => (
                         <tr key={i} className={`border-b border-slate-100 last:border-0 divide-x divide-slate-100 ${it.pass ? '' : 'bg-red-50/40'}`}>
-                          <td className="px-4 py-2 text-xs text-slate-600 whitespace-nowrap">
+                          <td className="px-4 py-2 text-sm text-slate-600 whitespace-nowrap">
                             {DIMENSION_LABELS[it.dimension] || it.dimension}
                           </td>
-                          <td className="px-4 py-2 text-xs text-slate-700">{it.name}<span className="text-slate-300 font-mono ml-1.5">{it.code}</span></td>
+                          <td className="px-4 py-2 text-sm text-slate-700">{it.name}<span className="text-slate-300 font-mono ml-1.5">{it.code}</span></td>
                           <td className="px-4 py-2 text-center">
                             {it.pass
                               ? <CheckCircle2 className="w-4 h-4 text-emerald-500 inline" />
                               : <XCircle className="w-4 h-4 text-red-500 inline" />}
                           </td>
-                          <td className="px-4 py-2 text-xs text-slate-500">{it.pass ? '—' : (it.note || '未通过')}</td>
+                          <td className="px-4 py-2 text-sm text-slate-500">{it.pass ? '—' : (it.note || '未通过')}</td>
                           <td className="px-4 py-2 text-right whitespace-nowrap">
                             {!it.pass && it.target === 'volume' && (
                               <button
@@ -569,7 +569,7 @@ const QuickCheckPage: React.FC = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-3 mb-3 shrink-0">
-              <div className="w-9 h-9 rounded-full bg-sky-100 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-full whitespace-nowrap bg-sky-100 flex items-center justify-center">
                 <Play className="w-4 h-4 text-sky-600" />
               </div>
               <div className="flex-1">
@@ -633,7 +633,7 @@ const QuickCheckPage: React.FC = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 rounded-full bg-violet-100 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-full whitespace-nowrap bg-violet-100 flex items-center justify-center">
                 <ClipboardCheck className="w-4 h-4 text-violet-600" />
               </div>
               <div className="flex-1">

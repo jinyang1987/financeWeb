@@ -274,7 +274,7 @@ const StorageConfigPage: React.FC<StorageConfigPageProps> = ({ triggerToast }) =
       <div className="flex items-center gap-3 px-6 py-3 bg-white border-b border-slate-200 shrink-0">
         <Warehouse className="w-5 h-5 text-sky-600" />
         <h1 className="text-base font-bold text-slate-800">库房配置</h1>
-        <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">
+        <span className="text-xs px-2 py-0.5 rounded-full whitespace-nowrap bg-slate-100 text-slate-500 border border-slate-200">
           库房号/架号创建后不可改（被架位引用）
         </span>
         <div className="flex-1" />
@@ -310,11 +310,11 @@ const StorageConfigPage: React.FC<StorageConfigPageProps> = ({ triggerToast }) =
                   <span className={`flex-1 text-xs font-medium truncate ${activeRoom === r.room ? 'text-sky-700' : 'text-slate-600'}`}>
                     {r.room_name}
                   </span>
-                  <span className="text-xs px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 shrink-0">
+                  <span className="text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap bg-slate-100 text-slate-500 shrink-0">
                     {r.rack_count} 架
                   </span>
                   {r.box_count > 0 && (
-                    <span className="text-xs px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 shrink-0">
+                    <span className="text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap bg-emerald-50 text-emerald-600 shrink-0">
                       {r.box_count} 盒
                     </span>
                   )}
@@ -471,8 +471,8 @@ const StorageConfigPage: React.FC<StorageConfigPageProps> = ({ triggerToast }) =
                         <div className="flex items-center gap-1.5 text-xs text-slate-500">
                           <Boxes className="w-3.5 h-3.5 text-emerald-500" />
                           在架 {occupied} 盒
-                          <span className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden inline-block align-middle">
-                            <span className="block h-full bg-emerald-400 rounded-full transition-all duration-500"
+                          <span className="w-16 h-1.5 bg-slate-100 rounded-full whitespace-nowrap overflow-hidden inline-block align-middle">
+                            <span className="block h-full bg-emerald-400 rounded-full whitespace-nowrap transition-all duration-500"
                               style={{ width: `${capacity > 0 ? Math.round((occupied / capacity) * 100) : 0}%` }} />
                           </span>
                         </div>

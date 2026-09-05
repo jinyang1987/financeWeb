@@ -96,20 +96,20 @@ const DirectoryTable: React.FC<DirectoryTableProps> = ({
                 const rec = recordMap.get(item.recordId);
                 return (
                   <tr key={item.id} className="border-b border-slate-200 hover:bg-slate-50">
-                    <td className="px-3 py-2 text-center text-slate-600 font-mono text-xs">{item.itemNo}</td>
-                    <td className="px-3 py-2 text-center font-mono text-xs text-sky-700">
+                    <td className="px-3 py-2 text-center text-slate-600 font-mono text-sm">{item.itemNo}</td>
+                    <td className="px-3 py-2 text-center font-mono text-sm text-sky-700">
                       {item.recordArchiveCode || rec?.voucherNo || '—'}
                     </td>
                     <td className="px-3 py-2 text-slate-700">
                       {item.title || `${rec?.voucherNo || ''} ${rec?.archiveType || ''}`.trim() || '—'}
                     </td>
-                    <td className="px-3 py-2 text-center text-slate-600 text-xs">
+                    <td className="px-3 py-2 text-center text-slate-600 text-sm">
                       {item.date || (rec ? `${rec.year}-${String(rec.month).padStart(2, '0')}` : '—')}
                     </td>
-                    <td className="px-3 py-2 text-center text-slate-600 font-mono text-xs">
+                    <td className="px-3 py-2 text-center text-slate-600 font-mono text-sm">
                       {item.pageStart > 0 ? `${item.pageStart}~${item.pageEnd}` : '—'}
                     </td>
-                    <td className="px-3 py-2 text-center text-slate-400 text-xs">—</td>
+                    <td className="px-3 py-2 text-center text-slate-400 text-sm">—</td>
                   </tr>
                 );
               })

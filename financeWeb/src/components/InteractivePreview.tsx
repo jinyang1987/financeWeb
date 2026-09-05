@@ -252,7 +252,7 @@ export const InteractivePreview: React.FC<InteractivePreviewProps> = ({
                     {/* Interactive OFD checker. If usable is false, we explain the missing font error and allow repairing it */}
                     {!record.checks.usable ? (
                       <div className="max-w-md text-center p-6 border border-rose-200 bg-rose-50/40 rounded-2xl space-y-4 shadow-sm" id="ofd-error-inspector">
-                        <div className="inline-flex p-3 bg-rose-100 text-rose-600 rounded-full">
+                        <div className="inline-flex p-3 bg-rose-100 text-rose-600 rounded-full whitespace-nowrap">
                           <ShieldAlert className="w-8 h-8" />
                         </div>
                         <div className="space-y-1.5">
@@ -311,14 +311,14 @@ export const InteractivePreview: React.FC<InteractivePreviewProps> = ({
                 {activeFile.contentType === 'png' && (
                   <div className="flex-1 flex flex-col justify-center items-center py-10" id="png-preview-stub">
                     <div className="border border-dashed border-slate-300 rounded-xl p-6 bg-slate-50 flex flex-col items-center gap-3">
-                      <div className="p-3 bg-sky-50 text-sky-500 rounded-full">
+                      <div className="p-3 bg-sky-50 text-sky-500 rounded-full whitespace-nowrap">
                         <FileText className="w-8 h-8" />
                       </div>
                       <div className="text-center">
                         <span className="text-xs font-bold text-slate-800 block">业务审批流程单明细截图</span>
                         <span className="text-xs text-slate-400 block mt-1">{activeFile.name} | 大小：{activeFile.size}</span>
                       </div>
-                      <span className="text-xs bg-slate-200 text-slate-600 font-bold px-2 py-0.5 rounded-full mt-2 select-none">
+                      <span className="text-xs bg-slate-200 text-slate-600 font-bold px-2 py-0.5 rounded-full whitespace-nowrap mt-2 select-none">
                         非电子发票、属于凭据型图片附件
                       </span>
                     </div>
@@ -328,7 +328,7 @@ export const InteractivePreview: React.FC<InteractivePreviewProps> = ({
                 {activeFile.contentType === 'unknown' && (
                   <div className="flex-1 flex flex-col justify-center items-center py-10" id="unknown-preview-stub">
                     <div className="border border-dashed border-slate-300 rounded-xl p-6 bg-slate-50 flex flex-col items-center gap-3">
-                      <div className="p-3 bg-slate-100 text-slate-500 rounded-full">
+                      <div className="p-3 bg-slate-100 text-slate-500 rounded-full whitespace-nowrap">
                         <FileText className="w-8 h-8" />
                       </div>
                       <div className="text-center">

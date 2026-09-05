@@ -305,22 +305,22 @@ const ArchivePackagePage: React.FC = () => {
 
                           {/* 校验状态 */}
                           {hasErrors ? (
-                            <span className="flex items-center gap-1 text-xs text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full shrink-0">
+                            <span className="flex items-center gap-1 text-xs text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0">
                               <AlertCircle className="w-3 h-3" />
                               {unit.preCheck.errors.length} 项不合规
                             </span>
                           ) : hasWarnings ? (
-                            <span className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full shrink-0">
+                            <span className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0">
                               <AlertTriangle className="w-3 h-3" />
                               {unit.preCheck.warnings.length} 项提醒
                             </span>
                           ) : checkOk ? (
-                            <span className="flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full shrink-0">
+                            <span className="flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0">
                               <CheckCircle2 className="w-3 h-3" />
                               合规
                             </span>
                           ) : (
-                            <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full shrink-0">
+                            <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0">
                               待校验
                             </span>
                           )}
@@ -385,7 +385,7 @@ const ArchivePackagePage: React.FC = () => {
                           {unit ? `${unit.archiveType} · ${unit.year}年` : ''} · {pkg.totalRecords} 条 · {pkg.totalSize}
                         </div>
                       </div>
-                      <span className="text-xs px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 font-medium shrink-0">
+                      <span className="text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap bg-emerald-50 text-emerald-600 font-medium shrink-0">
                         <CheckCircle2 className="w-3 h-3 inline mr-0.5" />
                         已生成
                       </span>

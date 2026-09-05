@@ -227,7 +227,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
                         ? <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                         : <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                     )}
-                    <span className={`w-2 h-2 rounded-full shrink-0 ${isYearActive ? 'bg-sky-500' : 'bg-slate-300'}`} />
+                    <span className={`w-2 h-2 rounded-full whitespace-nowrap shrink-0 ${isYearActive ? 'bg-sky-500' : 'bg-slate-300'}`} />
                     <span className="flex-1 min-w-0">{y.year}年</span>
                   </button>
 
@@ -247,7 +247,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
                                 : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
                             }`}
                           >
-                            <span className={`w-1 h-1 rounded-full shrink-0 ${isTypeActive ? 'bg-white' : 'bg-slate-300'}`} />
+                            <span className={`w-1 h-1 rounded-full whitespace-nowrap shrink-0 ${isTypeActive ? 'bg-white' : 'bg-slate-300'}`} />
                             <span className="truncate whitespace-nowrap">{sub.label}</span>
                           </button>
                         );
@@ -280,7 +280,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
                         : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
                     }`}
                   >
-                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isSubActive ? 'bg-white' : 'bg-slate-300'}`} />
+                    <span className={`w-1.5 h-1.5 rounded-full whitespace-nowrap shrink-0 ${isSubActive ? 'bg-white' : 'bg-slate-300'}`} />
                     <span className="flex-1 min-w-0 truncate whitespace-nowrap">{sub.label}</span>
                   </button>
                 </div>

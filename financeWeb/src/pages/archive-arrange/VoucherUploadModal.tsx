@@ -84,7 +84,7 @@ const StepIndicator: React.FC<{ current: number }> = ({ current }) => {
         return (
           <React.Fragment key={s.num}>
             <div className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
+              <div className={`w-8 h-8 rounded-full whitespace-nowrap flex items-center justify-center text-sm font-bold transition-colors ${
                 isDone ? 'bg-green-500 text-white' :
                 isActive ? 'bg-sky-600 text-white' :
                 'bg-slate-200 text-slate-400'
@@ -206,7 +206,7 @@ const FileRow: React.FC<FileRowProps> = ({ item, onEdit, onRemove }) => {
       )}
 
       <span
-        className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full ${sc.color}`}
+        className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full whitespace-nowrap ${sc.color}`}
         title={item.errorMsg || undefined}
       >
         {sc.icon}{sc.label}

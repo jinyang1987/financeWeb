@@ -38,7 +38,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
       return (
         <div className="flex items-center justify-center min-h-[240px] p-8">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-lg p-8 max-w-md w-full text-center space-y-5">
-            <div className="mx-auto w-14 h-14 rounded-full bg-red-50 flex items-center justify-center">
+            <div className="mx-auto w-14 h-14 rounded-full whitespace-nowrap bg-red-50 flex items-center justify-center">
               <AlertTriangle className="w-7 h-7 text-red-500" />
             </div>
 

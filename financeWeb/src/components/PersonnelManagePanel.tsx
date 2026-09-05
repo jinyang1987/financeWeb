@@ -599,7 +599,7 @@ export const PersonnelManagePanel: React.FC = () => {
                   >
                     <td className="px-4 py-3 text-sm font-medium text-slate-800">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 text-xs font-bold shrink-0">
+                        <div className="w-7 h-7 rounded-full whitespace-nowrap bg-sky-100 flex items-center justify-center text-sky-700 text-xs font-bold shrink-0">
                           {p.name.charAt(0)}
                         </div>
                         <span>{p.account}</span>
@@ -959,7 +959,7 @@ export const PersonnelManagePanel: React.FC = () => {
 
           {deleteConfirm.person && (
             <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
-              <div className="w-9 h-9 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 text-sm font-bold shrink-0">
+              <div className="w-9 h-9 rounded-full whitespace-nowrap bg-sky-100 flex items-center justify-center text-sky-700 text-sm font-bold shrink-0">
                 {deleteConfirm.person.name.charAt(0)}
               </div>
               <div>

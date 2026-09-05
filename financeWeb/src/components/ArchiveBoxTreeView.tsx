@@ -102,32 +102,32 @@ export const ArchiveBoxTreeView: React.FC<ArchiveBoxTreeViewProps> = ({
   const boxColumns = useMemo((): DataTableColumn<BoxViewEntry>[] => [
     {
       id: 'boxNo', header: '盒号',
-      cell: (e) => <span className="font-mono font-semibold text-slate-800 text-xs">{e.box.boxNo}</span>,
+      cell: (e) => <span className="font-mono font-semibold text-slate-800 text-sm">{e.box.boxNo}</span>,
       sortValue: (e) => e.box.boxNo, sortable: true, size: 150,
     },
     {
       id: 'boxName', header: '盒名称',
-      cell: (e) => <span className="text-xs text-slate-600 truncate block max-w-[220px]">{e.box.boxName}</span>,
+      cell: (e) => <span className="text-sm text-slate-600 truncate block max-w-[220px]">{e.box.boxName}</span>,
       sortValue: (e) => e.box.boxName, sortable: true, size: 220,
     },
     {
       id: 'year', header: '年度',
-      cell: (e) => <span className="text-xs text-slate-500">{e.box.year}年</span>,
+      cell: (e) => <span className="text-sm text-slate-500">{e.box.year}年</span>,
       sortValue: (e) => e.box.year, sortable: true, size: 70,
     },
     {
       id: 'retention', header: '保管期限',
-      cell: (e) => <span className="text-xs text-slate-600">{e.box.retention}</span>,
+      cell: (e) => <span className="text-sm text-slate-600">{e.box.retention}</span>,
       size: 96,
     },
     {
       id: 'volumeCount', header: '卷数',
-      cell: (e) => <span className="text-xs font-mono text-slate-700">{e.volumes.length}</span>,
+      cell: (e) => <span className="text-sm font-mono text-slate-700">{e.volumes.length}</span>,
       sortValue: (e) => e.volumes.length, sortable: true, size: 60, align: 'right',
     },
     {
       id: 'itemCount', header: '件数',
-      cell: (e) => <span className="text-xs font-mono font-semibold text-sky-700">{e.matchedItems.length}</span>,
+      cell: (e) => <span className="text-sm font-mono font-semibold text-sky-700">{e.matchedItems.length}</span>,
       sortValue: (e) => e.matchedItems.length, sortable: true, size: 60, align: 'right',
     },
     {
@@ -145,7 +145,7 @@ export const ArchiveBoxTreeView: React.FC<ArchiveBoxTreeViewProps> = ({
       cell: (e) => {
         const level = e.box.securityLevel || '普通';
         return (
-          <span className={`text-xs px-1.5 py-0.5 rounded-full border font-medium ${SECURITY_COLORS[level] || SECURITY_COLORS['普通']}`}>
+          <span className={`text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap border font-medium ${SECURITY_COLORS[level] || SECURITY_COLORS['普通']}`}>
             {level}
           </span>
         );
@@ -155,7 +155,7 @@ export const ArchiveBoxTreeView: React.FC<ArchiveBoxTreeViewProps> = ({
     {
       id: 'status', header: '状态',
       cell: (e) => (
-        <span className={`text-xs px-1.5 py-0.5 rounded-full border font-medium ${STATUS_COLORS[e.box.status]}`}>
+        <span className={`text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap border font-medium ${STATUS_COLORS[e.box.status]}`}>
           {BOX_STATUS_LABELS[e.box.status]}
         </span>
       ),
@@ -163,7 +163,7 @@ export const ArchiveBoxTreeView: React.FC<ArchiveBoxTreeViewProps> = ({
     },
     {
       id: 'createdDate', header: '创建日期',
-      cell: (e) => <span className="text-xs text-slate-500">{e.box.createdDate}</span>,
+      cell: (e) => <span className="text-sm text-slate-500">{e.box.createdDate}</span>,
       sortValue: (e) => e.box.createdDate, sortable: true, size: 100,
     },
   ], []);
@@ -346,7 +346,7 @@ export const ArchiveBoxTreeView: React.FC<ArchiveBoxTreeViewProps> = ({
                 ({focusedEntry?.volumes.length || 0} 卷 · {focusedEntry?.matchedItems.length || 0} 件 · {formatAmount(focusedTotalAmount)})
               </span>
               {selectedItemIds.size > 0 && (
-                <span className="text-xs font-medium text-sky-600 bg-sky-50 border border-sky-200 rounded-full px-2 py-0.5 shrink-0">
+                <span className="text-xs font-medium text-sky-600 bg-sky-50 border border-sky-200 rounded-full whitespace-nowrap px-2 py-0.5 shrink-0">
                   已选 {selectedItemIds.size} 件
                 </span>
               )}
@@ -362,11 +362,11 @@ export const ArchiveBoxTreeView: React.FC<ArchiveBoxTreeViewProps> = ({
                   <Shield className="w-3 h-3" />{focusedBox.retention}
                 </span>
                 {focusedBox.securityLevel && focusedBox.securityLevel !== '普通' && (
-                  <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full border font-medium ${SECURITY_COLORS[focusedBox.securityLevel] || ''}`}>
+                  <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full whitespace-nowrap border font-medium ${SECURITY_COLORS[focusedBox.securityLevel] || ''}`}>
                     <Lock className="w-3 h-3" />{focusedBox.securityLevel}
                   </span>
                 )}
-                <span className={`px-1.5 py-0.5 rounded-full border font-medium ${STATUS_COLORS[focusedBox.status]}`}>
+                <span className={`px-1.5 py-0.5 rounded-full whitespace-nowrap border font-medium ${STATUS_COLORS[focusedBox.status]}`}>
                   {BOX_STATUS_LABELS[focusedBox.status]}
                 </span>
               </div>
@@ -431,7 +431,7 @@ export const ArchiveBoxTreeView: React.FC<ArchiveBoxTreeViewProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-full whitespace-nowrap bg-amber-100 flex items-center justify-center shrink-0">
                 <AlertTriangle className="w-5 h-5 text-amber-600" />
               </div>
               <div>
@@ -474,7 +474,7 @@ export const ArchiveBoxTreeView: React.FC<ArchiveBoxTreeViewProps> = ({
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-full whitespace-nowrap bg-amber-100 flex items-center justify-center shrink-0">
                   <Undo2 className="w-5 h-5 text-amber-600" />
                 </div>
                 <div>

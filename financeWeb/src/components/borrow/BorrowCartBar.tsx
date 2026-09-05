@@ -56,7 +56,7 @@ export const BorrowCartBar: React.FC = () => {
       >
         <span className="relative">
           <ShoppingCart className="w-5 h-5" />
-          <span className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-amber-400 text-slate-900 text-xs font-bold flex items-center justify-center">
+          <span className="absolute -top-2 -right-2 w-5 h-5 rounded-full whitespace-nowrap bg-amber-400 text-slate-900 text-xs font-bold flex items-center justify-center">
             {cart.length}
           </span>
         </span>

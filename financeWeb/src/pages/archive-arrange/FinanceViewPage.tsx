@@ -344,7 +344,7 @@ const FinanceViewPage: React.FC<FinanceViewPageProps> = ({
                   key={cat}
                   type="button"
                   onClick={() => toggleSetFilter(setActiveVoucherCategories, cat)}
-                  className={`px-3 py-1 text-xs rounded-full transition-all cursor-pointer border ${activeVoucherCategories.has(cat) ? 'bg-sky-100 text-sky-700 border-sky-300 font-medium' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
+                  className={`px-3 py-1 text-xs rounded-full whitespace-nowrap transition-all cursor-pointer border ${activeVoucherCategories.has(cat) ? 'bg-sky-100 text-sky-700 border-sky-300 font-medium' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
                 >{cat}</button>
               ))}
             </div>
@@ -357,7 +357,7 @@ const FinanceViewPage: React.FC<FinanceViewPageProps> = ({
                   key={opt.key}
                   type="button"
                   onClick={() => toggleSetFilter(setActiveOriginalCategories, opt.key)}
-                  className={`px-3 py-1 text-xs rounded-full transition-all cursor-pointer border ${activeOriginalCategories.has(opt.key) ? 'bg-emerald-100 text-emerald-700 border-emerald-300 font-medium' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
+                  className={`px-3 py-1 text-xs rounded-full whitespace-nowrap transition-all cursor-pointer border ${activeOriginalCategories.has(opt.key) ? 'bg-emerald-100 text-emerald-700 border-emerald-300 font-medium' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
                 >{opt.label}</button>
               ))}
             </div>
@@ -462,7 +462,7 @@ const FinanceViewPage: React.FC<FinanceViewPageProps> = ({
           {hasActiveFilters && (
             <button
               onClick={clearAllFilters}
-              className="px-2 py-0.5 text-xs bg-amber-100 text-amber-700 rounded-full hover:bg-amber-200 transition-colors cursor-pointer"
+              className="px-2 py-0.5 text-xs bg-amber-100 text-amber-700 rounded-full whitespace-nowrap hover:bg-amber-200 transition-colors cursor-pointer"
               title="点击清除全部筛选"
             >已筛选 <X className="w-3 h-3 inline ml-0.5" /></button>
           )}

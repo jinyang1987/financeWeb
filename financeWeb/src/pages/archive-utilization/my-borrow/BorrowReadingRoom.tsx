@@ -139,7 +139,7 @@ const ReadingModal: React.FC<ReadingModalProps> = ({ order, fulfillment, record,
                 <span>附件 {(record.sourceDocumentIds?.length || 0)} 张</span>
               </div>
             </div>
-            <div className="mt-8 w-24 h-24 border-2 border-red-300 rounded-full flex items-center justify-center text-red-400 text-xs font-bold rotate-[-15deg] opacity-60">
+            <div className="mt-8 w-24 h-24 border-2 border-red-300 rounded-full whitespace-nowrap flex items-center justify-center text-red-400 text-xs font-bold rotate-[-15deg] opacity-60">
               已归档
             </div>
 
@@ -275,7 +275,7 @@ const GrantCard: React.FC<GrantCardProps> = ({ order, fulfillment, record, perms
         <div className="flex items-center gap-2 mt-1.5 flex-wrap">
           <span className="text-xs text-slate-400">借阅单 {order.orderNo}</span>
           {perms.map((p) => (
-            <span key={p} className="text-xs px-1.5 py-0.5 rounded-full bg-sky-50 text-sky-600 border border-sky-100">
+            <span key={p} className="text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap bg-sky-50 text-sky-600 border border-sky-100">
               {PERM_LABELS[p]}
             </span>
           ))}

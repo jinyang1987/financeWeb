@@ -89,7 +89,7 @@ const PortalHomePage: React.FC<PortalHomePageProps> = ({ onSearch, onOpenMode })
 
         {/* 搜索框 */}
         <form onSubmit={handleSubmit} className="w-full max-w-2xl">
-          <div className="flex items-center gap-0 bg-white border-2 border-slate-300 rounded-full shadow-sm hover:border-sky-400 focus-within:border-sky-500 transition-all overflow-hidden pl-5 pr-2 py-1.5">
+          <div className="flex items-center gap-0 bg-white border-2 border-slate-300 rounded-full whitespace-nowrap shadow-sm hover:border-sky-400 focus-within:border-sky-500 transition-all overflow-hidden pl-5 pr-2 py-1.5">
             <Search className="w-5 h-5 text-slate-400 shrink-0" />
             <input
               type="text"
@@ -101,7 +101,7 @@ const PortalHomePage: React.FC<PortalHomePageProps> = ({ onSearch, onOpenMode })
             />
             <button
               type="submit"
-              className="flex items-center gap-1.5 px-6 py-2 bg-sky-600 text-white text-sm font-bold rounded-full hover:bg-sky-700 transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-6 py-2 bg-sky-600 text-white text-sm font-bold rounded-full whitespace-nowrap hover:bg-sky-700 transition-colors cursor-pointer"
             >
               <Search className="w-4 h-4" />检索
             </button>
@@ -117,7 +117,7 @@ const PortalHomePage: React.FC<PortalHomePageProps> = ({ onSearch, onOpenMode })
                 key={t.code}
                 type="button"
                 onClick={() => quickSearch(t.code)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition-all cursor-pointer border ${
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-full whitespace-nowrap text-xs font-medium transition-all cursor-pointer border ${
                   portalType === t.code
                     ? 'bg-sky-50 text-sky-700 border-sky-200'
                     : 'bg-white text-slate-600 border-slate-200 hover:border-sky-300 hover:text-sky-700'

@@ -205,7 +205,7 @@ const BorrowChainRulesPanel: React.FC<{ wf: BusinessWorkflow }> = ({ wf }) => {
       <div className="flex items-center gap-1.5">
         <Zap className="w-3.5 h-3.5 text-emerald-600" />
         <span className="text-xs font-bold text-emerald-800">审批组链规则（运行中）</span>
-        <span className="ml-auto text-xs text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded-full">
+        <span className="ml-auto text-xs text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded-full whitespace-nowrap">
           服务端实时消费 · v{wf.version}
         </span>
       </div>
@@ -330,8 +330,8 @@ const WorkflowSettingsPanel: React.FC<{ wf: BusinessWorkflow }> = ({ wf }) => {
           <Power className="w-3.5 h-3.5" /> 启用流程
         </span>
         <button type="button" onClick={() => toggleActive(wf.id)}
-          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer ${wf.active ? 'bg-sky-600' : 'bg-slate-300'}`}>
-          <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform ${wf.active ? 'translate-x-[18px]' : 'translate-x-[3px]'}`} />
+          className={`relative inline-flex h-5 w-9 items-center rounded-full whitespace-nowrap transition-colors cursor-pointer ${wf.active ? 'bg-sky-600' : 'bg-slate-300'}`}>
+          <span className={`inline-block h-3.5 w-3.5 rounded-full whitespace-nowrap bg-white shadow-sm transition-transform ${wf.active ? 'translate-x-[18px]' : 'translate-x-[3px]'}`} />
         </button>
       </div>
 
@@ -605,7 +605,7 @@ const WorkflowConfigPage: React.FC = () => {
           {wf?.builtIn && (
             <span className="px-1.5 py-0.5 text-xs font-semibold bg-slate-100 text-slate-500 rounded">内置</span>
           )}
-          {dirty && <span className="w-1.5 h-1.5 rounded-full bg-amber-400" title="有未保存修改" />}
+          {dirty && <span className="w-1.5 h-1.5 rounded-full whitespace-nowrap bg-amber-400" title="有未保存修改" />}
         </div>
 
         <div className="w-px h-5 bg-slate-200" />
@@ -692,7 +692,7 @@ const WorkflowConfigPage: React.FC = () => {
               return (
                 <div key={cat}>
                   <div className="flex items-center gap-1.5 px-2 pt-1 pb-1.5">
-                    <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
+                    <span className={`w-1.5 h-1.5 rounded-full whitespace-nowrap ${meta.dot}`} />
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{meta.label}</span>
                   </div>
                   <div className="space-y-1">
@@ -726,7 +726,7 @@ const WorkflowConfigPage: React.FC = () => {
         {/* 中：画布 */}
         <div className="flex-1 overflow-auto bg-slate-100 relative" onClick={handleCanvasClick}>
           {connectMode && (
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 px-4 py-1.5 bg-sky-100 border border-sky-300 rounded-full text-xs font-semibold text-sky-700 shadow-sm">
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 px-4 py-1.5 bg-sky-100 border border-sky-300 rounded-full whitespace-nowrap text-xs font-semibold text-sky-700 shadow-sm">
               {linkingFrom ? '点击目标节点完成连线' : '点击起始节点开始连线'}
             </div>
           )}

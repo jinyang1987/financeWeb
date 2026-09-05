@@ -43,12 +43,12 @@ export const MenuSettingsModal: React.FC = () => {
                   onChange={() => toggleMenuVisibility(key)}
                 />
                 <div
-                  className={`w-10 h-6 rounded-full transition-colors ${
+                  className={`w-10 h-6 rounded-full whitespace-nowrap transition-colors ${
                     visibleMenus[key] ? 'bg-sky-600' : 'bg-slate-300'
                   }`}
                 >
                   <div
-                    className={`absolute left-0.5 top-0.5 bg-white w-5 h-5 rounded-full transition-transform shadow-sm ${
+                    className={`absolute left-0.5 top-0.5 bg-white w-5 h-5 rounded-full whitespace-nowrap transition-transform shadow-sm ${
                       visibleMenus[key] ? 'translate-x-4' : 'translate-x-0'
                     }`}
                   />

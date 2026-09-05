@@ -310,9 +310,9 @@ const PortalVolumeSearch: React.FC<PortalVolumeSearchProps> = ({ onOpenDetail })
                 <tbody>
                   {MOCK_COMPARE_DATA.map((item, i) => (
                     <tr key={i} className="border-b border-slate-100 divide-x divide-slate-100">
-                      <td className="px-3 py-2 text-xs text-slate-600 font-medium">{item.field}</td>
-                      <td className="px-3 py-2 text-xs text-slate-700">{item.scanned}</td>
-                      <td className="px-3 py-2 text-xs text-slate-700">{item.electronic}</td>
+                      <td className="px-3 py-2 text-sm text-slate-600 font-medium">{item.field}</td>
+                      <td className="px-3 py-2 text-sm text-slate-700">{item.scanned}</td>
+                      <td className="px-3 py-2 text-sm text-slate-700">{item.electronic}</td>
                       <td className="px-3 py-2 text-center">
                         {item.match
                           ? <CheckCircle2 className="w-4 h-4 text-green-500 mx-auto" />

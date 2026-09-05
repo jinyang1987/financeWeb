@@ -23,31 +23,31 @@ export interface ColumnDef {
 export const VOUCHER_COLUMN_MAP: Record<string, ColumnDef> = {
   VOUCHER_NO: {
     metaId: 'VOUCHER_NO', label: '凭证号',
-    accessor: (r) => <span className="font-mono font-bold text-slate-800 text-xs">{r.voucherNo}</span>,
+    accessor: (r) => <span className="font-mono font-bold text-slate-800 text-sm">{r.voucherNo}</span>,
     width: '96px', align: 'left',
   },
   DATE: {
     metaId: 'DATE', label: '制单日期',
-    accessor: (r) => <span className="text-xs text-slate-500">{voucherDateOf(r)}</span>,
+    accessor: (r) => <span className="text-sm text-slate-500">{voucherDateOf(r)}</span>,
     // 104px：4 字表头 + 排序图标 + 单元格内边距刚好不裁切（2026-08-22 排序图标修复配套）
     width: '104px', align: 'left',
   },
   SUMMARY: {
     metaId: 'SUMMARY', label: '摘要',
     accessor: (r) => (
-      <span className="text-xs text-slate-700 truncate block" title={r.remarks || ''}>{r.remarks || '—'}</span>
+      <span className="text-sm text-slate-700 truncate block" title={r.remarks || ''}>{r.remarks || '—'}</span>
     ),
     width: '140px', align: 'left',
   },
   DEPARTMENT: {
     metaId: 'DEPARTMENT', label: '部门',
-    accessor: (r) => <span className="text-xs text-slate-600">{r.department}</span>,
+    accessor: (r) => <span className="text-sm text-slate-600">{r.department}</span>,
     width: '64px', align: 'left',
   },
   AMOUNT: {
     metaId: 'AMOUNT', label: '金额',
     accessor: (r) => (
-      <span className="font-mono text-xs font-medium text-slate-800">
+      <span className="font-mono text-sm font-medium text-slate-800">
         {'¥'}{r.amount.toLocaleString('zh-CN', { minimumFractionDigits: 2 })}
       </span>
     ),
@@ -60,8 +60,8 @@ export const VOUCHER_COLUMN_MAP: Record<string, ColumnDef> = {
     accessor: (r) => {
       const count = r.sourceDocumentIds?.length || 0;
       return count > 0
-        ? <span className="text-amber-600 font-medium text-xs">{count} 份</span>
-        : <span className="text-slate-400 text-xs">无</span>;
+        ? <span className="text-amber-600 font-medium text-sm">{count} 份</span>
+        : <span className="text-slate-400 text-sm">无</span>;
     },
     width: '64px', align: 'left',
   },

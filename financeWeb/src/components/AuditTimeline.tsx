@@ -42,7 +42,7 @@ export const AuditTimeline: React.FC<AuditTimelineProps> = ({ logs }) => {
           <Clock className="w-3.5 h-3.5 text-sky-600" />
           <span>Alfresco 原生全生命周期固化审计日志 (Audit Trail)</span>
         </h4>
-        <span className="text-xs bg-sky-50 text-sky-700 px-2 py-0.5 rounded-full font-bold select-none">
+        <span className="text-xs bg-sky-50 text-sky-700 px-2 py-0.5 rounded-full whitespace-nowrap font-bold select-none">
           国标/区块链双链防篡改防泄漏存证
         </span>
       </div>
@@ -51,7 +51,7 @@ export const AuditTimeline: React.FC<AuditTimelineProps> = ({ logs }) => {
         {logs.map((log) => (
           <div key={log.id} className="relative group text-left" id={`timeline-item-${log.id}`}>
             {/* Circle dot absolute overlay */}
-            <span className="absolute -left-[25px] top-1 bg-white border border-slate-200 rounded-full p-0.5 shadow-sm group-hover:scale-110 transition-transform">
+            <span className="absolute -left-[25px] top-1 bg-white border border-slate-200 rounded-full whitespace-nowrap p-0.5 shadow-sm group-hover:scale-110 transition-transform">
               {getLogIcon(log.action)}
             </span>
 

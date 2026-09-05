@@ -400,7 +400,7 @@ const ApiReceivePage: React.FC = () => {
                       <td className="px-4 py-3 text-center font-mono text-sm text-slate-600">{b.period}</td>
                       <td className="px-4 py-3 text-center text-sm text-slate-600">{b.trigger_type === 'auto' ? '自动' : '手动'}</td>
                       <td className="px-4 py-3 text-center">
-                        <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${st.cls}`}>{st.label}</span>
+                        <span className={`px-2 py-0.5 text-xs font-medium rounded-full whitespace-nowrap ${st.cls}`}>{st.label}</span>
                       </td>
                       <td className="px-4 py-3 text-right font-mono text-sm text-slate-600">{b.total_count}</td>
                       <td className="px-4 py-3 text-right font-mono text-sm text-green-600">{b.success_count}</td>

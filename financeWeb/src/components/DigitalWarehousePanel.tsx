@@ -287,8 +287,8 @@ export const DigitalWarehousePanel: React.FC<{ triggerToast: (msg: string, type?
           <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
             <span>在架率</span><span className="font-bold text-sky-700">{stats.rate}%</span>
           </div>
-          <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-sky-500 to-emerald-500 rounded-full transition-all duration-700" style={{ width: `${stats.rate}%` }} />
+          <div className="h-2 bg-slate-100 rounded-full whitespace-nowrap overflow-hidden">
+            <div className="h-full bg-gradient-to-r from-sky-500 to-emerald-500 rounded-full whitespace-nowrap transition-all duration-700" style={{ width: `${stats.rate}%` }} />
           </div>
         </div>
         <div className="flex-1" />
@@ -325,7 +325,7 @@ export const DigitalWarehousePanel: React.FC<{ triggerToast: (msg: string, type?
                   <div className="flex items-center gap-2">
                     <span className={`w-2.5 h-2.5 rounded-sm ${cs.spine}`} />
                     <span className="font-mono text-xs font-bold text-slate-800 truncate">{b.boxNo}</span>
-                    <span className={`ml-auto text-xs px-1.5 py-0.5 rounded-full border ${
+                    <span className={`ml-auto text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap border ${
                       b.status === 'sealed' ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-amber-50 text-amber-700 border-amber-200'
                     }`}>{BOX_STATUS_LABEL[b.status] || b.status}</span>
                   </div>
@@ -496,7 +496,7 @@ export const DigitalWarehousePanel: React.FC<{ triggerToast: (msg: string, type?
                 <div className="font-mono text-sm font-bold text-slate-800 truncate">{detailBox.boxNo}</div>
                 <div className="text-xs text-slate-400 truncate">{detailBox.boxName}</div>
               </div>
-              <span className={`text-xs px-2 py-0.5 rounded-full border ${
+              <span className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap border ${
                 detailBox.status === 'stored' ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                 : detailBox.status === 'sealed' ? 'bg-slate-100 text-slate-600 border-slate-200'
                 : 'bg-amber-50 text-amber-700 border-amber-200'
@@ -695,8 +695,8 @@ const RackCard: React.FC<{
           <div>{rack.rack_name} · {rack.column_count}列×{rack.layer_count}层×{rack.cell_count}位</div>
           <div className="flex items-center gap-1.5 mt-0.5">
             <span className={occupied > 0 ? 'text-emerald-300 font-semibold' : ''}>{occupied}/{capacity}</span>
-            <span className="w-14 h-1 bg-slate-500 rounded-full overflow-hidden inline-block align-middle">
-              <span className="block h-full bg-emerald-400 rounded-full transition-all duration-500" style={{ width: `${Math.round(rate * 100)}%` }} />
+            <span className="w-14 h-1 bg-slate-500 rounded-full whitespace-nowrap overflow-hidden inline-block align-middle">
+              <span className="block h-full bg-emerald-400 rounded-full whitespace-nowrap transition-all duration-500" style={{ width: `${Math.round(rate * 100)}%` }} />
             </span>
           </div>
         </div>
@@ -857,7 +857,7 @@ const RackModal: React.FC<{
       <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-sm" />
       <div className="relative bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 animate-in zoom-in-95" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-full whitespace-nowrap bg-sky-100 flex items-center justify-center shrink-0">
             <Warehouse className="w-5 h-5 text-sky-600" />
           </div>
           <div>

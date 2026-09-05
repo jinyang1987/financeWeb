@@ -32,7 +32,7 @@ const ComplianceStatsPage: React.FC = () => {
               <p className="text-xs text-slate-400 mt-0.5">监管合规与风险识别 · 期限 / 数据质量 / 安全 / 审计支撑（79号令 + DA/T 94-2022）</p>
             </div>
           </div>
-          <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${
+          <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full whitespace-nowrap text-xs font-bold ${
             riskFree ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
           }`}>
             {riskFree ? <><CheckCircle2 className="w-3.5 h-3.5" />合规状态正常</> : <><AlertTriangle className="w-3.5 h-3.5" />存在合规风险</>}
@@ -107,7 +107,7 @@ const ComplianceStatsPage: React.FC = () => {
             <div className="mt-3 flex items-center gap-2 flex-wrap">
               <span className="text-xs text-slate-400">格式分布：</span>
               {cc.formatDistribution.map((f) => (
-                <span key={f.format} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded-full font-mono">
+                <span key={f.format} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded-full whitespace-nowrap font-mono">
                   {f.format} × {f.count}
                 </span>
               ))}

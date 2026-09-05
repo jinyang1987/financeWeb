@@ -161,7 +161,7 @@ const ReportConfigPage: React.FC = () => {
                 <td className="px-4 py-3.5 text-sm text-slate-600">{row.format}</td>
                 <td className="px-4 py-3 font-mono text-sm text-slate-600">{row.createTime}</td>
                 <td className="px-4 py-3">
-                  <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyles[row.status]}`}>
+                  <span className={`inline-block px-2.5 py-0.5 rounded-full whitespace-nowrap text-xs font-medium ${statusStyles[row.status]}`}>
                     {row.status}
                   </span>
                 </td>

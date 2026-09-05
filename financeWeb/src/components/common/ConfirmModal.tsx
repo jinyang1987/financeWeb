@@ -41,7 +41,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-3 mb-3">
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${danger ? 'bg-red-100' : 'bg-sky-100'}`}>
+          <div className={`w-10 h-10 rounded-full whitespace-nowrap flex items-center justify-center shrink-0 ${danger ? 'bg-red-100' : 'bg-sky-100'}`}>
             {danger
               ? <AlertTriangle className="w-5 h-5 text-red-600" />
               : <HelpCircle className="w-5 h-5 text-sky-600" />}

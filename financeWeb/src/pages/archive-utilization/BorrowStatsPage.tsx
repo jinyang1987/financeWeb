@@ -183,9 +183,9 @@ const BorrowStatsPage: React.FC = () => {
                     <span className="font-medium text-slate-700">{t.label}</span>
                     <span className="font-mono text-slate-500">{t.count} 件次</span>
                   </div>
-                  <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-3 bg-slate-100 rounded-full whitespace-nowrap overflow-hidden">
                     <div
-                      className={`h-full ${TYPE_COLORS[t.code]} rounded-full transition-all duration-500`}
+                      className={`h-full ${TYPE_COLORS[t.code]} rounded-full whitespace-nowrap transition-all duration-500`}
                       style={{ width: `${Math.max(t.pct, t.count > 0 ? 6 : 0)}%` }}
                     />
                   </div>
@@ -243,7 +243,7 @@ const BorrowStatsPage: React.FC = () => {
                       <span className={d.overdue > 0 ? 'text-red-600 font-bold' : 'text-slate-400'}>{d.overdue}</span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                      <span className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap font-bold ${
                         d.rate === 0 ? 'bg-emerald-100 text-emerald-700' : d.rate < 30 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
                       }`}>
                         {d.rate}%
@@ -287,7 +287,7 @@ const BorrowStatsPage: React.FC = () => {
                     <td className="px-4 py-3 text-sm font-medium text-slate-800 whitespace-nowrap">{log.actorName}</td>
                     <td className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap">{log.actorRoleLabel}</td>
                     <td className="px-4 py-3">
-                      <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap ${LOG_ACTION_COLORS[log.action] || 'bg-slate-100 text-slate-600'}`}>
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap font-medium whitespace-nowrap ${LOG_ACTION_COLORS[log.action] || 'bg-slate-100 text-slate-600'}`}>
                         {log.action}
                       </span>
                     </td>

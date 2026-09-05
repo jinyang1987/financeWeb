@@ -391,7 +391,7 @@ export const FanzongManager: React.FC = () => {
           <Building2 className="w-4 h-4 text-slate-400 shrink-0" />
           <span className="truncate">{node.name}</span>
           {count > 0 && (
-            <span className={`ml-auto text-xs font-mono px-1.5 py-0.5 rounded-full shrink-0 ${
+            <span className={`ml-auto text-xs font-mono px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0 ${
               isSelected ? 'bg-sky-100 text-sky-700' : 'bg-slate-100 text-slate-500'
             }`}>
               {activeCount}现
@@ -421,11 +421,11 @@ export const FanzongManager: React.FC = () => {
       <td className="px-4 py-3 text-sm font-medium text-slate-800">{f.name}</td>
       <td className="px-4 py-3">
         {f.type === 'active' ? (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full whitespace-nowrap text-xs font-bold bg-emerald-50 text-emerald-700">
             <Shield className="w-3 h-3" /> 现行
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full whitespace-nowrap text-xs font-bold bg-amber-50 text-amber-700">
             <FolderTree className="w-3 h-3" /> 代管
           </span>
         )}

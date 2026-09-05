@@ -1247,8 +1247,9 @@ public class VolumeService {
     view.put("securityLevel", prop(entry, "finance:volumeSecurityLevel"));
     view.put("cabinetNo", prop(entry, "finance:cabinetNo"));
     view.put("shelfNo", prop(entry, "finance:shelfNo"));
-    view.put("dateFrom", prop(entry, "finance:dateFrom"));
-    view.put("dateTo", prop(entry, "finance:dateTo"));
+    // d:date 属性经 REST 读回是 ISO 时间戳（2026-08-01T00:00:00.000+0000），展示口径统一截取日期段
+    view.put("dateFrom", dateOnly(prop(entry, "finance:dateFrom")));
+    view.put("dateTo", dateOnly(prop(entry, "finance:dateTo")));
     view.put("createdDate", prop(entry, "finance:createdDate"));
     view.put("createdBy", prop(entry, "finance:createdBy"));
     view.put("scanned", boolProp(entry, "finance:scanned"));
@@ -1311,6 +1312,12 @@ public class VolumeService {
   private static Integer asIntNullable(String s) {
     if (s == null || s.isBlank()) return null;
     try { return Integer.valueOf(s.trim()); } catch (NumberFormatException e) { return null; }
+  }
+
+  /** ISO 时间戳 → yyyy-MM-dd（已是纯日期则原样返回；空串安全） */
+  private static String dateOnly(String iso) {
+    if (iso == null || iso.length() < 10) return iso == null ? "" : iso;
+    return iso.substring(0, 10);
   }
 
   @SuppressWarnings("unchecked")

@@ -91,7 +91,7 @@ const ApprovalCenterPage: React.FC = () => {
           onClick={() => setExpandedId(expanded ? null : order.id)}
           className="w-full px-5 py-4 flex items-center gap-4 text-left hover:bg-slate-50/60 transition-colors cursor-pointer"
         >
-          <div className="w-9 h-9 rounded-full bg-sky-100 flex items-center justify-center shrink-0">
+          <div className="w-9 h-9 rounded-full whitespace-nowrap bg-sky-100 flex items-center justify-center shrink-0">
             <User className="w-4 h-4 text-sky-600" />
           </div>
           <div className="flex-1 min-w-0">
@@ -99,12 +99,12 @@ const ApprovalCenterPage: React.FC = () => {
               <span className="font-mono text-sm font-bold text-slate-800">{order.orderNo}</span>
               <span className="text-xs text-slate-500">{order.applicantName} · {order.applicantDept}</span>
               {actionable && step && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 font-medium">
+                <span className="text-xs px-2 py-0.5 rounded-full whitespace-nowrap bg-sky-100 text-sky-700 font-medium">
                   待您审批：{step.roleLabel}
                 </span>
               )}
               {order.items.some((i) => i.securityLevel === '秘密' || i.securityLevel === '机密') && (
-                <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">
+                <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full whitespace-nowrap bg-red-100 text-red-700 font-medium">
                   <Lock className="w-2.5 h-2.5" />涉密档案
                 </span>
               )}
@@ -113,7 +113,7 @@ const ApprovalCenterPage: React.FC = () => {
               {order.reasonType} · {order.items.length} 件档案 · {order.startDate} ~ {order.endDate} · {order.createdAt.slice(0, 16)} 提交
             </div>
           </div>
-          <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${
+          <span className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap font-medium shrink-0 ${
             order.status === 'approving' ? 'bg-sky-100 text-sky-700'
             : order.status === 'rejected' ? 'bg-red-100 text-red-700'
             : 'bg-emerald-100 text-emerald-700'
@@ -162,7 +162,7 @@ const ApprovalCenterPage: React.FC = () => {
                             : <span className="text-amber-600">已借出</span>}
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${SECURITY_COLORS[item.securityLevel]}`}>
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap font-medium ${SECURITY_COLORS[item.securityLevel]}`}>
                           {item.securityLevel}
                         </span>
                       </td>
@@ -282,7 +282,7 @@ const ApprovalCenterPage: React.FC = () => {
               }`}
             >
               <Icon className="w-4 h-4" />{label}
-              <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${tab === key ? 'bg-sky-600 text-white' : 'bg-slate-200 text-slate-600'}`}>{count}</span>
+              <span className={`text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap font-bold ${tab === key ? 'bg-sky-600 text-white' : 'bg-slate-200 text-slate-600'}`}>{count}</span>
             </button>
           ))}
         </div>

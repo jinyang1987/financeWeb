@@ -452,15 +452,15 @@ const DatasourceConfigPage: React.FC = () => {
               </div>
               {/* 去向与抓取计划 */}
               <div className="mt-3 flex items-center gap-2 flex-wrap">
-                <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-sky-50 text-sky-700 border border-sky-200">
+                <span className="px-2 py-0.5 text-xs font-medium rounded-full whitespace-nowrap bg-sky-50 text-sky-700 border border-sky-200">
                   默认去向：{DEST_LABELS[s.config.defaultDestination] || '送组卷工作台'}
                 </span>
                 {s.config.scheduleEnabled === 'true' ? (
-                  <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200" title={s.config.scheduleCron}>
+                  <span className="px-2 py-0.5 text-xs font-medium rounded-full whitespace-nowrap bg-emerald-50 text-emerald-700 border border-emerald-200" title={s.config.scheduleCron}>
                     定时抓取：{s.config.scheduleCron || 'cron 未设置'}
                   </span>
                 ) : (
-                  <span className="px-2 py-0.5 text-xs rounded-full bg-slate-100 text-slate-500 border border-slate-200">
+                  <span className="px-2 py-0.5 text-xs rounded-full whitespace-nowrap bg-slate-100 text-slate-500 border border-slate-200">
                     定时抓取：未启用
                   </span>
                 )}

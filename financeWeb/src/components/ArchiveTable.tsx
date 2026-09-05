@@ -94,8 +94,8 @@ export const ArchiveTable: React.FC<ArchiveTableProps> = ({
                     <h4 className="font-bold text-slate-800 text-base mb-1">{item.title}</h4>
                     <p className="text-xs text-slate-500 font-medium tracking-wide">Total {item.done} / Of {item.total}</p>
                   </div>
-                  <div className="w-full bg-slate-200 rounded-full h-2.5 mt-2 overflow-hidden shadow-inner">
-                    <div className={`${item.bar} h-full rounded-full`} style={{ width: `${(item.done / item.total) * 100}%` }}></div>
+                  <div className="w-full bg-slate-200 rounded-full whitespace-nowrap h-2.5 mt-2 overflow-hidden shadow-inner">
+                    <div className={`${item.bar} h-full rounded-full whitespace-nowrap`} style={{ width: `${(item.done / item.total) * 100}%` }}></div>
                   </div>
                 </div>
               ))}
@@ -192,7 +192,7 @@ export const ArchiveTable: React.FC<ArchiveTableProps> = ({
                           </span>
                         </TableCell>
                         <TableCell>
-                          <span className={`px-2 py-0.5 rounded-full font-bold text-xs ${
+                          <span className={`px-2 py-0.5 rounded-full whitespace-nowrap font-bold text-xs ${
                             row.archiveType === '记账凭证' ? 'bg-sky-50 text-sky-700' :
                             row.archiveType === '会计账簿' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
                             'bg-purple-50 text-purple-700'

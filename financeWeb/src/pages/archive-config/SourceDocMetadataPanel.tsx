@@ -111,7 +111,7 @@ const TypeSelector: React.FC<{
         <Tag className="w-4 h-4 text-slate-500" />
         <span className="text-sm font-semibold text-slate-700">选择原始凭证类型</span>
         {selectedLabel && (
-          <span className="text-xs text-sky-600 bg-sky-50 px-2 py-0.5 rounded-full font-medium">
+          <span className="text-xs text-sky-600 bg-sky-50 px-2 py-0.5 rounded-full whitespace-nowrap font-medium">
             {selectedLabel}
           </span>
         )}

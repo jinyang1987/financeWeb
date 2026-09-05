@@ -34,17 +34,17 @@ export const ArchiveStatusTags: React.FC<ArchiveStatusTagsProps> = ({ record, si
   return (
     <span className="inline-flex items-center gap-1 flex-wrap">
       {hasElectronic && (
-        <span className={`inline-flex items-center rounded-full border font-medium bg-sky-50 text-sky-700 border-sky-200 ${cls}`} title="电子版可在线调阅">
+        <span className={`inline-flex items-center rounded-full whitespace-nowrap border font-medium bg-sky-50 text-sky-700 border-sky-200 ${cls}`} title="电子版可在线调阅">
           <Cloud className={iconCls} />电子版可用
         </span>
       )}
       {hasPhysical && stock === 'in_stock' && (
-        <span className={`inline-flex items-center rounded-full border font-medium bg-emerald-50 text-emerald-700 border-emerald-200 ${cls}`} title="实体档案在库，可申请外借">
+        <span className={`inline-flex items-center rounded-full whitespace-nowrap border font-medium bg-emerald-50 text-emerald-700 border-emerald-200 ${cls}`} title="实体档案在库，可申请外借">
           <HardDrive className={iconCls} />实体在库
         </span>
       )}
       {hasPhysical && stock === 'lent_out' && (
-        <span className={`inline-flex items-center rounded-full border font-medium bg-amber-50 text-amber-700 border-amber-200 ${cls}`} title="实体已被借出，可预约排队">
+        <span className={`inline-flex items-center rounded-full whitespace-nowrap border font-medium bg-amber-50 text-amber-700 border-amber-200 ${cls}`} title="实体已被借出，可预约排队">
           <LogOut className={iconCls} />实体借出
         </span>
       )}

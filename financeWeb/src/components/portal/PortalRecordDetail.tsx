@@ -212,16 +212,16 @@ const PortalRecordDetail: React.FC<PortalRecordDetailProps> = ({ record, onBack,
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-emerald-600" />
               <span className="text-sm font-bold text-slate-800">{isSourceDoc ? '电子附件（上传原件）' : '原始凭证附件'}</span>
-              <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">
+              <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full whitespace-nowrap">
                 {isSourceDoc ? (record.components?.length || 0) : attachments.length} 份
               </span>
             </div>
             {canViewAttachment ? (
-              <span className="text-xs px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="text-xs px-2 py-1 rounded-full whitespace-nowrap bg-emerald-50 text-emerald-700 border border-emerald-200">
                 <Eye className="w-3 h-3 inline mr-0.5" />已授权 {perms.map((p) => PERM_LABELS[p]).join('/')}
               </span>
             ) : (
-              <span className="text-xs px-2 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+              <span className="text-xs px-2 py-1 rounded-full whitespace-nowrap bg-amber-50 text-amber-700 border border-amber-200">
                 <Lock className="w-3 h-3 inline mr-0.5" />需借阅授权后可预览
               </span>
             )}

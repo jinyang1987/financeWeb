@@ -141,8 +141,8 @@ const Donut: React.FC<{ segments: { value: number; color: string }[]; size?: num
   }).join(', ');
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
-      <div className="absolute inset-0 rounded-full" style={{ background: `conic-gradient(${gradient})` }} />
-      <div className="absolute rounded-full flex flex-col items-center justify-center" style={{ inset: size * 0.22, background: 'var(--ck-card-solid)' }}>
+      <div className="absolute inset-0 rounded-full whitespace-nowrap" style={{ background: `conic-gradient(${gradient})` }} />
+      <div className="absolute rounded-full whitespace-nowrap flex flex-col items-center justify-center" style={{ inset: size * 0.22, background: 'var(--ck-card-solid)' }}>
         {centerValue && <span className="text-xl font-bold font-mono" style={{ color: 'var(--ck-accent-text)' }}>{centerValue}</span>}
         {centerLabel && <span className="text-xs mt-0.5" style={{ color: 'var(--ck-dim)' }}>{centerLabel}</span>}
       </div>
@@ -157,8 +157,8 @@ const BarRow: React.FC<{ label: string; value: number; max: number; color?: stri
       <span className="truncate" style={{ color: 'var(--ck-body)' }}>{label}</span>
       <span className="font-mono shrink-0 ml-2" style={{ color: 'var(--ck-accent-text)' }}>{value.toLocaleString()}{suffix}</span>
     </div>
-    <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--ck-track)' }}>
-      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.max((value / Math.max(1, max)) * 100, value > 0 ? 3 : 0)}%`, background: color }} />
+    <div className="h-2 rounded-full whitespace-nowrap overflow-hidden" style={{ background: 'var(--ck-track)' }}>
+      <div className="h-full rounded-full whitespace-nowrap transition-all duration-700" style={{ width: `${Math.max((value / Math.max(1, max)) * 100, value > 0 ? 3 : 0)}%`, background: color }} />
     </div>
   </div>
 );
@@ -431,7 +431,7 @@ const StatsCockpitPage: React.FC = () => {
         {/* 大屏头部 */}
         <div className="flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-1 h-8 bg-gradient-to-b from-cyan-400 to-sky-600 rounded-full" />
+            <div className="w-1 h-8 bg-gradient-to-b from-cyan-400 to-sky-600 rounded-full whitespace-nowrap" />
             <div>
               <h1 className="text-xl font-bold tracking-widest" style={{ color: 'var(--ck-text)' }}>会计档案统计驾驶舱</h1>
               <p className="text-xs tracking-wider mt-0.5" style={{ color: 'var(--ck-sub)' }}>ACCOUNTING ARCHIVES STATISTICS COCKPIT · 全宗 Z001</p>
@@ -521,7 +521,7 @@ const RealtimeFeedCard: React.FC = () => {
       <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
         {latest.map((log) => (
           <div key={log.id} className="flex items-center gap-2 text-xs py-1" style={{ borderBottom: '1px solid var(--ck-divider)' }}>
-            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0 animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full whitespace-nowrap bg-cyan-400 shrink-0 animate-pulse" />
             <span className="font-mono shrink-0" style={{ color: 'var(--ck-faint)' }}>{log.timestamp.slice(5, 16)}</span>
             <span className="font-medium shrink-0" style={{ color: 'var(--ck-body)' }}>{log.actorName}</span>
             <span className="shrink-0" style={{ color: 'var(--ck-accent)' }}>{log.action}</span>

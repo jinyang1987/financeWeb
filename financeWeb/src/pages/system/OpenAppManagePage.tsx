@@ -333,7 +333,7 @@ const OpenAppManagePage: React.FC = () => {
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-slate-800 flex items-center gap-2">
                       {a.appName}
-                      <span className={`px-1.5 py-0.5 text-xs rounded-full ${a.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                      <span className={`px-1.5 py-0.5 text-xs rounded-full whitespace-nowrap ${a.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
                         {a.status === 'active' ? '启用' : '停用'}
                       </span>
                     </div>
@@ -411,7 +411,7 @@ const OpenAppManagePage: React.FC = () => {
                       <td className="px-4 py-3 text-sm text-slate-800">{b.app_name || '—'}<div className="text-xs text-slate-400">{b.source_system || ''}</div></td>
                       <td className="px-4 py-3 text-center font-mono text-sm text-slate-600">{b.fonds_code}</td>
                       <td className="px-4 py-3 text-center">
-                        <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${st.cls}`}>{st.label}</span>
+                        <span className={`px-2 py-0.5 text-xs font-medium rounded-full whitespace-nowrap ${st.cls}`}>{st.label}</span>
                       </td>
                       <td className="px-4 py-3 text-right font-mono text-sm text-slate-600">{b.total_count}</td>
                       <td className="px-4 py-3 text-right font-mono text-sm text-green-600">{b.success_count}</td>

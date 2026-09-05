@@ -37,7 +37,7 @@ const SOURCE_COLUMN: ColumnDef = {
     const isElectronic = r.carrierType === 'electronic' || r.source === 'digital-native';
     const modeLabel = isElectronic ? '电子文件' : '纸质副本';
     return (
-      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold border ${
+      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full whitespace-nowrap text-xs font-bold border ${
         isElectronic
           ? 'bg-sky-50 text-sky-700 border-sky-200'
           : 'bg-amber-50 text-amber-700 border-amber-200'
@@ -71,7 +71,7 @@ export const ARCHIVE_ITEM_COLUMN_MAP: Record<string, ColumnDef> = {
     metaId: 'M13',
     label: '档号',
     accessor: (r) => (
-      <span className="font-mono font-bold text-slate-800 text-xs tracking-tight">{r.archiveCode}</span>
+      <span className="font-mono font-bold text-slate-800 text-sm tracking-tight">{r.archiveCode}</span>
     ),
     width: '220px',
     align: 'left',
@@ -99,7 +99,7 @@ export const ARCHIVE_ITEM_COLUMN_MAP: Record<string, ColumnDef> = {
         '原始凭证': 'bg-emerald-50 text-emerald-700',
       };
       const cls = colorMap[r.archiveType] || 'bg-slate-50 text-slate-600';
-      return <span className={`px-2 py-0.5 rounded-full font-bold text-xs ${cls}`}>{r.archiveType}</span>;
+      return <span className={`px-2 py-0.5 rounded-full whitespace-nowrap font-bold text-xs ${cls}`}>{r.archiveType}</span>;
     },
     width: '100px',
     align: 'center',
@@ -164,7 +164,7 @@ export const ARCHIVE_ITEM_COLUMN_MAP: Record<string, ColumnDef> = {
     metaId: 'M14',
     label: '题名/摘要',
     accessor: (r) => (
-      <span className="text-slate-600 text-xs max-w-[200px] truncate block" title={r.remarks}>
+      <span className="text-slate-600 text-sm max-w-[200px] truncate block" title={r.remarks}>
         {r.remarks || '—'}
       </span>
     ),
@@ -213,7 +213,7 @@ export const ARCHIVE_ITEM_COLUMN_MAP: Record<string, ColumnDef> = {
     accessor: (r) => {
       const main = r.components[0];
       return (
-        <span className="text-xs text-slate-500 max-w-[150px] truncate block font-mono" title={main?.name}>
+        <span className="text-sm text-slate-500 max-w-[150px] truncate block font-mono" title={main?.name}>
           {main?.name || '—'}
         </span>
       );
@@ -227,7 +227,7 @@ export const ARCHIVE_ITEM_COLUMN_MAP: Record<string, ColumnDef> = {
     label: '文件大小',
     accessor: (r) => {
       const main = r.components[0];
-      return <span className="text-xs text-slate-500 font-mono">{main?.size || '—'}</span>;
+      return <span className="text-sm text-slate-500 font-mono">{main?.size || '—'}</span>;
     },
     width: '96px',
     align: 'center',
@@ -237,7 +237,7 @@ export const ARCHIVE_ITEM_COLUMN_MAP: Record<string, ColumnDef> = {
     metaId: 'M9',
     label: '案卷号',
     accessor: (r) => r.volumeCode
-      ? <span className="font-mono text-slate-600 text-xs">{r.volumeCode}</span>
+      ? <span className="font-mono text-slate-600 text-sm">{r.volumeCode}</span>
       : <span className="text-slate-300">—</span>,
     width: '140px',
     align: 'left',
@@ -247,7 +247,7 @@ export const ARCHIVE_ITEM_COLUMN_MAP: Record<string, ColumnDef> = {
     metaId: 'M11',
     label: '件号',
     accessor: (r) => r.volumeItemNo != null
-      ? <span className="font-mono text-slate-600 text-xs">{String(r.volumeItemNo).padStart(4, '0')}</span>
+      ? <span className="font-mono text-slate-600 text-sm">{String(r.volumeItemNo).padStart(4, '0')}</span>
       : <span className="text-slate-300">—</span>,
     width: '60px',
     align: 'center',
@@ -257,7 +257,7 @@ export const ARCHIVE_ITEM_COLUMN_MAP: Record<string, ColumnDef> = {
     metaId: 'M21',
     label: '摘要',
     accessor: (r) => (
-      <span className="text-slate-600 text-xs max-w-[180px] truncate block" title={r.remarks}>
+      <span className="text-slate-600 text-sm max-w-[180px] truncate block" title={r.remarks}>
         {r.remarks || '—'}
       </span>
     ),
@@ -285,7 +285,7 @@ export const ARCHIVE_ITEM_COLUMN_MAP: Record<string, ColumnDef> = {
       const main = r.components[0];
       const hash = main?.hash;
       return hash
-        ? <span className="font-mono text-xs text-slate-500 max-w-[120px] truncate block" title={hash}>{hash.slice(0, 12)}…</span>
+        ? <span className="font-mono text-sm text-slate-500 max-w-[120px] truncate block" title={hash}>{hash.slice(0, 12)}…</span>
         : <span className="text-slate-300">—</span>;
     },
     width: '100px',
@@ -310,7 +310,7 @@ export const ARCHIVE_ITEM_COLUMN_MAP: Record<string, ColumnDef> = {
     metaId: 'M32',
     label: '起始日期',
     accessor: (r) => (
-      <span className="font-mono text-slate-500 text-xs">{r.year}-{r.month || '01'}-01</span>
+      <span className="font-mono text-slate-500 text-sm">{r.year}-{r.month || '01'}-01</span>
     ),
     width: '100px',
     align: 'center',
@@ -332,7 +332,7 @@ export const ARCHIVE_ITEM_COLUMN_MAP: Record<string, ColumnDef> = {
     accessor: (r) => {
       const linkedCount = (r.sourceDocumentIds?.length || 0) + (r.childRecordIds?.length || 0) + (r.parentRecordId ? 1 : 0);
       return linkedCount > 0
-        ? <span className="text-sky-600 font-medium text-xs">{linkedCount} 条关联</span>
+        ? <span className="text-sky-600 font-medium text-sm">{linkedCount} 条关联</span>
         : <span className="text-slate-300">无</span>;
     },
     width: '96px',
@@ -357,7 +357,7 @@ export const ARCHIVE_ITEM_COLUMN_MAP: Record<string, ColumnDef> = {
     label: '类别号',
     accessor: (r) => {
       const parts = r.archiveCode.split('-');
-      return <span className="font-mono text-slate-500 text-xs">{parts[1] || '—'}</span>;
+      return <span className="font-mono text-slate-500 text-sm">{parts[1] || '—'}</span>;
     },
     width: '80px',
     align: 'center',
@@ -366,7 +366,7 @@ export const ARCHIVE_ITEM_COLUMN_MAP: Record<string, ColumnDef> = {
   M16: {
     metaId: 'M16',
     label: '文件编号',
-    accessor: (r) => <span className="font-mono text-slate-500 text-xs">{r.voucherNo}</span>,
+    accessor: (r) => <span className="font-mono text-slate-500 text-sm">{r.voucherNo}</span>,
     width: '96px',
     align: 'center',
   },

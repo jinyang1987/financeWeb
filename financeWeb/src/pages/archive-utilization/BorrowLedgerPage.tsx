@@ -146,7 +146,7 @@ const BorrowLedgerPage: React.FC = () => {
                     <td className="px-4 py-3.5 text-sm text-slate-600 max-w-[180px] truncate" title={approverChain(o)}>{approverChain(o) || '—'}</td>
                     <td className="px-4 py-3 font-mono text-sm text-slate-600 whitespace-nowrap">{o.startDate} ~ {o.endDate}</td>
                     <td className="px-4 py-3">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[o.status]}`}>
+                      <span className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap font-medium ${STATUS_COLORS[o.status]}`}>
                         {ORDER_STATUS_LABELS[o.status]}
                       </span>
                     </td>
@@ -171,7 +171,7 @@ const BorrowLedgerPage: React.FC = () => {
                               {f.lentAt && <span className="text-slate-400 shrink-0">借出 {f.lentAt.slice(0, 10)}</span>}
                               {f.returnedAt && <span className="text-slate-400 shrink-0">归还 {f.returnedAt.slice(0, 10)}</span>}
                               {f.operatorBy && <span className="text-slate-400 shrink-0">核销 {f.operatorBy}</span>}
-                              <span className={`px-1.5 py-0.5 rounded-full font-medium shrink-0 ${FULFILLMENT_COLORS[f.status]}`}>
+                              <span className={`px-1.5 py-0.5 rounded-full whitespace-nowrap font-medium shrink-0 ${FULFILLMENT_COLORS[f.status]}`}>
                                 {FULFILLMENT_STATUS_LABELS[f.status]}
                               </span>
                             </div>

@@ -238,7 +238,7 @@ const BorrowCartCheckout: React.FC<BorrowCartCheckoutProps> = ({ blacklisted, on
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs font-mono text-slate-400">#{idx + 1}</span>
                         <span className="text-sm font-semibold text-slate-800 truncate">{r.remarks || r.voucherNo}</span>
-                        <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${SECURITY_COLORS[sec]}`}>
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap font-medium ${SECURITY_COLORS[sec]}`}>
                           {sec !== '普通' && <Lock className="w-2.5 h-2.5 inline mr-0.5" />}{sec}
                         </span>
                       </div>

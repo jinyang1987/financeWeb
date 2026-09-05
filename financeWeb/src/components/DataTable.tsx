@@ -314,7 +314,7 @@ export function DataTable<TData extends { id: string }>({
                         className="absolute right-0 top-0 h-full w-1 cursor-col-resize select-none touch-none bg-transparent hover:bg-sky-300 transition-colors group/resize"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <div className="absolute right-0 top-1/2 -translate-y-1/2 h-8 w-0.5 bg-slate-200 group-hover/resize:bg-sky-400 rounded-full opacity-0 group-hover/resize:opacity-100 transition-opacity" />
+                        <div className="absolute right-0 top-1/2 -translate-y-1/2 h-8 w-0.5 bg-slate-200 group-hover/resize:bg-sky-400 rounded-full whitespace-nowrap opacity-0 group-hover/resize:opacity-100 transition-opacity" />
                       </div>
                     )}
                   </TableHead>

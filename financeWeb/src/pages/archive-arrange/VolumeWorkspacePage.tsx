@@ -83,6 +83,15 @@ const ARCHIVE_TYPE_CATEGORY_NAMES: Record<string, string> = {
 };
 const RETENTION_TYPES = ['全部', '30年', '永久', '10年'] as const;
 
+/**
+ * 日期展示格式化（2026-09-05 用户反馈）：后端旧数据 dateFrom/dateTo 可能仍是
+ * ISO 时间戳（2026-08-01T00:00:00.000+0000），统一截取 yyyy-MM-dd；纯日期原样返回。
+ */
+const fmtDate = (v: string | undefined): string => {
+  if (!v) return '';
+  return v.length >= 10 ? v.slice(0, 10) : v;
+};
+
 /** 空选择集（避免每渲染新建 Set 的引用抖动） */
 const EMPTY_SEL: Set<string> = new Set();
 
@@ -329,7 +338,7 @@ const UnassignedPool: React.FC<UnassignedPoolProps> = ({
                           onClick={() => { onAddToVolume(v.id); setShowVolumeMenu(false); }}
                           className="w-full text-left px-3 py-2 text-xs hover:bg-sky-50 transition-colors flex items-center gap-2"
                         >
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                          <span className="w-1.5 h-1.5 rounded-full whitespace-nowrap bg-emerald-400 shrink-0" />
                           <span className="font-medium text-slate-700 flex-1 truncate">{v.title || v.volumeCode || '未命名案卷'}</span>
                           <span className="text-xs text-slate-400">草稿</span>
                         </button>
@@ -343,7 +352,7 @@ const UnassignedPool: React.FC<UnassignedPoolProps> = ({
                               className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 opacity-50 cursor-not-allowed"
                               title="案卷已赋号/已确认，档号不可变更"
                             >
-                              <span className="w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0" />
+                              <span className="w-1.5 h-1.5 rounded-full whitespace-nowrap bg-slate-300 shrink-0" />
                               <span className="text-slate-500 flex-1 truncate">{v.volumeCode || v.title || '未命名案卷'}</span>
                               <span className="text-xs text-slate-400">{statusLabel(v.status)}</span>
                             </div>
@@ -639,7 +648,7 @@ const VolumeCard: React.FC<VolumeCardProps> = ({
         </span>
 
         {/* 状态标签 — 紧跟标题 */}
-        <span className={`px-1.5 py-0.5 text-xs font-medium rounded-full border shrink-0 ${statusColors[volume.status] || ''}`}>
+        <span className={`px-1.5 py-0.5 text-xs font-medium rounded-full whitespace-nowrap border shrink-0 ${statusColors[volume.status] || ''}`}>
           {statusLabels[volume.status] || volume.status}
         </span>
       </div>
@@ -653,7 +662,7 @@ const VolumeCard: React.FC<VolumeCardProps> = ({
             <span>类别: {volume.archiveType || ARCHIVE_TYPE_CATEGORY_NAMES[toCategoryCode(volume.archiveTypeCode, volume.archiveType)] || '—'}</span>
             <span>期限: {volume.retention || volume.retentionCode || '—'}</span>
             <span>件数: {items.length}{linkedCount > 0 ? `（含 ${linkedCount} 张原始凭证附件）` : ''}</span>
-            <span>日期: {volume.dateFrom || '?'} ~ {volume.dateTo || '?'}</span>
+            <span>日期: {fmtDate(volume.dateFrom) || '?'} ~ {fmtDate(volume.dateTo) || '?'}</span>
             {(() => {
               const totalAtt = items.reduce((sum, item) => sum + (attachmentCountMap.get(item.recordId) || 0), 0);
               return totalAtt > 0 ? <span className="text-amber-600">附件: {totalAtt}份</span> : null;
@@ -1088,7 +1097,7 @@ const OpModal: React.FC<{
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-center gap-3 mb-4 shrink-0">
-        <div className={`w-10 h-10 rounded-full ${iconBg} flex items-center justify-center shrink-0`}>{icon}</div>
+        <div className={`w-10 h-10 rounded-full whitespace-nowrap ${iconBg} flex items-center justify-center shrink-0`}>{icon}</div>
         <div className="min-w-0">
           <h3 className="text-base font-bold text-slate-800">{title}</h3>
           {subtitle && <p className="text-xs text-slate-500 mt-0.5 truncate" title={subtitle}>{subtitle}</p>}
@@ -1114,7 +1123,7 @@ const PillBtn: React.FC<{
     onClick={onClick}
     disabled={disabled}
     title={title}
-    className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full transition-colors whitespace-nowrap disabled:opacity-35 disabled:hover:bg-transparent ${
+    className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap transition-colors whitespace-nowrap disabled:opacity-35 disabled:hover:bg-transparent ${
       danger ? 'text-amber-300 hover:bg-amber-400/20' : 'text-slate-100 hover:bg-white/10'
     }`}
   >
@@ -1447,7 +1456,7 @@ const TransferVolumeModal: React.FC<{
       >
         {/* 标题栏 */}
         <div className="flex items-center gap-3 mb-4 shrink-0">
-          <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-full whitespace-nowrap bg-sky-100 flex items-center justify-center shrink-0">
             <Send className="w-5 h-5 text-sky-600" />
           </div>
           <div className="min-w-0 flex-1">
@@ -3028,7 +3037,7 @@ const VolumeWorkspacePage: React.FC = () => {
           {/* ★ 卷内件选择工具栏（悬浮底置 pill：选择域为面板级单域，不再挤在卡片内折行） */}
           {itemSel && (
             <div className="sticky bottom-3 z-20 flex justify-center pointer-events-none mt-2 shrink-0">
-              <div className="pointer-events-auto flex items-center gap-0.5 pl-3 pr-1.5 py-1.5 bg-slate-800 text-white rounded-full shadow-2xl animate-in slide-in-from-bottom-3 fade-in duration-200 max-w-full">
+              <div className="pointer-events-auto flex items-center gap-0.5 pl-3 pr-1.5 py-1.5 bg-slate-800 text-white rounded-full whitespace-nowrap shadow-2xl animate-in slide-in-from-bottom-3 fade-in duration-200 max-w-full">
                 <span className="text-xs font-medium text-slate-300 whitespace-nowrap mr-1 truncate max-w-[140px]" title={selInfo.volumeTitle}>
                   「{selInfo.volumeTitle}」已选 {itemSel.ids.size} 件
                 </span>
@@ -3078,7 +3087,7 @@ const VolumeWorkspacePage: React.FC = () => {
                   type="button"
                   onClick={() => setItemSel(null)}
                   title="清空勾选"
-                  className="ml-1 p-1.5 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+                  className="ml-1 p-1.5 rounded-full whitespace-nowrap text-slate-400 hover:text-white hover:bg-white/10 transition-colors shrink-0"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -3216,7 +3225,7 @@ const VolumeWorkspacePage: React.FC = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-full whitespace-nowrap bg-amber-100 flex items-center justify-center shrink-0">
                 <AlertTriangle className="w-5 h-5 text-amber-600" />
               </div>
               <div>

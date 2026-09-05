@@ -195,7 +195,7 @@ const AuditTrailPage: React.FC = () => {
                   const isExpanded = expandedNode === node.id;
                   return (
                     <div key={node.id} className="relative">
-                      <div className="absolute left-[-23px] top-2 w-4 h-4 rounded-full border-2 z-10 bg-white border-sky-400" />
+                      <div className="absolute left-[-23px] top-2 w-4 h-4 rounded-full whitespace-nowrap border-2 z-10 bg-white border-sky-400" />
                       <div className={`rounded-xl border p-4 transition-all cursor-pointer ${NODE_COLORS[node.type]} ${isExpanded ? 'ring-2 ring-sky-300' : ''}`}
                         onClick={() => setExpandedNode(isExpanded ? null : node.id)}>
                         <div className="flex items-start justify-between">

@@ -229,7 +229,7 @@ export const AuditLogsPanel: React.FC<AuditLogsPanelProps> = ({ records, trigger
                     {log.details}
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <div className="inline-flex items-center gap-1 bg-slate-50 text-slate-600 border border-slate-200 px-2 py-0.5 rounded-full font-bold text-xs">
+                    <div className="inline-flex items-center gap-1 bg-slate-50 text-slate-600 border border-slate-200 px-2 py-0.5 rounded-full whitespace-nowrap font-bold text-xs">
                       <ShieldCheck className="w-3 h-3 text-slate-500 shrink-0" />
                       <span>链上存证</span>
                     </div>

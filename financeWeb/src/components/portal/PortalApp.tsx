@@ -70,7 +70,7 @@ const PortalApp: React.FC<{ loggedUser: string; onLogout: () => void }> = ({ log
         >
           <img src="/logo.png" alt="会计档案" className="h-7 w-auto object-contain rounded" />
           <span className="font-bold text-slate-800 text-tab tracking-wide">会计档案 · 检索门户</span>
-          <span className="text-xs px-1.5 py-0.5 rounded-full bg-sky-50 text-sky-600 border border-sky-100">前台</span>
+          <span className="text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap bg-sky-50 text-sky-600 border border-sky-100">前台</span>
         </button>
 
         <div className="flex items-center gap-2">
@@ -110,7 +110,7 @@ const PortalApp: React.FC<{ loggedUser: string; onLogout: () => void }> = ({ log
 
           {/* 用户信息 */}
           <div className="flex items-center gap-2 pl-1">
-            <div className={`w-7 h-7 rounded-full ${currentUser?.avatarColor || 'bg-slate-700'} flex items-center justify-center text-white font-semibold text-xs`}>
+            <div className={`w-7 h-7 rounded-full whitespace-nowrap ${currentUser?.avatarColor || 'bg-slate-700'} flex items-center justify-center text-white font-semibold text-xs`}>
               {currentUser?.name?.slice(0, 1) || '？'}
             </div>
             <div className="hidden lg:block">

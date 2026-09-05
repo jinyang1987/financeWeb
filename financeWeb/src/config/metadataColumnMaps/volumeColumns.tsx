@@ -47,8 +47,8 @@ export const VOLUME_COLUMN_MAP: Record<string, ColumnDef> = {
   V1: {
     metaId: 'V1', label: '案卷档号', width: '220px', align: 'left', sortable: true,
     accessor: (v) => v.volumeCode
-      ? <span className="font-mono font-bold text-slate-800 text-xs tracking-tight">{v.volumeCode}</span>
-      : <span className="text-slate-300 text-xs">未赋号</span>,
+      ? <span className="font-mono font-bold text-slate-800 text-sm tracking-tight">{v.volumeCode}</span>
+      : <span className="text-slate-300 text-sm">未赋号</span>,
   },
   V2: {
     metaId: 'V2', label: '案卷题名', width: '240px', align: 'left', sortable: true,
@@ -56,11 +56,11 @@ export const VOLUME_COLUMN_MAP: Record<string, ColumnDef> = {
   },
   V3: {
     metaId: 'V3', label: '类别号', width: '80px', align: 'center',
-    accessor: (v) => <span className="font-mono text-xs text-slate-600">{v.archiveTypeCode}</span>,
+    accessor: (v) => <span className="font-mono text-sm text-slate-600">{v.archiveTypeCode}</span>,
   },
   V4: {
     metaId: 'V4', label: '档案类型', width: '110px', align: 'left',
-    accessor: (v) => <span className="text-slate-600 text-xs">{v.archiveType || '—'}</span>,
+    accessor: (v) => <span className="text-slate-600 text-sm">{v.archiveType || '—'}</span>,
   },
   V5: {
     metaId: 'V5', label: '会计年度', width: '90px', align: 'center', sortable: true,
@@ -68,11 +68,11 @@ export const VOLUME_COLUMN_MAP: Record<string, ColumnDef> = {
   },
   V6: {
     metaId: 'V6', label: '保管期限', width: '90px', align: 'center', sortable: true,
-    accessor: (v) => <span className="text-slate-600 text-xs">{v.retention || '—'}</span>,
+    accessor: (v) => <span className="text-slate-600 text-sm">{v.retention || '—'}</span>,
   },
   V7: {
     metaId: 'V7', label: '期限代码', width: '80px', align: 'center',
-    accessor: (v) => <span className="font-mono text-xs text-slate-500">{v.retentionCode || '—'}</span>,
+    accessor: (v) => <span className="font-mono text-sm text-slate-500">{v.retentionCode || '—'}</span>,
   },
   V8: {
     metaId: 'V8', label: '卷状态', width: '90px', align: 'center', sortable: true,
@@ -84,53 +84,53 @@ export const VOLUME_COLUMN_MAP: Record<string, ColumnDef> = {
   },
   V10: {
     metaId: 'V10', label: '卷内页数', width: '80px', align: 'right',
-    accessor: (v) => <span className="font-mono text-xs text-slate-500">{v.totalPages || '—'}</span>,
+    accessor: (v) => <span className="font-mono text-sm text-slate-500">{v.totalPages || '—'}</span>,
   },
   V11: {
     metaId: 'V11', label: '载体类型', width: '90px', align: 'center',
-    accessor: (v) => <span className="text-xs text-slate-600">{v.carrierType ? CARRIER_LABELS[v.carrierType] : '—'}</span>,
+    accessor: (v) => <span className="text-sm text-slate-600">{v.carrierType ? CARRIER_LABELS[v.carrierType] : '—'}</span>,
   },
   V12: {
     metaId: 'V12', label: '密级', width: '80px', align: 'center',
     accessor: (v) => v.securityLevel
-      ? <span className="text-xs text-amber-700 font-medium">{v.securityLevel}</span>
-      : <span className="text-slate-300 text-xs">普通</span>,
+      ? <span className="text-sm text-amber-700 font-medium">{v.securityLevel}</span>
+      : <span className="text-slate-300 text-sm">普通</span>,
   },
   V13: {
     metaId: 'V13', label: '柜号', width: '80px', align: 'center',
-    accessor: (v) => <span className="font-mono text-xs text-slate-500">{v.cabinetNo || '—'}</span>,
+    accessor: (v) => <span className="font-mono text-sm text-slate-500">{v.cabinetNo || '—'}</span>,
   },
   V14: {
     metaId: 'V14', label: '架号', width: '80px', align: 'center',
-    accessor: (v) => <span className="font-mono text-xs text-slate-500">{v.shelfNo || '—'}</span>,
+    accessor: (v) => <span className="font-mono text-sm text-slate-500">{v.shelfNo || '—'}</span>,
   },
   V15: {
     metaId: 'V15', label: '起始日期', width: '110px', align: 'center',
-    accessor: (v) => <span className="text-xs text-slate-500">{v.dateFrom || '—'}</span>,
+    accessor: (v) => <span className="text-sm text-slate-500">{v.dateFrom || '—'}</span>,
   },
   V16: {
     metaId: 'V16', label: '截止日期', width: '110px', align: 'center',
-    accessor: (v) => <span className="text-xs text-slate-500">{v.dateTo || '—'}</span>,
+    accessor: (v) => <span className="text-sm text-slate-500">{v.dateTo || '—'}</span>,
   },
   V17: {
     metaId: 'V17', label: '组卷日期', width: '110px', align: 'center', sortable: true,
-    accessor: (v) => <span className="text-xs text-slate-500">{v.createdDate || '—'}</span>,
+    accessor: (v) => <span className="text-sm text-slate-500">{v.createdDate || '—'}</span>,
   },
   V18: {
     metaId: 'V18', label: '组卷人', width: '100px', align: 'left',
-    accessor: (v) => <span className="text-xs text-slate-600">{v.createdBy || '—'}</span>,
+    accessor: (v) => <span className="text-sm text-slate-600">{v.createdBy || '—'}</span>,
   },
   V19: {
     metaId: 'V19', label: '数字化副本哈希', width: '160px', align: 'left',
     accessor: (v) => v.digitalHash
-      ? <span className="font-mono text-xs text-slate-400">{v.digitalHash.slice(0, 16)}…</span>
-      : <span className="text-slate-300 text-xs">—</span>,
+      ? <span className="font-mono text-sm text-slate-400">{v.digitalHash.slice(0, 16)}…</span>
+      : <span className="text-slate-300 text-sm">—</span>,
   },
   V20: {
     metaId: 'V20', label: '所属盒号', width: '140px', align: 'left',
     accessor: (v) => v.boxNo
-      ? <span className="font-mono text-xs text-slate-600">{v.boxNo}</span>
-      : <span className="text-slate-300 text-xs">未装盒</span>,
+      ? <span className="font-mono text-sm text-slate-600">{v.boxNo}</span>
+      : <span className="text-slate-300 text-sm">未装盒</span>,
   },
 };
 

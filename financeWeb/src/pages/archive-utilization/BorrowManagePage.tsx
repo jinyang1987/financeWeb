@@ -103,11 +103,11 @@ const BorrowManagePage: React.FC = () => {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-semibold text-slate-800 truncate">{f.volumeTitle}</span>
-          <span className="text-xs px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 font-medium">
+          <span className="text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap bg-slate-100 text-slate-500 font-medium">
             {PHYSICAL_MODE_LABELS[f.physicalMode || 'original']}
           </span>
           {f.status === 'overdue' && (
-            <span className="text-xs px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 font-bold">已逾期</span>
+            <span className="text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap bg-red-100 text-red-700 font-bold">已逾期</span>
           )}
         </div>
         <div className="text-xs text-slate-400 mt-1">
@@ -175,7 +175,7 @@ const BorrowManagePage: React.FC = () => {
             >
               <Icon className="w-4 h-4" />{label}
               {count !== undefined && count > 0 && (
-                <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${alert ? 'bg-red-500 text-white' : tab === key ? 'bg-sky-600 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                <span className={`text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap font-bold ${alert ? 'bg-red-500 text-white' : tab === key ? 'bg-sky-600 text-white' : 'bg-slate-200 text-slate-600'}`}>
                   {count}
                 </span>
               )}
@@ -211,7 +211,7 @@ const BorrowManagePage: React.FC = () => {
               );
               return (
                 <div key={fulfillment.id} className="bg-white border border-purple-200 rounded-2xl shadow-sm px-5 py-4 flex items-center gap-4">
-                  <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-bold text-sm shrink-0">
+                  <div className="w-8 h-8 rounded-full whitespace-nowrap bg-purple-100 flex items-center justify-center text-purple-600 font-bold text-sm shrink-0">
                     {idx + 1}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -221,7 +221,7 @@ const BorrowManagePage: React.FC = () => {
                       {holder && ` · 当前由 ${holder.applicantName} 持有（应还 ${holder.fulfillments.find((f) => f.volumeId === fulfillment.volumeId)?.endDate}）`}
                     </div>
                   </div>
-                  <span className="flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700 font-medium shrink-0">
+                  <span className="flex items-center gap-1 text-xs px-2 py-1 rounded-full whitespace-nowrap bg-purple-100 text-purple-700 font-medium shrink-0">
                     <Hourglass className="w-3 h-3" />归还后自动锁定并通知
                   </span>
                 </div>
@@ -243,7 +243,7 @@ const BorrowManagePage: React.FC = () => {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-mono text-sm font-bold text-slate-800">{order.orderNo}</span>
                       <span className="text-xs text-slate-500">{order.applicantName} · {order.applicantDept}</span>
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">{ORDER_STATUS_LABELS[order.status]}</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full whitespace-nowrap bg-emerald-100 text-emerald-700 font-medium">{ORDER_STATUS_LABELS[order.status]}</span>
                     </div>
                     <div className="text-xs text-slate-400 mt-1">
                       {order.reasonType} · {order.startDate} ~ {order.endDate} ·
@@ -278,14 +278,14 @@ const BorrowManagePage: React.FC = () => {
                   <div className="space-y-2">
                     {blacklistedUsers.map((u) => u && (
                       <div key={u.id} className="flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-xl">
-                        <div className={`w-8 h-8 rounded-full ${u.avatarColor} flex items-center justify-center text-white text-xs font-bold shrink-0`}>
+                        <div className={`w-8 h-8 rounded-full whitespace-nowrap ${u.avatarColor} flex items-center justify-center text-white text-xs font-bold shrink-0`}>
                           {u.name.slice(0, 1)}
                         </div>
                         <div className="flex-1">
                           <div className="text-sm font-semibold text-red-800">{u.name} <span className="text-xs font-normal text-red-500">{u.dept} · 工号 {u.empNo}</span></div>
                           <div className="text-xs text-red-500">名下有逾期未还实体档案 · 新建借阅已锁死 · 已每日抄送直属主管</div>
                         </div>
-                        <span className="text-xs px-2 py-1 rounded-full bg-red-600 text-white font-bold shrink-0">熔断中</span>
+                        <span className="text-xs px-2 py-1 rounded-full whitespace-nowrap bg-red-600 text-white font-bold shrink-0">熔断中</span>
                       </div>
                     ))}
                   </div>
@@ -320,7 +320,7 @@ const BorrowManagePage: React.FC = () => {
           <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-sm" />
           <div className="relative bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-3 mb-4">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+              <div className={`w-10 h-10 rounded-full whitespace-nowrap flex items-center justify-center shrink-0 ${
                 confirmAction.type === 'terminate' ? 'bg-red-100' : 'bg-sky-100'
               }`}>
                 {confirmAction.type === 'terminate' ? <Ban className="w-5 h-5 text-red-600" />

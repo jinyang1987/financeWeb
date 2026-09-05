@@ -115,7 +115,7 @@ const ItemsLibraryTab: React.FC = () => {
             <div className="grid grid-cols-4 divide-x divide-slate-100">
               {DIM_ORDER.map((dim) => (
                 <div key={dim} className="p-3 space-y-2">
-                  <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded-full border ${DIM_BADGE[dim]}`}>
+                  <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap border ${DIM_BADGE[dim]}`}>
                     {DIMENSION_LABELS[dim]}
                   </span>
                   {phaseItems.filter((i) => i.dimension === dim).map((item) => (
@@ -128,11 +128,11 @@ const ItemsLibraryTab: React.FC = () => {
                         onClick={() => void toggle(item)}
                         disabled={toggling === item.code}
                         title={item.enabled ? '点击停用' : '点击启用'}
-                        className={`relative inline-flex h-4 w-7 mt-0.5 items-center rounded-full transition-colors cursor-pointer shrink-0 ${
+                        className={`relative inline-flex h-4 w-7 mt-0.5 items-center rounded-full whitespace-nowrap transition-colors cursor-pointer shrink-0 ${
                           item.enabled ? 'bg-emerald-500' : 'bg-slate-300'
                         }`}
                       >
-                        <span className={`inline-block h-3 w-3 rounded-full bg-white shadow transition-transform ${
+                        <span className={`inline-block h-3 w-3 rounded-full whitespace-nowrap bg-white shadow transition-transform ${
                           item.enabled ? 'translate-x-[14px]' : 'translate-x-[2px]'
                         }`} />
                       </button>
@@ -185,12 +185,12 @@ const Toggle: React.FC<{ checked: boolean; onChange: () => void; disabled?: bool
     type="button"
     onClick={onChange}
     disabled={disabled}
-    className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+    className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full whitespace-nowrap transition-colors cursor-pointer ${
       disabled ? 'opacity-40 cursor-not-allowed' : ''
     } ${checked ? 'bg-sky-600' : 'bg-slate-300'}`}
   >
     <span
-      className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform ${
+      className={`inline-block h-3.5 w-3.5 rounded-full whitespace-nowrap bg-white shadow-sm transition-transform ${
         checked ? 'translate-x-[18px]' : 'translate-x-[3px]'
       }`}
     />
@@ -199,7 +199,7 @@ const Toggle: React.FC<{ checked: boolean; onChange: () => void; disabled?: bool
 
 /** 标签（可删除） */
 const TagBadge: React.FC<{ label: string; onRemove?: () => void }> = ({ label, onRemove }) => (
-  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-sky-50 text-sky-700 border border-sky-200 rounded-full">
+  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-sky-50 text-sky-700 border border-sky-200 rounded-full whitespace-nowrap">
     {label}
     {onRemove && (
       <button type="button" onClick={onRemove} className="hover:text-red-600 cursor-pointer">
@@ -225,7 +225,7 @@ const CapabilityNote: React.FC<{ items: Array<{ label: string; state: 'on' | 'pe
   <div className="mx-4 my-3 border border-slate-200 rounded-lg divide-y divide-slate-100">
     {items.map((it) => (
       <div key={it.label} className="flex items-center gap-2 px-3 py-2 text-xs">
-        <span className={`px-1.5 py-0.5 rounded-full font-medium shrink-0 ${
+        <span className={`px-1.5 py-0.5 rounded-full whitespace-nowrap font-medium shrink-0 ${
           it.state === 'on' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
         }`}>
           {it.state === 'on' ? '已实现' : '待接入'}
@@ -310,12 +310,12 @@ const InspectionConfigPage: React.FC = () => {
           <Settings className="w-5 h-5 text-sky-600" />
           <h2 className="text-base font-bold text-slate-800">四性检测配置</h2>
           {saved && (
-            <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full animate-in fade-in">
+            <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full whitespace-nowrap animate-in fade-in">
               配置已保存（服务端检测引擎即时生效）
             </span>
           )}
           {saveError && (
-            <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded-full">
+            <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded-full whitespace-nowrap">
               保存失败：{saveError}
             </span>
           )}
@@ -424,7 +424,7 @@ const InspectionConfigPage: React.FC = () => {
                               : [...plan.completeness.requiredFields, field];
                             setPlan({ ...plan, completeness: { ...plan.completeness, requiredFields: next } });
                           }}
-                          className={`px-2.5 py-1 text-xs rounded-full border transition-colors cursor-pointer ${
+                          className={`px-2.5 py-1 text-xs rounded-full whitespace-nowrap border transition-colors cursor-pointer ${
                             checked
                               ? 'bg-sky-50 text-sky-700 border-sky-300'
                               : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
@@ -464,7 +464,7 @@ const InspectionConfigPage: React.FC = () => {
                             : [...plan.usability.formatWhitelist, fmt];
                           setPlan({ ...plan, usability: { formatWhitelist: next } });
                         }}
-                        className={`px-2.5 py-1 text-xs rounded-full border font-mono transition-colors cursor-pointer ${
+                        className={`px-2.5 py-1 text-xs rounded-full whitespace-nowrap border font-mono transition-colors cursor-pointer ${
                           checked
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
                             : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
@@ -529,7 +529,7 @@ const InspectionConfigPage: React.FC = () => {
                           key={k}
                           type="button"
                           onClick={() => setPlan({ ...plan, security: { ...plan.security, sensitiveKeywords: [...plan.security.sensitiveKeywords, k] } })}
-                          className="px-2 py-0.5 text-xs text-slate-400 border border-dashed border-slate-200 rounded-full hover:text-rose-600 hover:border-rose-300 cursor-pointer"
+                          className="px-2 py-0.5 text-xs text-slate-400 border border-dashed border-slate-200 rounded-full whitespace-nowrap hover:text-rose-600 hover:border-rose-300 cursor-pointer"
                         >
                           +{k}
                         </button>

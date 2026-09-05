@@ -175,10 +175,10 @@ export const Header: React.FC<HeaderProps> = ({ onLogout, fondsLoading, onFanzon
             title="点击切换身份"
           >
             <div className="relative">
-              <div className={`w-9 h-9 rounded-full ${currentUser?.avatarColor || 'bg-slate-700'} flex items-center justify-center text-white font-semibold text-sm shadow-sm`}>
+              <div className={`w-9 h-9 rounded-full whitespace-nowrap ${currentUser?.avatarColor || 'bg-slate-700'} flex items-center justify-center text-white font-semibold text-sm shadow-sm`}>
                 {currentUser?.name?.slice(0, 1) || '？'}
               </div>
-              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-[#F8FAFC]" />
+              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full whitespace-nowrap bg-emerald-500 border-2 border-[#F8FAFC]" />
             </div>
             <div className="hidden lg:flex flex-col items-start">
               <span className="font-semibold text-slate-700 text-base leading-tight">{currentUser?.name || '未登录'}</span>
@@ -211,7 +211,7 @@ export const Header: React.FC<HeaderProps> = ({ onLogout, fondsLoading, onFanzon
                         isCurrent ? 'bg-sky-50' : 'hover:bg-slate-50'
                       }`}
                     >
-                      <div className={`w-8 h-8 rounded-full ${u.avatarColor} flex items-center justify-center text-white font-semibold text-xs shrink-0`}>
+                      <div className={`w-8 h-8 rounded-full whitespace-nowrap ${u.avatarColor} flex items-center justify-center text-white font-semibold text-xs shrink-0`}>
                         {u.name.slice(0, 1)}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -221,7 +221,7 @@ export const Header: React.FC<HeaderProps> = ({ onLogout, fondsLoading, onFanzon
                         </div>
                         <div className="flex items-center gap-1 mt-0.5 flex-wrap">
                           {u.roles.map((r) => (
-                            <span key={r} className="text-xs px-1.5 py-px rounded-full bg-slate-100 text-slate-500">{ROLE_LABELS[r]}</span>
+                            <span key={r} className="text-xs px-1.5 py-px rounded-full whitespace-nowrap bg-slate-100 text-slate-500">{ROLE_LABELS[r]}</span>
                           ))}
                         </div>
                       </div>

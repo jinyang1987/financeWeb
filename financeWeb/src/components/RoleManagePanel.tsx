@@ -137,7 +137,7 @@ const RoleManagePanel: React.FC = () => {
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${ROLE_BADGE_COLORS[role]}`}>
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap font-bold ${ROLE_BADGE_COLORS[role]}`}>
                     {ROLE_LABELS[role]}
                   </span>
                   <span className="text-xs text-slate-400 ml-auto">{users.length} 人</span>
@@ -145,7 +145,7 @@ const RoleManagePanel: React.FC = () => {
                 <div className="text-xs text-slate-400 mt-1 leading-relaxed">{ROLE_DESCRIPTIONS[role]}</div>
                 <div className="flex items-center gap-1 mt-1.5 flex-wrap">
                   {users.map((u) => (
-                    <span key={u.id} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded-full">
+                    <span key={u.id} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded-full whitespace-nowrap">
                       {u.name}
                     </span>
                   ))}
@@ -159,7 +159,7 @@ const RoleManagePanel: React.FC = () => {
       {/* 右：三维授权 */}
       <div className="flex-1 flex flex-col min-w-0">
         <div className="px-5 py-3 bg-white border-b border-slate-200 flex items-center gap-3 shrink-0">
-          <span className={`text-xs px-2 py-1 rounded-full font-bold ${ROLE_BADGE_COLORS[selectedRole]}`}>
+          <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap font-bold ${ROLE_BADGE_COLORS[selectedRole]}`}>
             {ROLE_LABELS[selectedRole]}
           </span>
           <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
@@ -484,8 +484,8 @@ const RoleManagePanel: React.FC = () => {
                       onClick={() => toggleOperation(selectedRole, op)}
                       className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 transition-colors"
                     >
-                      <span className={`w-9 h-5 rounded-full relative transition-colors shrink-0 ${granted ? 'bg-emerald-500' : 'bg-slate-300'}`}>
-                        <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${granted ? 'left-4.5' : 'left-0.5'}`}
+                      <span className={`w-9 h-5 rounded-full whitespace-nowrap relative transition-colors shrink-0 ${granted ? 'bg-emerald-500' : 'bg-slate-300'}`}>
+                        <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full whitespace-nowrap shadow transition-all ${granted ? 'left-4.5' : 'left-0.5'}`}
                           style={{ left: granted ? '1.125rem' : '0.125rem' }} />
                       </span>
                       <span className="text-xs font-bold text-slate-700 w-28 shrink-0">{OPERATION_LABELS[op]}</span>

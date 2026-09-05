@@ -61,7 +61,7 @@ function FulfillmentRow({ f }: { f: Fulfillment }) {
           <Hourglass className="w-3 h-3" />优先预约队列中
         </span>
       )}
-      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${FULFILLMENT_COLORS[f.status]}`}>
+      <span className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap font-medium ${FULFILLMENT_COLORS[f.status]}`}>
         {FULFILLMENT_STATUS_LABELS[f.status]}
       </span>
     </div>
@@ -116,7 +116,7 @@ const MyBorrowOrders: React.FC = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2.5 flex-wrap">
                     <span className="font-mono text-sm font-bold text-slate-800">{order.orderNo}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ORDER_STATUS_COLORS[order.status]}`}>
+                    <span className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap font-medium ${ORDER_STATUS_COLORS[order.status]}`}>
                       {ORDER_STATUS_LABELS[order.status]}
                     </span>
                     {order.status === 'approving' && currentStep && (

@@ -95,7 +95,7 @@ const SectionCard: React.FC<{ title: string; icon: React.ReactNode; badge?: stri
     <div className="flex items-center gap-2.5 px-5 py-4 border-b border-slate-100">
       {icon}
       <span className="text-sm font-bold text-slate-800">{title}</span>
-      {badge && <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{badge}</span>}
+      {badge && <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full whitespace-nowrap">{badge}</span>}
     </div>
     <div className="px-5 py-4">{children}</div>
   </div>
@@ -153,7 +153,7 @@ const GroupingConfigTab: React.FC = () => {
     <div className="flex flex-col flex-1 min-h-0 bg-slate-100">
       {/* ═══ 操作栏（说教内容已移「原理说明」Tab） ═══ */}
       <div className="flex items-center gap-3 px-6 py-2.5 bg-white border-b border-slate-200 shrink-0">
-        <span className="text-xs px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200 font-medium"
+        <span className="text-xs px-2 py-0.5 rounded-full whitespace-nowrap bg-sky-50 text-sky-700 border border-sky-200 font-medium"
           title="本页配置实时写入组卷引擎，驱动组卷工作台「智能组卷」推荐与「组卷」操作">
           配置实时驱动智能组卷
         </span>
@@ -190,7 +190,7 @@ const GroupingConfigTab: React.FC = () => {
                       {sec.label}
                     </span>
                     {sec.badge && (
-                      <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium shrink-0 ${sec.badgeCls || 'bg-slate-100 text-slate-500'}`}>
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap font-medium shrink-0 ${sec.badgeCls || 'bg-slate-100 text-slate-500'}`}>
                         {sec.badge}
                       </span>
                     )}
@@ -277,7 +277,7 @@ const GroupingConfigTab: React.FC = () => {
                                     boxThicknessMm: p.mm,
                                     itemsPerBox: calcItemsPerBox(p.mm, config.perItemThicknessMm),
                                   })}
-                                  className={`px-2.5 py-1 text-xs rounded-full border transition-colors cursor-pointer ${
+                                  className={`px-2.5 py-1 text-xs rounded-full whitespace-nowrap border transition-colors cursor-pointer ${
                                     config.boxThicknessMm === p.mm
                                       ? 'bg-amber-600 text-white border-amber-600 font-medium'
                                       : 'bg-white text-slate-600 border-slate-300 hover:border-amber-400'

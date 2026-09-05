@@ -120,7 +120,7 @@ const BADGE_TONES: Record<string, string> = {
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ children, tone = 'slate', className, title }) => (
   <span
     title={title}
-    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-medium leading-4 whitespace-nowrap ${BADGE_TONES[tone] || BADGE_TONES.slate} ${className || ''}`}
+    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full whitespace-nowrap border text-xs font-medium leading-4 whitespace-nowrap ${BADGE_TONES[tone] || BADGE_TONES.slate} ${className || ''}`}
   >
     {children}
   </span>
