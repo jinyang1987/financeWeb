@@ -173,8 +173,8 @@ const PortalRecordDetail: React.FC<PortalRecordDetailProps> = ({ record, onBack,
             </div>
             <h1 className="text-base font-bold text-white mt-1.5">{record.remarks || record.voucherNo}</h1>
             <div className="flex items-center gap-2 mt-2 flex-wrap">
-              <span className="text-xs font-mono text-white/70 bg-white/10 px-2 py-0.5 rounded">{record.archiveCode}</span>
-              {isSourceDoc && <span className="text-xs text-amber-200 bg-amber-500/20 px-2 py-0.5 rounded">原始凭证</span>}
+              <span className="text-xs font-mono text-white/70 bg-white/10 px-2 py-0.5 rounded whitespace-nowrap">{record.archiveCode}</span>
+              {isSourceDoc && <span className="text-xs text-amber-200 bg-amber-500/20 px-2 py-0.5 rounded whitespace-nowrap">原始凭证</span>}
               {record.voucherNo && <span className="text-xs font-mono text-white/70">{record.voucherNo}</span>}
               <ArchiveStatusTags record={record} />
             </div>
@@ -232,7 +232,7 @@ const PortalRecordDetail: React.FC<PortalRecordDetailProps> = ({ record, onBack,
               <div className="divide-y divide-slate-100">
                 {record.components.map((c, idx) => (
                   <div key={idx} className="px-6 py-3.5 flex items-center gap-3">
-                    <span className="text-xs font-mono text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded shrink-0">
+                    <span className="text-xs font-mono text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded whitespace-nowrap shrink-0">
                       附{idx + 1}
                     </span>
                     <div className="flex-1 min-w-0">
@@ -279,7 +279,7 @@ const PortalRecordDetail: React.FC<PortalRecordDetailProps> = ({ record, onBack,
             <div className="divide-y divide-slate-100">
               {attachments.map((doc, idx) => (
                 <div key={doc.id} className="px-6 py-3.5 flex items-center gap-3">
-                  <span className="text-xs font-mono text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded shrink-0">
+                  <span className="text-xs font-mono text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded whitespace-nowrap shrink-0">
                     附{idx + 1}
                   </span>
                   <div className="flex-1 min-w-0">

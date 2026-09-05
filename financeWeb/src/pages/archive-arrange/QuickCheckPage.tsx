@@ -39,7 +39,7 @@ const phaseLabel = (p: string) =>
 
 /** 四性徽标（单维度） */
 const DimBadge: React.FC<{ label: string; pass: boolean }> = ({ label, pass }) => (
-  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-xs font-medium ${
+  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded whitespace-nowrap border text-xs font-medium ${
     pass ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-600 border-red-200'
   }`}>
     {pass ? <CheckCircle2 className="w-2.5 h-2.5" /> : <XCircle className="w-2.5 h-2.5" />}
@@ -163,7 +163,7 @@ const ReportRow: React.FC<{
                               <button
                                 type="button"
                                 onClick={(e) => { e.stopPropagation(); onJumpVolume(report.target_node); }}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-sky-700 bg-sky-50 border border-sky-200 rounded-md hover:bg-sky-100"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-sky-700 bg-sky-50 border border-sky-200 rounded-md whitespace-nowrap hover:bg-sky-100"
                               >
                                 <Layers className="w-3 h-3" />查看案卷
                               </button>
@@ -172,7 +172,7 @@ const ReportRow: React.FC<{
                               <button
                                 type="button"
                                 onClick={(e) => { e.stopPropagation(); onViewRecord(it.target!); }}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-sky-700 bg-sky-50 border border-sky-200 rounded-md hover:bg-sky-100"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-sky-700 bg-sky-50 border border-sky-200 rounded-md whitespace-nowrap hover:bg-sky-100"
                               >
                                 <Eye className="w-3 h-3" />查看该件
                               </button>

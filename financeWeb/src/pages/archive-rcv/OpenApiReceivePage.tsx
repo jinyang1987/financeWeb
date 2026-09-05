@@ -463,7 +463,7 @@ const StandardTab: React.FC = () => (
           {ENDPOINTS.map((e) => (
             <tr key={e.path} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
               <td className="px-4 py-3">
-                <span className={`px-1.5 py-0.5 text-xs font-mono font-bold rounded ${
+                <span className={`px-1.5 py-0.5 text-xs font-mono font-bold rounded whitespace-nowrap ${
                   e.method === 'POST' ? 'bg-emerald-50 text-emerald-700' : 'bg-sky-50 text-sky-700'
                 }`}>{e.method}</span>
               </td>

@@ -155,7 +155,7 @@ const SourceDocRow: React.FC<{
           <div className="flex items-center gap-4 text-xs">
             <span className="text-slate-400">所属凭证：</span>
             <span className="text-slate-700 font-mono font-semibold">{sd.parentVoucherNo}</span>
-            <span className="text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded text-xs">
+            <span className="text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded whitespace-nowrap text-xs">
               第 {sd.attachmentSequence || 1} 份附件
             </span>
           </div>

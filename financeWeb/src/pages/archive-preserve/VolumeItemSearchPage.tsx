@@ -208,7 +208,7 @@ const VolumeItemSearchPage: React.FC = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-slate-800 text-sm">{r.title}</span>
-                          <span className={`px-1.5 py-0.5 text-xs font-medium rounded ${
+                          <span className={`px-1.5 py-0.5 text-xs font-medium rounded whitespace-nowrap ${
                             r.type === 'volume' ? 'bg-amber-100 text-amber-700' : 'bg-sky-100 text-sky-700'
                           }`}>
                             {r.type === 'volume' ? '案卷' : '件'}

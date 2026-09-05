@@ -153,7 +153,7 @@ export const InteractivePreview: React.FC<InteractivePreviewProps> = ({
               <div className="bg-white px-4 py-2 border-b border-slate-100 text-xs text-slate-600 flex items-center justify-between shrink-0">
                 <span className="font-mono text-xs text-slate-400 select-all">SHA-256 Checksum: {activeFile.hash}</span>
                 {activeFile.signatureVerified && (
-                  <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded font-bold flex items-center gap-1">
+                  <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded whitespace-nowrap font-bold flex items-center gap-1">
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     已通过国家电子发票真实性签名查验
                   </span>

@@ -488,7 +488,7 @@ const MetadataEntryModal: React.FC<MetadataEntryModalProps> = ({ open, volume, i
                         {rec?.voucherNo || id.slice(0, 10)}
                       </span>
                       {rec && isSourceDocRecord(rec) && (
-                        <span className="ml-auto shrink-0 px-1 py-px text-xs rounded bg-amber-100 text-amber-700">原始凭证</span>
+                        <span className="ml-auto shrink-0 px-1 py-px text-xs rounded whitespace-nowrap bg-amber-100 text-amber-700">原始凭证</span>
                       )}
                     </div>
                     {rec && (

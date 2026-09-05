@@ -208,13 +208,13 @@ const ResultsTable: React.FC<{
           <tr className="bg-slate-100/80 text-slate-700 divide-x divide-slate-200/80">
             <th className="px-4 py-3 w-8"></th>
             <SortHeader field="transactionDate" label="业务日期" />
-            <th className="px-4 py-3 text-left text-sm font-semibold">单据编号</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold">凭证类型</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">单据编号</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">凭证类型</th>
             <SortHeader field="amountLower" label="金额" />
-            <th className="px-4 py-3 text-left text-sm font-semibold">对方单位</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold hidden xl:table-cell">业务分类</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold hidden xl:table-cell">载体</th>
-            <th className="px-4 py-3 text-center text-sm font-semibold w-16">四性</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">对方单位</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold hidden xl:table-cell whitespace-nowrap">业务分类</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold hidden xl:table-cell whitespace-nowrap">载体</th>
+            <th className="px-4 py-3 text-center text-sm font-semibold w-16 whitespace-nowrap">四性</th>
           </tr>
         </thead>
         <tbody>
@@ -254,10 +254,10 @@ const ResultsTable: React.FC<{
                   <span className="text-sm text-slate-600 truncate max-w-[160px] block">{doc.counterpartyName}</span>
                 </td>
                 <td className="px-4 py-3 hidden xl:table-cell">
-                  <span className="text-xs px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{doc.businessCategory}</span>
+                  <span className="text-xs px-1.5 py-0.5 rounded whitespace-nowrap bg-slate-100 text-slate-600">{doc.businessCategory}</span>
                 </td>
                 <td className="px-4 py-3 hidden xl:table-cell">
-                  <span className={`text-xs px-1.5 py-0.5 rounded ${
+                  <span className={`text-xs px-1.5 py-0.5 rounded whitespace-nowrap ${
                     doc.carrierType === 'electronic'
                       ? 'bg-sky-50 text-sky-600'
                       : 'bg-amber-50 text-amber-700'
@@ -479,7 +479,7 @@ const Badge: React.FC<{ children: React.ReactNode; color?: 'blue' | 'amber' | 's
     amber: 'bg-amber-50 text-amber-700',
     slate: 'bg-slate-100 text-slate-600',
   };
-  return <span className={`text-xs px-1.5 py-0.5 rounded ${colors[color]}`}>{children}</span>;
+  return <span className={`text-xs px-1.5 py-0.5 rounded whitespace-nowrap ${colors[color]}`}>{children}</span>;
 };
 
 const CheckBadge: React.FC<{ label: string; passed: boolean }> = ({ label, passed }) => (

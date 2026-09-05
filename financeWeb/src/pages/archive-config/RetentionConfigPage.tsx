@@ -275,7 +275,7 @@ const DetailRow: React.FC<{ detail: CategoryDetail; isLast: boolean; depth: numb
               {detail.name}
             </span>
             {isPermanent && (
-              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-bold bg-red-50 text-red-600 border border-red-200">
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded whitespace-nowrap text-xs font-bold bg-red-50 text-red-600 border border-red-200">
                 <Lock className="w-2.5 h-2.5" />永久
               </span>
             )}

@@ -656,7 +656,7 @@ export default function DirectoryConfigPanel({ embedded = false }: { embedded?: 
                   >
                     <Calendar className={`w-4 h-4 mb-1.5 ${isSelected ? 'text-sky-600' : 'text-slate-400'}`} />
                     <span className={`text-sm font-bold ${isSelected ? 'text-sky-700' : 'text-slate-600'}`}>{year}</span>
-                    {isCurrentYear && <span className="absolute top-1 right-1 text-xs px-1 py-0.5 bg-emerald-100 text-emerald-600 rounded font-medium">当前</span>}
+                    {isCurrentYear && <span className="absolute top-1 right-1 text-xs px-1 py-0.5 bg-emerald-100 text-emerald-600 rounded whitespace-nowrap font-medium">当前</span>}
                     {isSelected && <CheckCircle className="absolute top-1 left-1 w-3.5 h-3.5 text-sky-600" />}
                   </button>
                 );

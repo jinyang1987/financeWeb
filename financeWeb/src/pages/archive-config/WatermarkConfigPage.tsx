@@ -756,7 +756,7 @@ const WatermarkConfigPage: React.FC = () => {
                 <div className="divide-y divide-slate-50">
                   <ConfigRow label="盲水印（暗水印）" desc="频域数字水印：拍照/截图/裁剪/压缩后仍可提取泄露人工号">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-violet-600 bg-violet-50 border border-violet-200 rounded px-1.5 py-0.5">高阶</span>
+                      <span className="text-xs font-bold text-violet-600 bg-violet-50 border border-violet-200 rounded whitespace-nowrap px-1.5 py-0.5">高阶</span>
                       <Toggle
                         checked={config.security.blindWatermark}
                         onChange={() => updateSecurity({ blindWatermark: !config.security.blindWatermark })}
@@ -765,7 +765,7 @@ const WatermarkConfigPage: React.FC = () => {
                   </ConfigRow>
                   <ConfigRow label="防截屏控制" desc="移动端/桌面客户端禁用截屏键，截屏时黑屏">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-violet-600 bg-violet-50 border border-violet-200 rounded px-1.5 py-0.5">高阶</span>
+                      <span className="text-xs font-bold text-violet-600 bg-violet-50 border border-violet-200 rounded whitespace-nowrap px-1.5 py-0.5">高阶</span>
                       <Toggle
                         checked={config.security.preventScreenshot}
                         onChange={() => updateSecurity({ preventScreenshot: !config.security.preventScreenshot })}
@@ -853,7 +853,7 @@ const WatermarkConfigPage: React.FC = () => {
                   <ConfigRow label="失败降级（安全失败）" desc="加水印服务故障时阻断下载，绝不暴露无水印原文件">
                     <div className="flex items-center gap-2">
                       {config.download.failSecure && (
-                        <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5">
+                        <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 rounded whitespace-nowrap px-1.5 py-0.5">
                           <CheckCircle2 className="w-3 h-3" />推荐
                         </span>
                       )}

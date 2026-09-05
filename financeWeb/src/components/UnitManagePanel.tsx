@@ -363,7 +363,7 @@ export const UnitManagePanel: React.FC = () => {
           <button
             type="button"
             onClick={() => setError(null)}
-            className="text-red-400 hover:text-red-600 font-bold cursor-pointer text-xs px-2 py-0.5 rounded hover:bg-red-100"
+            className="text-red-400 hover:text-red-600 font-bold cursor-pointer text-xs px-2 py-0.5 rounded whitespace-nowrap hover:bg-red-100"
           >
             关闭
           </button>

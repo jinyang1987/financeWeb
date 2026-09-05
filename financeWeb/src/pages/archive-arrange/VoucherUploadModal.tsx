@@ -177,7 +177,7 @@ const FileRow: React.FC<FileRowProps> = ({ item, onEdit, onRemove }) => {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="font-medium text-slate-700 truncate">{item.name}</span>
-          <span className={`px-1.5 py-0.5 text-xs font-medium rounded ${item.category === '记账凭证' ? 'bg-sky-100 text-sky-700' : item.category === '原始凭证' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
+          <span className={`px-1.5 py-0.5 text-xs font-medium rounded whitespace-nowrap ${item.category === '记账凭证' ? 'bg-sky-100 text-sky-700' : item.category === '原始凭证' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
             {item.category}
           </span>
         </div>
@@ -196,7 +196,7 @@ const FileRow: React.FC<FileRowProps> = ({ item, onEdit, onRemove }) => {
       </div>
 
       {item.status === 'ocr-done' && (
-        <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
+        <span className={`text-xs font-medium px-1.5 py-0.5 rounded whitespace-nowrap ${
           item.confidence >= 80 ? 'bg-green-100 text-green-700' :
           item.confidence >= 50 ? 'bg-amber-100 text-amber-700' :
           'bg-red-100 text-red-700'

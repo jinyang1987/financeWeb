@@ -609,7 +609,7 @@ export const PersonnelManagePanel: React.FC = () => {
                     <td className="px-4 py-3 font-mono text-sm text-slate-600">{p.email}</td>
                     <td className="px-4 py-3">
                       {p.org ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md text-xs font-medium">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md whitespace-nowrap text-xs font-medium">
                           {p.org}
                         </span>
                       ) : (
@@ -618,7 +618,7 @@ export const PersonnelManagePanel: React.FC = () => {
                     </td>
                     <td className="px-4 py-3">
                       {p.position ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-sky-50 text-sky-600 rounded-md text-xs font-medium">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-sky-50 text-sky-600 rounded-md whitespace-nowrap text-xs font-medium">
                           {p.position}
                         </span>
                       ) : (
@@ -636,7 +636,7 @@ export const PersonnelManagePanel: React.FC = () => {
                           'bg-rose-50 text-rose-700 border-rose-300',
                         ];
                         return (
-                          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-xs font-medium ${colors[level]}`}>
+                          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md whitespace-nowrap border text-xs font-medium ${colors[level]}`}>
                             <select
                               value={level}
                               disabled={clearanceSaving === p.account}

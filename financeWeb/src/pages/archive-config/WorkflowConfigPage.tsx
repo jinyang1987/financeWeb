@@ -306,7 +306,7 @@ const WorkflowSettingsPanel: React.FC<{ wf: BusinessWorkflow }> = ({ wf }) => {
     <div className="p-4 space-y-4">
       <div className="flex items-center justify-between">
         <span className="text-xs font-bold uppercase tracking-wider text-slate-400">流程设置</span>
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-xs font-semibold ${meta.badge}`}>
+        <span className={`inline-flex items-center px-2 py-0.5 rounded-md whitespace-nowrap border text-xs font-semibold ${meta.badge}`}>
           {meta.label}
         </span>
       </div>
@@ -379,7 +379,7 @@ const NodeSettingsPanel: React.FC<{ wf: BusinessWorkflow; node: WfNode }> = ({ w
     <div className="p-4 space-y-4">
       <div className="flex items-center justify-between">
         <span className="text-xs font-bold uppercase tracking-wider text-slate-400">节点属性</span>
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold"
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md whitespace-nowrap text-xs font-semibold"
           style={{ backgroundColor: th.fill, color: th.text }}>
           {WF_NODE_TYPE_LABELS[node.type]}
         </span>
@@ -603,7 +603,7 @@ const WorkflowConfigPage: React.FC = () => {
           <GitBranch className="w-4 h-4 text-sky-600" />
           <span className="text-sm font-bold text-slate-800">{wf?.name || '流程配置'}</span>
           {wf?.builtIn && (
-            <span className="px-1.5 py-0.5 text-xs font-semibold bg-slate-100 text-slate-500 rounded">内置</span>
+            <span className="px-1.5 py-0.5 text-xs font-semibold bg-slate-100 text-slate-500 rounded whitespace-nowrap">内置</span>
           )}
           {dirty && <span className="w-1.5 h-1.5 rounded-full whitespace-nowrap bg-amber-400" title="有未保存修改" />}
         </div>

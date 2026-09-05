@@ -560,7 +560,7 @@ const GroupingConfigTab: React.FC = () => {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-sm font-bold text-slate-700">{opt.label}</span>
-                              <span className="font-mono text-xs text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{opt.structure}</span>
+                              <span className="font-mono text-xs text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded whitespace-nowrap">{opt.structure}</span>
                             </div>
                             <p className="text-xs text-slate-500 mt-0.5">{opt.desc}</p>
                             <p className="text-xs text-sky-600 font-mono mt-1">示例：{opt.example}</p>

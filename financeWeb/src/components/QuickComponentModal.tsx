@@ -317,7 +317,7 @@ export const QuickComponentModal: React.FC<QuickComponentProps> = ({
                         <div className="flex items-center gap-2">
                           <span className={`w-2 h-2 rounded-full whitespace-nowrap ${color.bar} shrink-0`} aria-hidden="true" />
                           <span className={`font-mono font-semibold text-sm ${color.text}`}>{v.voucherNo || '未编号'}</span>
-                          <span className="px-1.5 py-px text-xs rounded bg-slate-100 text-slate-500">{v.archiveType}</span>
+                          <span className="px-1.5 py-px text-xs rounded whitespace-nowrap bg-slate-100 text-slate-500">{v.archiveType}</span>
                           {isActive ? (
                             <span className={`ml-auto inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full whitespace-nowrap text-xs font-semibold text-white ${color.bar}`}>
                               <span className="w-1.5 h-1.5 rounded-full whitespace-nowrap bg-white/90 animate-pulse" aria-hidden="true" />

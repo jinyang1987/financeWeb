@@ -205,7 +205,7 @@ export const ArchiveTable: React.FC<ArchiveTableProps> = ({
                           {row.year}/{row.month || ''}
                         </TableCell>
                         <TableCell className="text-center">
-                          <span className={`px-2 py-0.5 rounded font-bold text-xs ${
+                          <span className={`px-2 py-0.5 rounded whitespace-nowrap font-bold text-xs ${
                             row.retention === '永久' ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-muted text-muted-foreground'
                           }`}>{row.retention}</span>
                         </TableCell>
@@ -218,7 +218,7 @@ export const ArchiveTable: React.FC<ArchiveTableProps> = ({
                         <button
                           title="Real (CA)"
                           onClick={() => { handleOpenDrawer(row); setActiveFileIndex(1); }}
-                          className={`px-1.5 py-0.5 rounded font-bold text-xs flex items-center gap-0.5 pointer-events-auto border transition-colors cursor-pointer ${
+                          className={`px-1.5 py-0.5 rounded whitespace-nowrap font-bold text-xs flex items-center gap-0.5 pointer-events-auto border transition-colors cursor-pointer ${
                             row.checks.real ? 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100' : 'bg-red-50 border-red-200 text-red-800 hover:bg-red-100'
                           }`}
                         >
@@ -226,7 +226,7 @@ export const ArchiveTable: React.FC<ArchiveTableProps> = ({
                         </button>
                         <button
                           title="Complete (SHA256)"
-                          className={`px-1.5 py-0.5 rounded font-bold text-xs flex items-center gap-0.5 border cursor-pointer ${
+                          className={`px-1.5 py-0.5 rounded whitespace-nowrap font-bold text-xs flex items-center gap-0.5 border cursor-pointer ${
                             row.checks.complete ? 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100' : 'bg-red-50 border-red-200 text-red-800'
                           }`}
                           onClick={() => handleOpenDrawer(row)}
@@ -235,7 +235,7 @@ export const ArchiveTable: React.FC<ArchiveTableProps> = ({
                         </button>
                         <button
                           title="Usable (Format)"
-                          className={`px-1.5 py-0.5 rounded font-bold text-xs flex items-center gap-0.5 border transition-all cursor-pointer ${
+                          className={`px-1.5 py-0.5 rounded whitespace-nowrap font-bold text-xs flex items-center gap-0.5 border transition-all cursor-pointer ${
                             row.checks.usable ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-amber-100 border-amber-300 text-amber-800 animate-pulse'
                           }`}
                           onClick={() => { handleOpenDrawer(row); const ofdIdx = row.components.findIndex(c => c.contentType === 'ofd'); if (ofdIdx >= 0) setActiveFileIndex(ofdIdx); }}
@@ -244,7 +244,7 @@ export const ArchiveTable: React.FC<ArchiveTableProps> = ({
                         </button>
                         <button
                           title="Safe (Security)"
-                          className={`px-1.5 py-0.5 rounded font-bold text-xs flex items-center gap-0.5 border cursor-pointer ${
+                          className={`px-1.5 py-0.5 rounded whitespace-nowrap font-bold text-xs flex items-center gap-0.5 border cursor-pointer ${
                             row.checks.safe ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-800'
                           }`}
                           onClick={() => handleOpenDrawer(row)}
@@ -256,7 +256,7 @@ export const ArchiveTable: React.FC<ArchiveTableProps> = ({
 
                     {/* Status */}
                     <TableCell className="text-center">
-                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                      <span className={`px-2 py-0.5 rounded whitespace-nowrap text-xs font-bold ${
                         row.status === '已组卷' ? 'bg-muted text-muted-foreground border border-slate-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
                       }`}>{row.status}</span>
                       {row.volumeCode && (

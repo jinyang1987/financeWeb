@@ -226,14 +226,14 @@ const RecycleBinPage: React.FC = () => {
             )}
             {src && (r.parentRecordId ? (
               <span
-                className="shrink-0 px-1 py-px text-xs rounded bg-sky-100 text-sky-700"
+                className="shrink-0 px-1 py-px text-xs rounded whitespace-nowrap bg-sky-100 text-sky-700"
                 title="所属记账凭证（不在本页回收站内——或已先恢复/入卷）"
               >
                 附于 {parentNo || r.parentRecordId.slice(0, 8)}
               </span>
             ) : (
               <span
-                className="shrink-0 px-1 py-px text-xs rounded bg-amber-100 text-amber-700"
+                className="shrink-0 px-1 py-px text-xs rounded whitespace-nowrap bg-amber-100 text-amber-700"
                 title="未挂接的原始凭证"
               >
                 待挂接
@@ -246,7 +246,7 @@ const RecycleBinPage: React.FC = () => {
     {
       id: 'archiveType', header: '档案类别',
       cell: (r) => (
-        <span className={`inline-flex items-center rounded border px-1.5 py-0.5 text-xs ${ARCHIVE_TYPE_COLORS[r.archiveType] || 'border-slate-200 text-slate-600 bg-slate-50'}`}>
+        <span className={`inline-flex items-center rounded whitespace-nowrap border px-1.5 py-0.5 text-xs ${ARCHIVE_TYPE_COLORS[r.archiveType] || 'border-slate-200 text-slate-600 bg-slate-50'}`}>
           {r.archiveType}
         </span>
       ),
@@ -283,7 +283,7 @@ const RecycleBinPage: React.FC = () => {
         <div className="flex items-center gap-2">
           <FolderOpen className="h-5 w-5 text-slate-500" />
           <h2 className="text-base font-semibold text-slate-800">回收站</h2>
-          <span className="ml-1 rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
+          <span className="ml-1 rounded whitespace-nowrap bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
             全宗 {currentFanzongCode} · {displayRows.length} 件
             {items.length !== displayRows.length && `（共 ${items.length} 条记录）`}
           </span>

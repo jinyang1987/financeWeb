@@ -59,7 +59,7 @@ export const AuditTimeline: React.FC<AuditTimelineProps> = ({ logs }) => {
               {/* Top metadata row */}
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-mono text-slate-400 font-bold">{log.timestamp}</span>
-                <span className={`text-xs font-bold px-2 py-0.5 rounded border ${getLogColorClass(log.action)}`}>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded whitespace-nowrap border ${getLogColorClass(log.action)}`}>
                   {log.action}
                 </span>
                 <span className="text-xs text-slate-500">

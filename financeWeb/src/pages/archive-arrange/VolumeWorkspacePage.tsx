@@ -450,7 +450,7 @@ const UnassignedPool: React.FC<UnassignedPoolProps> = ({
                     <span className="font-mono font-medium text-slate-700">{a.voucherNo}</span>
                     {a.amount > 0 && <span>¥{a.amount.toLocaleString('zh-CN', { minimumFractionDigits: 2 })}</span>}
                     {a.year && <span className="text-slate-400">{a.year}-{a.month}</span>}
-                    <span className="px-1 py-px text-xs rounded bg-amber-100 text-amber-700">原始凭证</span>
+                    <span className="px-1 py-px text-xs rounded whitespace-nowrap bg-amber-100 text-amber-700">原始凭证</span>
                   </div>
                 ))}
               </div>
@@ -2008,11 +2008,11 @@ const VolumeWorkspacePage: React.FC = () => {
                 </button>
               )}
               {isSrc && (r.parentRecordId ? (
-                <span className="shrink-0 px-1 py-px text-xs rounded bg-sky-100 text-sky-700" title="所属记账凭证（随其整体组卷）">
+                <span className="shrink-0 px-1 py-px text-xs rounded whitespace-nowrap bg-sky-100 text-sky-700" title="所属记账凭证（随其整体组卷）">
                   附于 {parentNo || r.parentRecordId!.slice(0, 8)}
                 </span>
               ) : (
-                <span className="shrink-0 px-1 py-px text-xs rounded bg-amber-100 text-amber-700" title="未挂接：不会随任何凭证成单元；勾选 1 张记账凭证 + 本件后点【组件】">
+                <span className="shrink-0 px-1 py-px text-xs rounded whitespace-nowrap bg-amber-100 text-amber-700" title="未挂接：不会随任何凭证成单元；勾选 1 张记账凭证 + 本件后点【组件】">
                   待挂接
                 </span>
               ))}

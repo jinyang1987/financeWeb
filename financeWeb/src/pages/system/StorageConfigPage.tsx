@@ -389,7 +389,7 @@ const StorageConfigPage: React.FC<StorageConfigPageProps> = ({ triggerToast }) =
                         />
                         {roomNameDraft.trim() !== room.room_name && roomNameDraft.trim() && (
                           <button type="button" onClick={() => void handleRenameRoom()} disabled={busy === 'rename-room'}
-                            className="flex items-center gap-1 px-2 py-0.5 text-xs font-semibold text-white bg-sky-600 rounded-md hover:bg-sky-700 disabled:opacity-50">
+                            className="flex items-center gap-1 px-2 py-0.5 text-xs font-semibold text-white bg-sky-600 rounded-md whitespace-nowrap hover:bg-sky-700 disabled:opacity-50">
                             {busy === 'rename-room' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}保存名称
                           </button>
                         )}

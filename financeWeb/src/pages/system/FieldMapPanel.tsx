@@ -395,7 +395,7 @@ const FieldMapPanel: React.FC = () => {
                     <select
                       value={testCategory}
                       onChange={(e) => setTestCategory(e.target.value)}
-                      className="px-2 py-0.5 text-xs border border-slate-300 rounded-md bg-white"
+                      className="px-2 py-0.5 text-xs border border-slate-300 rounded-md whitespace-nowrap bg-white"
                     >
                       {CATEGORIES.filter((c) => c.id !== '*').map((c) => (
                         <option key={c.id} value={c.id}>{c.label}类</option>

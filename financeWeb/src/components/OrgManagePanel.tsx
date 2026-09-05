@@ -170,7 +170,7 @@ export const OrgManagePanel: React.FC = () => {
               <>
                 <input type="text" value={newDeptName} onChange={(e) => setNewDeptName(e.target.value)}
                   placeholder={isUnit ? '部门名称' : '下级部门名称'}
-                  className="w-24 border border-amber-300 rounded px-1.5 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  className="w-24 border border-amber-300 rounded whitespace-nowrap px-1.5 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-amber-500"
                   autoFocus onClick={(e) => e.stopPropagation()}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') handleCreateDept(node.id);

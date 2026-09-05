@@ -100,7 +100,7 @@ export const Header: React.FC<HeaderProps> = ({ onLogout, fondsLoading, onFanzon
               </span>
             </div>
             {!fondsLoading && (
-              <span className="text-xs font-mono text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
+              <span className="text-xs font-mono text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded whitespace-nowrap shrink-0">
                 {currentFanzongCode}
               </span>
             )}
@@ -138,7 +138,7 @@ export const Header: React.FC<HeaderProps> = ({ onLogout, fondsLoading, onFanzon
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-semibold truncate">{f.name}</span>
                         {f.status === 'custodial' && (
-                          <span className="text-xs text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded font-medium shrink-0">
+                          <span className="text-xs text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded whitespace-nowrap font-medium shrink-0">
                             代管
                           </span>
                         )}

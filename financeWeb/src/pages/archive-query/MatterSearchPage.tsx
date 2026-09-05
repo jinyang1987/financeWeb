@@ -155,7 +155,7 @@ const MatterSearchPage: React.FC = () => {
                 <tr key={doc.id} className="border-b border-slate-200/60 last:border-0 divide-x divide-slate-100 hover:bg-sky-50/50 transition-colors">
                   <td className="px-4 py-3 font-mono text-sm font-bold text-slate-800 whitespace-nowrap">{doc.documentNo}</td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <span className="px-1.5 py-0.5 bg-slate-100 rounded text-xs">{doc.docTypeName}</span>
+                    <span className="px-1.5 py-0.5 bg-slate-100 rounded whitespace-nowrap text-xs">{doc.docTypeName}</span>
                   </td>
                   <td className="px-4 py-3 font-mono text-sm text-slate-600 whitespace-nowrap">{doc.transactionDate}</td>
                   <td className="px-4 py-3.5 text-sm text-slate-600 max-w-[160px] truncate" title={doc.counterpartyName}>
