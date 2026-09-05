@@ -237,13 +237,13 @@ const ResultsTable: React.FC<{
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="font-mono text-sm text-slate-600 whitespace-nowrap">{doc.transactionDate}</span>
+                  <span className="font-mono text-sm text-slate-600 whitespace-nowrap">{(doc.transactionDate || "").slice(0, 10)}</span>
                 </td>
                 <td className="px-4 py-3">
                   <span className="font-mono text-sm font-medium text-slate-800">{doc.documentNo}</span>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="text-sm text-slate-600">{doc.docTypeName}</span>
+                  <span className="text-sm text-slate-600 whitespace-nowrap">{doc.docTypeName}</span>
                 </td>
                 <td className="px-4 py-3">
                   <span className={`font-mono text-sm font-medium ${doc.amountLower < 0 ? 'text-red-600' : 'text-slate-800'}`}>
@@ -319,7 +319,7 @@ const SourceDocDrawer: React.FC<{
           <FieldGrid columns={2} fields={[
             { label: '单据编号', value: doc.documentNo, mono: true },
             { label: '凭证类型', value: doc.docTypeName },
-            { label: '业务日期', value: doc.transactionDate, mono: true },
+            { label: "业务日期", value: (doc.transactionDate || "").slice(0, 10), mono: true },
             { label: '业务分类', value: <Badge>{doc.businessCategory}</Badge> },
             {
               label: '载体类型',

@@ -253,7 +253,8 @@ public class SourceDocService {
     view.put("documentNo", prop(entry, "finance:documentNo"));
     view.put("docTypeCode", prop(entry, "finance:docTypeCode"));
     view.put("docTypeName", prop(entry, "finance:docTypeName"));
-    view.put("transactionDate", prop(entry, "finance:transactionDate"));
+    // d:date 经 REST 读回是 ISO 时间戳（2026-08-29T00:00:00.000+0000），展示口径统一截取日期段
+    view.put("transactionDate", dateOnly(prop(entry, "finance:transactionDate")));
     Object amount = entry.get("properties") instanceof Map<?, ?> p ? p.get("finance:amountLower") : null;
     view.put("amountLower", amount instanceof Number n ? n.doubleValue() : 0.0);
     view.put("amountUpper", prop(entry, "finance:amountUpper"));
@@ -277,6 +278,12 @@ public class SourceDocService {
       view.put("sizeInBytes", c.get("sizeInBytes") instanceof Number n ? n.longValue() : 0L);
     }
     return view;
+  }
+
+  /** ISO 时间戳 → yyyy-MM-dd（已是纯日期则原样返回；空串安全） */
+  private static String dateOnly(String iso) {
+    if (iso == null || iso.length() < 10) return iso == null ? "" : iso;
+    return iso.substring(0, 10);
   }
 
   @SuppressWarnings("unchecked")
