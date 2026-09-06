@@ -435,53 +435,53 @@ const MetadataSection: React.FC<SectionProps> = ({ title, description, icon, met
           <table className="w-full">
             <thead>
               <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 divide-x divide-slate-200/80">
-                <th className="px-4 py-3 text-left text-sm font-semibold w-12">编号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold w-24">中文名称</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold w-28">英文名称</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold min-w-48">定义</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold w-16">必选性</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold w-16">可重复性</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold w-12">数据类型</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold w-36">值域</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold w-40">捕获节点</th>
+                <th className="px-2.5 py-3 text-left text-sm font-semibold w-12">编号</th>
+                <th className="px-2.5 py-3 text-left text-sm font-semibold w-20">中文名称</th>
+                <th className="px-2.5 py-3 text-left text-sm font-semibold w-24">英文名称</th>
+                <th className="px-2.5 py-3 text-left text-sm font-semibold">定义</th>
+                <th className="px-2.5 py-3 text-left text-sm font-semibold w-16">必选性</th>
+                <th className="px-2.5 py-3 text-left text-sm font-semibold w-16">可重复性</th>
+                <th className="px-2.5 py-3 text-left text-sm font-semibold w-16">数据类型</th>
+                <th className="px-2.5 py-3 text-left text-sm font-semibold w-32">值域</th>
+                <th className="px-2.5 py-3 text-left text-sm font-semibold w-28">捕获节点</th>
               </tr>
             </thead>
             <tbody>
               {metadata.map((item, idx) => (
                 <React.Fragment key={item.id}>
                   <tr className={`border-b border-slate-200/60 divide-x divide-slate-100 ${rowHoverBg} transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}`}>
-                    <td className={`px-4 py-3 font-mono text-sm font-bold ${idColor}`}>{item.id}</td>
-                    <td className="px-4 py-3 text-sm font-bold text-slate-800">{item.name}</td>
-                    <td className="px-4 py-3 font-mono text-sm text-slate-600">{item.englishName}</td>
-                    <td className="px-4 py-3.5 text-sm text-slate-600 leading-relaxed">{item.definition}</td>
-                    <td className="px-4 py-3">
+                    <td className={`px-2.5 py-3 font-mono text-sm font-bold ${idColor}`}>{item.id}</td>
+                    <td className="px-2.5 py-3 text-sm font-bold text-slate-800">{item.name}</td>
+                    <td className="px-2.5 py-3 font-mono text-sm text-slate-600">{item.englishName}</td>
+                    <td className="px-2.5 py-3.5 text-sm text-slate-600 leading-relaxed">{item.definition}</td>
+                    <td className="px-2.5 py-3">
                       <span className={`inline-block rounded-full whitespace-nowrap px-2 py-0.5 text-xs font-bold ${
                         item.mandatory === '必选' ? 'bg-red-50 text-red-600 border border-red-200' :
                         item.mandatory === '条件可选' ? 'bg-amber-50 text-amber-600 border border-amber-200' :
                         'bg-slate-100 text-slate-500 border border-slate-200'
                       }`}>{item.mandatory}</span>
                     </td>
-                    <td className="px-4 py-3.5 text-sm text-slate-600">{item.repeatable}</td>
-                    <td className="px-4 py-3.5 text-sm text-slate-600">{item.dataType}</td>
-                    <td className="px-4 py-3.5 text-sm text-slate-600">{item.valueRange || '—'}</td>
-                    <td className="px-4 py-3.5 text-sm text-slate-600">{item.captureNode}</td>
+                    <td className="px-2.5 py-3.5 text-sm text-slate-600">{item.repeatable}</td>
+                    <td className="px-2.5 py-3.5 text-sm text-slate-600">{item.dataType}</td>
+                    <td className="px-2.5 py-3.5 text-sm text-slate-600">{item.valueRange || '—'}</td>
+                    <td className="px-2.5 py-3.5 text-sm text-slate-600">{item.captureNode}</td>
                   </tr>
                   {item.subItems?.map((sub) => (
                     <tr key={sub.id} className={`border-b border-slate-200/60 divide-x divide-slate-100 bg-slate-50/20 ${rowHoverBg} transition-colors`}>
                       <td className={`px-4 py-3 pl-8 font-mono text-sm font-bold ${subIdColor}`}>{sub.id}</td>
-                      <td className="px-4 py-3 text-sm font-bold text-slate-600">├ {sub.name}</td>
-                      <td className="px-4 py-3 font-mono text-sm text-slate-400">{sub.englishName}</td>
-                      <td className="px-4 py-3.5 text-sm text-slate-500 leading-relaxed">{sub.definition}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-2.5 py-3 text-sm font-bold text-slate-600">├ {sub.name}</td>
+                      <td className="px-2.5 py-3 font-mono text-sm text-slate-400">{sub.englishName}</td>
+                      <td className="px-2.5 py-3.5 text-sm text-slate-500 leading-relaxed">{sub.definition}</td>
+                      <td className="px-2.5 py-3">
                         <span className={`inline-block rounded-full whitespace-nowrap px-2 py-0.5 text-xs font-bold ${
                           sub.mandatory === '必选' ? 'bg-red-50 text-red-600 border border-red-200' :
                           'bg-slate-100 text-slate-500 border border-slate-200'
                         }`}>{sub.mandatory}</span>
                       </td>
-                      <td className="px-4 py-3.5 text-sm text-slate-400">{sub.repeatable}</td>
-                      <td className="px-4 py-3.5 text-sm text-slate-400">{sub.dataType}</td>
-                      <td className="px-4 py-3.5 text-sm text-slate-400">{sub.valueRange || '—'}</td>
-                      <td className="px-4 py-3.5 text-sm text-slate-400">{sub.captureNode}</td>
+                      <td className="px-2.5 py-3.5 text-sm text-slate-400">{sub.repeatable}</td>
+                      <td className="px-2.5 py-3.5 text-sm text-slate-400">{sub.dataType}</td>
+                      <td className="px-2.5 py-3.5 text-sm text-slate-400">{sub.valueRange || '—'}</td>
+                      <td className="px-2.5 py-3.5 text-sm text-slate-400">{sub.captureNode}</td>
                     </tr>
                   ))}
                 </React.Fragment>

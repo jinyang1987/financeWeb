@@ -21,7 +21,7 @@ import {
   Loader2, CheckCircle2, Trash2, Upload, Send, Clock,
   RefreshCw, Trash, Link2, Eye, AlertTriangle, Paperclip,
   ArrowUp, ArrowDown, FolderOutput, Split, Merge, Ungroup, ListChecks,
-  MapPin, Warehouse, ClipboardList, FilePlus2, Pencil,
+  MapPin, Warehouse, ClipboardList, FilePlus2, Pencil, MoreHorizontal,
 } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
 import { useArchiveStore } from '../../stores/archiveStore';
@@ -258,6 +258,7 @@ const UnassignedPool: React.FC<UnassignedPoolProps> = ({
   const allSelected = isAllPageSelected(allIds, selectedIds);
   const draftVolumes = volumes.filter((v) => v.status === 'draft');
   const [showVolumeMenu, setShowVolumeMenu] = useState(false);
+  const [volumeMenuPos, setVolumeMenuPos] = useState<{ top: number; left: number } | null>(null);
 
   // 案卷状态标签
   const statusLabel = (s: string) => {
@@ -269,11 +270,20 @@ const UnassignedPool: React.FC<UnassignedPoolProps> = ({
   // 点击外部关闭下拉
   const menuRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
+    if (!showVolumeMenu) return;
     const handler = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setShowVolumeMenu(false);
     };
-    if (showVolumeMenu) document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    const close = () => setShowVolumeMenu(false);
+    document.addEventListener('mousedown', handler);
+    // 菜单为 fixed 定位（防 overflow 工具栏容器裁剪），容器滚动/窗口缩放时关闭避免错位
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+    };
   }, [showVolumeMenu]);
 
   return (
@@ -321,7 +331,13 @@ const UnassignedPool: React.FC<UnassignedPoolProps> = ({
             <div className="relative">
               <button
                 type="button"
-                onClick={() => setShowVolumeMenu(!showVolumeMenu)}
+                onClick={(e) => {
+                  if (!showVolumeMenu) {
+                    const r = e.currentTarget.getBoundingClientRect();
+                    setVolumeMenuPos({ top: r.bottom + 4, left: Math.max(8, r.right - 256) });
+                  }
+                  setShowVolumeMenu(!showVolumeMenu);
+                }}
                 disabled={selectedIds.size === 0 || draftVolumes.length === 0}
                 title={selectedIds.size === 0 ? '请先勾选左侧凭证' : draftVolumes.length === 0 ? '暂无草稿状态的案卷' : '加入已有草稿案卷'}
                 className="flex h-8 items-center gap-1 px-2.5 text-sm font-medium whitespace-nowrap shrink-0 rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 transition-colors disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
@@ -329,7 +345,10 @@ const UnassignedPool: React.FC<UnassignedPoolProps> = ({
                 加入已有
                 <ChevronDown className="w-3.5 h-3.5 opacity-50" />
               </button>{showVolumeMenu && selectedIds.size > 0 && draftVolumes.length > 0 && (
-                    <div className="absolute right-0 top-full mt-1 w-64 bg-white border border-slate-200 rounded-lg shadow-xl z-20 max-h-80 overflow-y-auto">
+                    <div
+                      className="fixed w-64 bg-white border border-slate-200 rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto"
+                      style={{ top: volumeMenuPos?.top, left: volumeMenuPos?.left }}
+                    >
                       <div className="px-3 py-2 text-xs text-slate-500 border-b border-slate-100 font-medium">
                         选择已有案卷
                       </div>
@@ -551,6 +570,26 @@ const VolumeCard: React.FC<VolumeCardProps> = ({
   const [transferring, setTransferring] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [draftTitle, setDraftTitle] = useState(volume.title);
+  // ★ 卷级「更多」下拉（合并/拆卷/删除空卷收纳，主行只留高频操作防右侧裁切，2026-09-07）：
+  //   fixed 定位（防 overflow 容器裁剪）+ 滚动/缩放/点外自动关闭
+  const [showMore, setShowMore] = useState(false);
+  const [morePos, setMorePos] = useState<{ top: number; left: number } | null>(null);
+  const moreRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!showMore) return;
+    const handler = (e: MouseEvent) => {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) setShowMore(false);
+    };
+    const close = () => setShowMore(false);
+    document.addEventListener('mousedown', handler);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+    };
+  }, [showMore]);
   const statusColors: Record<string, string> = {
     draft: 'text-amber-600 bg-amber-50 border-amber-200',
     confirmed: 'text-sky-600 bg-sky-100 border-sky-200',
@@ -861,7 +900,7 @@ const VolumeCard: React.FC<VolumeCardProps> = ({
                   <Printer className="w-3 h-3" />
                   目录预览
                 </button>
-                {/* ★ 元数据录入（2026-08-25：组卷环节的卷/件元数据录入与修正入口） */}
+                {/* ★ 元数据录入（2026-08-25：组卷环节的卷/件元数据录入与修正入口；2026-09-07 文案精简防裁切） */}
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onMetadataEntry(volume.id); }}
@@ -869,40 +908,64 @@ const VolumeCard: React.FC<VolumeCardProps> = ({
                   title="录入/修改案卷与卷内件的元数据（确认组卷前完成）"
                 >
                   <FileText className="w-3 h-3" />
-                  元数据录入
+                  元数据
                 </button>
-                <div className="flex-1" />
-                {/* 卷级操作：合并（他卷并入本卷）/ 拆卷（整卷打散回池） */}
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); onMerge(); }}
-                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium whitespace-nowrap shrink-0 text-slate-600 bg-white border border-slate-300 rounded-lg hover:border-sky-300 hover:text-sky-700 transition-colors"
-                  title="将其他同类别/年度/期限的草稿案卷并入本卷（来源卷合并后删除）"
-                >
-                  <Merge className="w-3 h-3" />
-                  合并
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); onDecompose(volume.id); }}
-                  disabled={items.length === 0}
-                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium whitespace-nowrap shrink-0 text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
-                  title="拆卷：卷内全部件回到待组卷池，案卷删除"
-                >
-                  <Ungroup className="w-3 h-3" />
-                  拆卷
-                </button>
-                {items.length === 0 && (
+                {/* 卷级操作收纳「更多」（2026-09-07：合并/拆卷原平铺导致右栏窄屏被裁切不可见） */}
+                <div className="relative shrink-0" ref={moreRef}>
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); onDelete(volume.id); }}
-                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium whitespace-nowrap shrink-0 text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
-                    title="删除空案卷"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!showMore) {
+                        const r = e.currentTarget.getBoundingClientRect();
+                        setMorePos({ top: r.bottom + 4, left: Math.max(8, r.right - 176) });
+                      }
+                      setShowMore(!showMore);
+                    }}
+                    className="flex items-center gap-1 px-2 py-1.5 text-xs font-medium whitespace-nowrap shrink-0 text-slate-600 bg-white border border-slate-300 rounded-lg hover:border-sky-300 hover:text-sky-700 transition-colors"
+                    title="更多卷级操作：合并 / 拆卷 / 删除空卷"
                   >
-                    <Trash2 className="w-3 h-3" />
-                    删除空卷
+                    <MoreHorizontal className="w-4 h-4" />
                   </button>
-                )}
+                  {showMore && morePos && (
+                    <div
+                      className="fixed w-44 bg-white border border-slate-200 rounded-lg shadow-xl z-50 py-1"
+                      style={{ top: morePos.top, left: morePos.left }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => { onMerge(); setShowMore(false); }}
+                        className="w-full text-left px-3 py-2 text-xs text-slate-700 hover:bg-sky-50 transition-colors flex items-center gap-2"
+                        title="将其他同类别/年度/期限的草稿案卷并入本卷（来源卷合并后删除）"
+                      >
+                        <Merge className="w-3.5 h-3.5 text-slate-400" />
+                        合并其他案卷
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { onDecompose(volume.id); setShowMore(false); }}
+                        disabled={items.length === 0}
+                        className="w-full text-left px-3 py-2 text-xs text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                        title="拆卷：卷内全部件回到待组卷池，案卷删除"
+                      >
+                        <Ungroup className="w-3.5 h-3.5" />
+                        拆卷回池
+                      </button>
+                      {items.length === 0 && (
+                        <button
+                          type="button"
+                          onClick={() => { onDelete(volume.id); setShowMore(false); }}
+                          className="w-full text-left px-3 py-2 text-xs text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
+                          title="删除空案卷"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          删除空卷
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
