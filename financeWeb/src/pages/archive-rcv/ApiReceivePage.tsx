@@ -397,8 +397,8 @@ const ApiReceivePage: React.FC = () => {
                       onClick={() => setExpandedBatch(expanded ? null : b.id)}
                     >
                       <td className="px-4 py-3 font-mono text-sm text-slate-800">{b.batch_no}</td>
-                      <td className="px-4 py-3 text-center font-mono text-sm text-slate-600">{b.period}</td>
-                      <td className="px-4 py-3 text-center text-sm text-slate-600">{b.trigger_type === 'auto' ? '自动' : '手动'}</td>
+                      <td className="px-4 py-3 text-center font-mono text-sm text-slate-600 whitespace-nowrap">{b.period}</td>
+                      <td className="px-4 py-3 text-center text-sm text-slate-600 whitespace-nowrap">{b.trigger_type === 'auto' ? '自动' : '手动'}</td>
                       <td className="px-4 py-3 text-center">
                         <span className={`px-2 py-0.5 text-xs font-medium rounded-full whitespace-nowrap ${st.cls}`}>{st.label}</span>
                       </td>
