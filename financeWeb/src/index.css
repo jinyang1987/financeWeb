@@ -187,3 +187,13 @@
 .sidebar-nav::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 .sidebar-nav::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
+/* 按钮工具栏防折行兜底（2026-09-06）：容器 flex-nowrap + overflow-x-auto，
+   极端窄屏时横向滚动而不是按钮折行；滚动能力保留、滚动条视觉无痕 */
+.no-scrollbar {
+  scrollbar-width: none;          /* Firefox */
+  -ms-overflow-style: none;       /* 旧 Edge */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;                  /* Chrome/Safari/新版 Edge */
+}
+

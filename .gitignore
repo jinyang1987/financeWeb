@@ -65,3 +65,7 @@ financeWeb/dist_v28/
 
 ams-server/_build3/
 financeWeb/dist_v29/
+
+# ===== 构建产物（2026-09-06 补） =====
+ams-server/_build4/
+financeWeb/dist_v*/
