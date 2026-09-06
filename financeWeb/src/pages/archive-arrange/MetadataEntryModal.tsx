@@ -612,9 +612,6 @@ const MetadataEntryModal: React.FC<MetadataEntryModalProps> = ({ open, volume, i
                       </div>
                     )}
                   </div>
-                  <p className="text-xs text-slate-400">
-                    原始凭证录入依据 DA/T 95-2022 与主管部门凭证制式；扩展字段按类型字段集动态展开，落库 finance:srcDocExtFields。
-                  </p>
                 </div>
                 <SaveBar dirty={dirty} saving={saving} onReset={() => selectedId && selectItem(selectedId)} onSave={() => void saveItem()} />
               </>
@@ -677,7 +674,6 @@ const MetadataEntryModal: React.FC<MetadataEntryModalProps> = ({ open, volume, i
             <ChevronLeft className="w-3.5 h-3.5" />
             {poolMode ? '返回组卷工作台' : '返回组卷工作台'}
           </button>
-          <span className="text-xs text-slate-300">元数据依据 DA/T 94-2022 件级必填项白名单</span>
         </div>
       </div>
     </div>

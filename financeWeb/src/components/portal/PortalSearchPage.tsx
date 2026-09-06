@@ -42,18 +42,18 @@ const PortalSearchPage: React.FC<PortalSearchPageProps> = ({ onOpenDetail, onGoH
 
   return (
     <div className="h-full flex flex-col">
-      {/* 检索模式 Tab（融合后台档案查询二级菜单） */}
+      {/* 检索模式 Tab（融合后台档案查询二级菜单；2026-09-07 防折行硬约束） */}
       <div className="bg-white border-b border-slate-200 px-6 pt-2.5 pb-0 shrink-0">
-        <div className="flex items-center gap-1 max-w-6xl mx-auto flex-wrap">
+        <div className="flex items-center gap-1 max-w-6xl mx-auto flex-nowrap overflow-x-auto no-scrollbar min-w-0">
           <button
             type="button"
             onClick={onGoHome}
-            className="flex items-center gap-1 px-2 py-2 text-xs text-slate-400 hover:text-sky-600 transition-colors cursor-pointer mr-1"
+            className="flex items-center gap-1 px-2 py-2 text-xs text-slate-400 hover:text-sky-600 transition-colors cursor-pointer mr-1 whitespace-nowrap shrink-0"
             title="返回首页"
           >
             <Search className="w-3 h-3 rotate-180" />返回
           </button>
-          <div className="h-5 w-px bg-slate-200 mr-1" />
+          <div className="h-5 w-px bg-slate-200 mr-1 shrink-0" />
           {SEARCH_MODES.map((m) => {
             const active = searchMode === m.key;
             return (
@@ -62,7 +62,7 @@ const PortalSearchPage: React.FC<PortalSearchPageProps> = ({ onOpenDetail, onGoH
                 type="button"
                 onClick={() => setSearchMode(m.key)}
                 title={m.desc}
-                className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium rounded-t-xl border-b-2 transition-colors cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium whitespace-nowrap shrink-0 rounded-t-xl border-b-2 transition-colors cursor-pointer ${
                   active
                     ? 'border-sky-600 text-sky-700 bg-sky-50/60'
                     : 'border-transparent text-slate-500 hover:text-sky-600 hover:bg-slate-50'
@@ -73,7 +73,7 @@ const PortalSearchPage: React.FC<PortalSearchPageProps> = ({ onOpenDetail, onGoH
               </button>
             );
           })}
-          <div className="ml-auto text-xs text-slate-400 hidden md:block">
+          <div className="ml-auto text-xs text-slate-400 hidden md:block whitespace-nowrap shrink-0">
             检索能力与后台「档案查询」一致 · 关键词：{portalKeyword || '—'}
           </div>
         </div>

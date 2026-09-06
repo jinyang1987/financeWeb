@@ -93,7 +93,7 @@ const ItemsLibraryTab: React.FC = () => {
         <div>
           <h3 className="text-sm font-semibold text-slate-700">标准检测项库（环节 × 四性）</h3>
           <p className="text-xs text-slate-400 mt-1">
-            启用的检测项即实际执行的检测方案：归档环节在确认组卷时自动执行、移交环节在移交归盒时自动执行（未过阻断），长期保存环节由固化巡检定时任务与快速检测页执行。
+            启用的检测项即实际执行的检测方案；检测为系统行为，在归档与移交环节自动执行、未过阻断。
           </p>
         </div>
         <span className="text-xs text-slate-400 shrink-0 mt-0.5">
@@ -321,8 +321,8 @@ const InspectionConfigPage: React.FC = () => {
           )}
         </div>
         <div className="flex items-center gap-2 mt-2 text-xs text-slate-400">
-          <Info className="w-3.5 h-3.5" />
-          本页仅含检测引擎真实消费的配置项；检测项粒度启停在「检测项库」。检测时机为系统行为：归档（确认组卷）与移交（归盒）自动执行、不合格阻断，长期保存环节由固化巡检定时任务执行。
+          <Info className="w-3.5 h-3.5 shrink-0" />
+          仅含检测引擎真实消费的配置项；检测项粒度启停在「检测项库」。
         </div>
       </div>
 

@@ -150,7 +150,7 @@ const MyBorrowOrders: React.FC = () => {
                         return (
                           <React.Fragment key={step.seq}>
                             {i > 0 && <div className={`w-6 h-px ${step.status === 'approved' ? 'bg-emerald-300' : 'bg-slate-200'}`} />}
-                            <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${
+                            <div className={`flex items-center gap-2 px-3 py-2 whitespace-nowrap shrink-0 rounded-xl border ${
                               step.status === 'approved'
                                 ? 'bg-emerald-50 border-emerald-200'
                                 : step.status === 'rejected'

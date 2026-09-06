@@ -469,9 +469,9 @@ export const FanzongManager: React.FC = () => {
 
         {/* ===== 右侧：全宗列表 ===== */}
         <div className="flex-1 flex flex-col min-h-0">
-          {/* 工具栏 */}
-          <div className="p-3 border-b border-slate-100 flex items-center justify-between shrink-0 flex-wrap gap-2">
-            <div className="flex items-center gap-1.5">
+          {/* 工具栏（2026-09-07 防折行硬约束：flex-nowrap+隐形滚动兜底，绝不折行） */}
+          <div className="p-3 border-b border-slate-100 flex items-center justify-between shrink-0 flex-nowrap overflow-x-auto no-scrollbar min-w-0 gap-2">
+            <div className="flex items-center gap-1.5 shrink-0">
               <button type="button" onClick={() => {
                   if (!unitOptions.length) {
                     setError('请先在系统设置-单位管理中创建单位');
@@ -480,19 +480,19 @@ export const FanzongManager: React.FC = () => {
                   setNewForm(prev => ({ ...prev, companyId: selectedOrg || unitOptions[0]?.id || '' }));
                   setShowNewModal(true);
                 }}
-                className="inline-flex items-center gap-1 bg-sky-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-sky-700 transition-colors cursor-pointer">
+                className="inline-flex items-center gap-1 whitespace-nowrap shrink-0 bg-sky-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-sky-700 transition-colors cursor-pointer">
                 <Plus className="w-3.5 h-3.5" /> 新建全宗
               </button>
               <button type="button"
-                className="inline-flex items-center gap-1 bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-50 cursor-pointer">
+                className="inline-flex items-center gap-1 whitespace-nowrap shrink-0 bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-50 cursor-pointer">
                 <Download className="w-3.5 h-3.5" /> 导出
               </button>
               <button type="button"
-                className="inline-flex items-center gap-1 bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-50 cursor-pointer">
+                className="inline-flex items-center gap-1 whitespace-nowrap shrink-0 bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-50 cursor-pointer">
                 <SortAsc className="w-3.5 h-3.5" /> 排序
               </button>
               <button type="button" onClick={() => { loadOrgTree(); loadFonds(); }}
-                className="inline-flex items-center gap-1 bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-50 cursor-pointer">
+                className="inline-flex items-center gap-1 whitespace-nowrap shrink-0 bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-50 cursor-pointer">
                 <RefreshCw className="w-3.5 h-3.5" /> 刷新
               </button>
             </div>
@@ -501,7 +501,7 @@ export const FanzongManager: React.FC = () => {
               <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input type="text" placeholder="搜索全宗号/名称..." value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="pl-8 pr-3 py-1.5 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 w-48" />
+                className="pl-8 pr-3 py-1.5 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 w-48 shrink-0" />
             </div>
           </div>
 

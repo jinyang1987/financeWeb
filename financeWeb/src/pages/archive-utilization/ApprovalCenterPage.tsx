@@ -11,7 +11,7 @@
 import React, { useMemo, useState } from 'react';
 import {
   CheckCircle2, XCircle, Clock, User, FileText, Lock,
-  ClipboardCheck, History, AlertTriangle, Cloud, HardDrive,
+  ClipboardCheck, History, Info, Cloud, HardDrive,
 } from 'lucide-react';
 import { useBorrowStore, pendingApprovalsForRoles } from '../../stores/borrowStore';
 import { useAuthStore } from '../../stores/authStore';
@@ -185,7 +185,7 @@ const ApprovalCenterPage: React.FC = () => {
                 return (
                   <React.Fragment key={s.seq}>
                     {i > 0 && <div className={`w-5 h-px ${s.status === 'approved' ? 'bg-emerald-300' : 'bg-slate-200'}`} />}
-                    <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs ${
+                    <div className={`flex items-center gap-1.5 px-2.5 py-1.5 whitespace-nowrap shrink-0 rounded-lg border text-xs ${
                       s.status === 'approved' ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
                       : s.status === 'rejected' ? 'bg-red-50 border-red-200 text-red-700'
                       : isCurrent ? 'bg-sky-50 border-sky-300 text-sky-700 font-semibold'
@@ -264,6 +264,13 @@ const ApprovalCenterPage: React.FC = () => {
         <div className="flex items-center gap-3 mb-3">
           <ClipboardCheck className="w-5 h-5 text-slate-600" />
           <h1 className="text-base font-bold text-slate-800">审批中心</h1>
+          {/* 动态路由规则改为悬浮提示（2026-09-07：常驻黄条解释撤出版面，语义不丢） */}
+          <span
+            className="inline-flex shrink-0 cursor-help"
+            title="动态路由规则：仅在线浏览 → 部门经理+档案管理员；含下载/打印/实体外借 → 升级财务总监；涉密（薪酬/高管报销）→ 强制 HRVP 会签"
+          >
+            <Info className="w-3.5 h-3.5 text-slate-300 hover:text-sky-500" />
+          </span>
           <span className="text-xs text-slate-400">
             {currentUser.name}（{currentUser.roles.map((r) => ({ employee: '员工', dept_manager: '部门经理', archivist: '档案管理员', archive_director: '档案主管', cfo: '财务总监', hrvp: 'HR副总裁', admin: '系统管理员' } as Record<string, string>)[r]).join('/')}）的待办审批
           </span>
@@ -300,15 +307,6 @@ const ApprovalCenterPage: React.FC = () => {
           {list.map((o) => renderOrder(o, tab === 'pending'))}
         </div>
       </div>
-
-      {pending.length > 0 && tab === 'pending' && (
-        <div className="px-6 py-2.5 bg-amber-50 border-t border-amber-100 shrink-0">
-          <div className="flex items-center gap-2 text-xs text-amber-700">
-            <AlertTriangle className="w-3.5 h-3.5" />
-            动态路由规则：仅在线浏览 → 部门经理+档案管理员；含下载/打印/实体外借 → 升级财务总监；涉密（薪酬/高管报销）→ 强制 HRVP 会签
-          </div>
-        </div>
-      )}
     </div>
   );
 };

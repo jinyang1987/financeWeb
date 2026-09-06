@@ -273,8 +273,7 @@ const CodeConfigTab: React.FC = () => {
                   <div className="space-y-3">
                     {PARAM_FIELDS.map((f) => <ParamCard key={f.key} field={f} />)}
                     <div className="bg-sky-50 border border-sky-200 rounded-lg p-3 text-xs text-sky-800">
-                      <strong>配置锁定规则：</strong>所有自定义规则需在本单位档案管理制度中书面固化，保持长期一致。
-                      门类前缀建议初始化时一次定死——归档后修改会造成新旧档号门类段不一致。
+                      <strong>配置锁定规则：</strong>门类前缀初始化时一次定死——归档后修改会造成新旧档号门类段不一致。
                     </div>
                   </div>
                 </SectionCard>

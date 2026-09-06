@@ -600,14 +600,14 @@ const MetadataConfigTab: React.FC = () => {
     <div className="flex-1 overflow-auto p-6">
       <div className="max-w-full">
         {/* ── 操作行：模式 Tab + 详情页上下文 + 页面设置（说教内容已移「原理说明」Tab） ── */}
-        <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-          <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1 w-fit">
+        <div className="flex items-center justify-between mb-4 gap-3 flex-nowrap overflow-x-auto no-scrollbar min-w-0">
+          <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1 w-fit shrink-0">
             {MODE_OPTIONS.map((opt) => (
               <button
                 key={opt.key}
                 type="button"
                 onClick={() => setMode(opt.key)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all cursor-pointer ${
+                className={`flex items-center gap-2 px-4 py-2 whitespace-nowrap shrink-0 rounded-md text-sm font-medium transition-all cursor-pointer ${
                   mode === opt.key
                     ? 'bg-white text-slate-800 shadow-sm'
                     : 'text-slate-500 hover:text-slate-700'
@@ -622,9 +622,9 @@ const MetadataConfigTab: React.FC = () => {
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {mode === 'accounting-archive' && (
-              <label className="flex items-center gap-1.5 text-xs text-slate-500">
+              <label className="flex items-center gap-1.5 text-xs text-slate-500 whitespace-nowrap">
                 详情页上下文
                 <select
                   value={selectedContext}

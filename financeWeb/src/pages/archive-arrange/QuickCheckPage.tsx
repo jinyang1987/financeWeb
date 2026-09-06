@@ -414,8 +414,8 @@ const QuickCheckPage: React.FC = () => {
       <div className="flex items-center gap-3 px-6 py-3 bg-white border-b border-slate-200 shrink-0">
         <Zap className="w-5 h-5 text-sky-600" />
         <h1 className="text-base font-bold text-slate-800">快速检测</h1>
-        <span className="text-xs text-slate-400">
-          四性检测结果中心 · 按规定检测在移交（推送至保管库）时自动执行，未通过即阻断移交
+        <span className="text-xs text-slate-400 whitespace-nowrap">
+          四性检测结果中心
         </span>
         <div className="flex-1" />
         <button
